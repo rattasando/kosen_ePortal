@@ -254,10 +254,10 @@ export default function CompanyListPage() {
   const mouCount = companies.filter((c) => c.mouStatus === "มี MOU").length;
   const totalOpen = jobs.filter((j) => j.status === "เปิดรับ").length;
 
-  if (!ready) return <div className="page-container py-16 text-center text-muted text-sm">กำลังโหลด...</div>;
+  if (!ready) return <div className="w-full max-w-[1440px] mx-auto px-6 md:px-12 py-16 text-center text-muted text-sm">กำลังโหลด...</div>;
 
   return (
-    <div className="page-container py-10 md:py-14">
+    <div className="w-full max-w-[1440px] mx-auto px-6 md:px-12 py-10 md:py-14">
 
       {/* Breadcrumb */}
       <nav className="mb-6 flex items-center gap-2 text-sm text-muted">

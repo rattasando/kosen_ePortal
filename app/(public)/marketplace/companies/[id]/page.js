@@ -113,11 +113,11 @@ export default function CompanyDetailPage() {
     setReady(true);
   }, [id]);
 
-  if (!ready) return <div className="page-container py-20 text-center text-muted text-sm">กำลังโหลด...</div>;
+  if (!ready) return <div className="w-full max-w-[1440px] mx-auto px-6 md:px-12 py-20 text-center text-muted text-sm">กำลังโหลด...</div>;
 
   if (!company) {
     return (
-      <div className="page-container py-20 text-center">
+      <div className="w-full max-w-[1440px] mx-auto px-6 md:px-12 py-20 text-center">
         <p className="text-5xl mb-4">🏢</p>
         <h1 className="text-xl font-bold text-foreground mb-2">ไม่พบข้อมูลบริษัทนี้</h1>
         <Link href="/marketplace/companies" className="inline-block rounded-xl bg-primary px-6 py-2.5 text-sm font-semibold text-white hover:bg-primary/90 transition-colors mt-4">
@@ -137,7 +137,7 @@ export default function CompanyDetailPage() {
   ];
 
   return (
-    <div className="page-container py-10 md:py-14">
+    <div className="w-full max-w-[1440px] mx-auto px-6 md:px-12 py-10 md:py-14">
 
       {/* Breadcrumb */}
       <nav className="mb-6 flex items-center gap-2 text-sm text-muted flex-wrap">

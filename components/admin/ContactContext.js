@@ -50,6 +50,9 @@ export function ContactProvider({ children }) {
   const deleteMainItem  = useCallback((id) => {
     setMain((prev) => { const next = prev.filter((i) => i.id !== id); persist({ main: next, universities, social }); return next; });
   }, [universities, social, persist]);
+  const reorderMain     = useCallback((from, to) => {
+    setMain((prev) => { const next = [...prev]; const [item] = next.splice(from, 1); next.splice(to, 0, item); persist({ main: next, universities, social }); return next; });
+  }, [universities, social, persist]);
 
   // ── Universities ──
   const updateUniversity  = useCallback((id, data) => {
@@ -60,6 +63,9 @@ export function ContactProvider({ children }) {
   }, [main, social, persist]);
   const deleteUniversity  = useCallback((id) => {
     setUniversities((prev) => { const next = prev.filter((i) => i.id !== id); persist({ main, universities: next, social }); return next; });
+  }, [main, social, persist]);
+  const reorderUniversities = useCallback((from, to) => {
+    setUniversities((prev) => { const next = [...prev]; const [item] = next.splice(from, 1); next.splice(to, 0, item); persist({ main, universities: next, social }); return next; });
   }, [main, social, persist]);
 
   // ── Social ──
@@ -72,13 +78,16 @@ export function ContactProvider({ children }) {
   const deleteSocial  = useCallback((id) => {
     setSocial((prev) => { const next = prev.filter((i) => i.id !== id); persist({ main, universities, social: next }); return next; });
   }, [main, universities, persist]);
+  const reorderSocial = useCallback((from, to) => {
+    setSocial((prev) => { const next = [...prev]; const [item] = next.splice(from, 1); next.splice(to, 0, item); persist({ main, universities, social: next }); return next; });
+  }, [main, universities, persist]);
 
   return (
     <ContactContext.Provider value={{
       main, universities, social, ready,
-      updateMainItem, addMainItem, deleteMainItem,
-      updateUniversity, addUniversity, deleteUniversity,
-      updateSocial, addSocial, deleteSocial,
+      updateMainItem, addMainItem, deleteMainItem, reorderMain,
+      updateUniversity, addUniversity, deleteUniversity, reorderUniversities,
+      updateSocial, addSocial, deleteSocial, reorderSocial,
     }}>
       {children}
     </ContactContext.Provider>

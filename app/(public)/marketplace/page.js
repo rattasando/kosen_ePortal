@@ -258,8 +258,7 @@ function JobCard({ job }) {
         isOpen ? "border-border" : "border-border opacity-65"
       }`}
     >
-      <CompanyAvatar name={job.companyName} logo={job.companyLogo} size="lg" />
-
+      <CompanyAvatar name={job.companyName} size="lg" />
       <div className="min-w-0 flex-1">
         {/* Top row: badges */}
         <div className="flex flex-wrap items-center gap-2 mb-2">
@@ -396,10 +395,10 @@ function MarketplaceContent() {
   const openCount   = jobs.filter((j) => j.status === "เปิดรับ").length;
   const internCount = jobs.filter((j) => j.type === "ฝึกงาน").length;
 
-  if (!ready) return <div className="page-container py-16 text-center text-muted text-sm">กำลังโหลดข้อมูล...</div>;
+  if (!ready) return <div className="w-full max-w-[1440px] mx-auto px-6 md:px-12 py-16 text-center text-muted text-sm">กำลังโหลดข้อมูล...</div>;
 
   return (
-    <div className="page-container py-10 md:py-14">
+    <div className="w-full max-w-[1440px] mx-auto px-6 md:px-12 py-10 md:py-14">
 
       {/* Hero */}
       <div className="mb-8">

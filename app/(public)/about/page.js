@@ -95,14 +95,14 @@ export default function AboutPage() {
 
       {/* ── Page header ── */}
       <div className="border-b border-border bg-white pt-8 pb-6">
-        <div className="page-container">
+        <div className="w-full max-w-[1440px] mx-auto px-6 md:px-12">
           <h1 className="text-3xl font-extrabold tracking-tight text-foreground md:text-4xl">เกี่ยวกับเรา</h1>
         </div>
       </div>
 
       {/* What is KOSEN */}
-      <div className="page-container py-12">
-        <div className="mx-auto max-w-3xl text-center">
+      <div className="w-full max-w-[1440px] mx-auto px-6 md:px-12 py-12">
+        <div className="text-center">
           <p className="text-xs font-bold uppercase tracking-widest text-primary">
             KOSEN คืออะไร?
           </p>
@@ -137,7 +137,7 @@ export default function AboutPage() {
 
       {/* Timeline */}
       <div className="border-y border-border bg-slate-50 py-12">
-        <div className="page-container">
+        <div className="w-full max-w-[1440px] mx-auto px-6 md:px-12">
           <div className="mb-10 text-center">
             <p className="text-xs font-bold uppercase tracking-widest text-primary">
               เส้นทางการศึกษา
@@ -146,7 +146,7 @@ export default function AboutPage() {
               5 ปีสู่วิศวกรมืออาชีพ
             </h2>
           </div>
-          <div className="relative mx-auto max-w-2xl">
+          <div className="relative mx-auto max-w-3xl">
             <div className="absolute left-6 top-0 h-full w-px bg-border" />
             <div className="space-y-8">
               {TIMELINE.map((item, i) => (
@@ -173,7 +173,7 @@ export default function AboutPage() {
       </div>
 
       {/* Universities */}
-      <div className="page-container py-12">
+      <div className="w-full max-w-[1440px] mx-auto px-6 md:px-12 py-12">
         <div className="mb-10 text-center">
           <p className="text-xs font-bold uppercase tracking-widest text-primary">
             สถาบันพาร์ทเนอร์
@@ -186,7 +186,7 @@ export default function AboutPage() {
             มหาวิทยาลัยเทคโนโลยีชั้นนำของไทย
           </p>
         </div>
-        <div className="grid gap-6 md:grid-cols-2 max-w-2xl mx-auto">
+        <div className="grid gap-6 md:grid-cols-2">
           {UNIVERSITIES.map((u) => (
             <div key={u.short} className="card overflow-hidden">
               <div

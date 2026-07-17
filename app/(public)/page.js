@@ -278,12 +278,8 @@ export default function HomePage() {
             {previewJobs.map((job, idx) => (
               <Link key={job.id} href={`/marketplace/${job.id}`} className="card card-hover group flex flex-col overflow-hidden">
                 {/* Top image-like area */}
-                <div className={`relative flex min-h-[180px] w-full items-center justify-center ${job.companyLogo ? "bg-white" : AVATAR_COLORS[idx % AVATAR_COLORS.length]}`}>
-                  {job.companyLogo ? (
-                    <img src={job.companyLogo} alt={job.companyName} className="max-h-[110px] max-w-[160px] object-contain p-4" />
-                  ) : (
-                    <span className="text-5xl font-extrabold text-white/30 tracking-tight select-none">{getInitials(job.companyName)}</span>
-                  )}
+                <div className={`relative flex min-h-[180px] w-full items-center justify-center ${AVATAR_COLORS[idx % AVATAR_COLORS.length]}`}>
+                  <span className="text-5xl font-extrabold text-white/30 tracking-tight select-none">{getInitials(job.companyName)}</span>
                   <span className={`absolute left-3 top-3 rounded-full px-2.5 py-0.5 text-xs font-semibold ${job.type === "ฝึกงาน" ? "bg-accent-soft text-primary" : "bg-emerald-50 text-emerald-700 border border-emerald-200"}`}>
                     {job.type === "ฝึกงาน" ? "🎓 ฝึกงาน" : "💼 งานประจำ"}
                   </span>

@@ -8,9 +8,11 @@ import StudentActionButtons from "@/components/admin/StudentActionButtons";
 import { useStudents } from "@/components/admin/StudentContext";
 
 // ── CSV helpers ──────────────────────────────────────────────
-// One row per student; up to 2 enrollments; both TH + JP addresses exported
+// One row per student; up to 3 enrollments; both TH + JP addresses; banking & travel fields
+const DATE_FIELDS = new Set(["dob", "departureDateTH", "arrivalDateJP"]);
+
 const CSV_HEADERS = [
-  "id", "prefix", "prefixEn", "name", "nameEn", "lastname", "lastnameEn", "nickname",
+  "id", "prefix", "name", "lastname", "prefixEn", "nameEn", "lastnameEn", "nickname",
   "gender", "dob", "nationalId", "passport", "militaryStatus",
   // Enrollment 1 (primary institution)
   "enroll1_university", "enroll1_studentId", "enroll1_email",
@@ -20,12 +22,20 @@ const CSV_HEADERS = [
   "enroll2_university", "enroll2_studentId", "enroll2_email",
   "enroll2_faculty", "enroll2_department", "enroll2_major",
   "enroll2_year", "enroll2_advisor", "enroll2_project",
+  // Enrollment 3 (third institution, if any)
+  "enroll3_university", "enroll3_studentId", "enroll3_email",
+  "enroll3_faculty", "enroll3_department", "enroll3_major",
+  "enroll3_year", "enroll3_advisor", "enroll3_project",
   "prevSchool", "scholarship",
   "tel", "email", "lineId", "country",
   // Thai address
   "addr_th_houseNo", "addr_th_subdistrict", "addr_th_district", "addr_th_province", "addr_th_postalCode",
   // Japanese address
   "addr_jp_postalCode", "addr_jp_prefecture", "addr_jp_city", "addr_jp_street", "addr_jp_building",
+  // Banking
+  "bankName", "bankBranch", "bankAccountNo",
+  // Travel
+  "departureDateTH", "arrivalDateJP",
   "status", "note",
 ];
 
@@ -50,26 +60,94 @@ function toCSVField(val) {
     : s;
 }
 
-function studentToRow(s) {
+// Flatten a nested student object to a plain object keyed by CSV_HEADERS names
+function studentToFlat(s) {
   const e1 = s.enrollments?.[0] ?? {};
   const e2 = s.enrollments?.[1] ?? {};
+  const e3 = s.enrollments?.[2] ?? {};
   const th = s.addresses?.th ?? {};
   const jp = s.addresses?.jp ?? {};
-  return [
-    s.id, s.prefix, s.prefixEn, s.name, s.nameEn, s.lastname, s.lastnameEn, s.nickname,
-    s.gender, parseDateToISO(s.dob), s.nationalId, s.passport, s.militaryStatus,
-    e1.university, e1.studentId, e1.univEmail,
-    e1.faculty, e1.department, e1.major,
-    e1.year, e1.advisor, e1.project,
-    e2.university, e2.studentId, e2.univEmail,
-    e2.faculty, e2.department, e2.major,
-    e2.year, e2.advisor, e2.project,
-    s.prevSchool, s.scholarship,
-    s.tel, s.email, s.lineId, s.country,
-    th.houseNo, th.subdistrict, th.district, th.province, th.postalCode,
-    jp.postalCode, jp.prefecture, jp.city, jp.streetAddress, jp.building,
-    s.status, s.note,
-  ].map(toCSVField);
+  return {
+    id: s.id, prefix: s.prefix, prefixEn: s.prefixEn, name: s.name, nameEn: s.nameEn,
+    lastname: s.lastname, lastnameEn: s.lastnameEn, nickname: s.nickname,
+    gender: s.gender, dob: parseDateToISO(s.dob), nationalId: s.nationalId,
+    passport: s.passport, militaryStatus: s.militaryStatus,
+    enroll1_university: e1.university, enroll1_studentId: e1.studentId, enroll1_email: e1.univEmail,
+    enroll1_faculty: e1.faculty, enroll1_department: e1.department, enroll1_major: e1.major,
+    enroll1_year: e1.year, enroll1_advisor: e1.advisor, enroll1_project: e1.project,
+    enroll2_university: e2.university, enroll2_studentId: e2.studentId, enroll2_email: e2.univEmail,
+    enroll2_faculty: e2.faculty, enroll2_department: e2.department, enroll2_major: e2.major,
+    enroll2_year: e2.year, enroll2_advisor: e2.advisor, enroll2_project: e2.project,
+    enroll3_university: e3.university, enroll3_studentId: e3.studentId, enroll3_email: e3.univEmail,
+    enroll3_faculty: e3.faculty, enroll3_department: e3.department, enroll3_major: e3.major,
+    enroll3_year: e3.year, enroll3_advisor: e3.advisor, enroll3_project: e3.project,
+    prevSchool: s.prevSchool, scholarship: s.scholarship,
+    tel: s.tel, email: s.email, lineId: s.lineId, country: s.country,
+    addr_th_houseNo: th.houseNo, addr_th_subdistrict: th.subdistrict,
+    addr_th_district: th.district, addr_th_province: th.province, addr_th_postalCode: th.postalCode,
+    addr_jp_postalCode: jp.postalCode, addr_jp_prefecture: jp.prefecture,
+    addr_jp_city: jp.city, addr_jp_street: jp.streetAddress, addr_jp_building: jp.building,
+    bankName: s.bankName, bankBranch: s.bankBranch, bankAccountNo: s.bankAccountNo,
+    departureDateTH: parseDateToISO(s.departureDateTH), arrivalDateJP: parseDateToISO(s.arrivalDateJP),
+    status: s.status, note: s.note,
+  };
+}
+
+function studentToRow(s) {
+  const flat = studentToFlat(s);
+  return CSV_HEADERS.map((k) => toCSVField(flat[k]));
+}
+
+// Reconstruct a nested student object from a flat CSV row
+function rowToStudent(row) {
+  const enrollments = [];
+  for (let i = 1; i <= 3; i++) {
+    const uni = (row[`enroll${i}_university`] ?? "").trim();
+    if (uni) {
+      enrollments.push({
+        university: uni,
+        studentId: row[`enroll${i}_studentId`] ?? "",
+        univEmail: row[`enroll${i}_email`] ?? "",
+        faculty: row[`enroll${i}_faculty`] ?? "",
+        department: row[`enroll${i}_department`] ?? "",
+        major: row[`enroll${i}_major`] ?? "",
+        year: row[`enroll${i}_year`] ?? "",
+        advisor: row[`enroll${i}_advisor`] ?? "",
+        project: row[`enroll${i}_project`] ?? "",
+      });
+    }
+  }
+  return {
+    id: row.id,
+    prefix: row.prefix ?? "", prefixEn: row.prefixEn ?? "",
+    name: row.name ?? "", nameEn: row.nameEn ?? "",
+    lastname: row.lastname ?? "", lastnameEn: row.lastnameEn ?? "",
+    nickname: row.nickname ?? "", gender: row.gender ?? "",
+    dob: row.dob ?? "", nationalId: row.nationalId ?? "",
+    passport: row.passport ?? "", militaryStatus: row.militaryStatus ?? "",
+    enrollments: enrollments.length > 0 ? enrollments : [],
+    prevSchool: row.prevSchool ?? "", scholarship: row.scholarship ?? "",
+    tel: row.tel ?? "", email: row.email ?? "", lineId: row.lineId ?? "", country: row.country ?? "",
+    addresses: {
+      th: {
+        houseNo: row.addr_th_houseNo ?? "",
+        subdistrict: row.addr_th_subdistrict ?? "",
+        district: row.addr_th_district ?? "",
+        province: row.addr_th_province ?? "",
+        postalCode: row.addr_th_postalCode ?? "",
+      },
+      jp: {
+        postalCode: row.addr_jp_postalCode ?? "",
+        prefecture: row.addr_jp_prefecture ?? "",
+        city: row.addr_jp_city ?? "",
+        streetAddress: row.addr_jp_street ?? "",
+        building: row.addr_jp_building ?? "",
+      },
+    },
+    bankName: row.bankName ?? "", bankBranch: row.bankBranch ?? "", bankAccountNo: row.bankAccountNo ?? "",
+    departureDateTH: row.departureDateTH ?? "", arrivalDateJP: row.arrivalDateJP ?? "",
+    status: row.status ?? "", note: row.note ?? "",
+  };
 }
 
 function exportCSV(students) {
@@ -139,10 +217,24 @@ const FIELD_LABEL_MAP = {
   id: "รหัส", prefix: "คำนำหน้า", prefixEn: "คำนำหน้า (EN)", name: "ชื่อ", nameEn: "First Name",
   lastname: "นามสกุล", lastnameEn: "Last Name", nickname: "ชื่อเล่น", gender: "เพศ", dob: "วันเกิด",
   nationalId: "เลขบัตรประชาชน", passport: "Passport", militaryStatus: "เกณฑ์ทหาร",
-  university: "มหาวิทยาลัย", faculty: "คณะ", department: "ภาควิชา", major: "สาขาวิชา",
-  year: "ชั้นปี", prevSchool: "โรงเรียนเดิม", project: "โปรเจกต์", advisor: "อาจารย์ที่ปรึกษา",
-  scholarship: "ทุนการศึกษา", tel: "เบอร์โทร", email: "อีเมล", lineId: "LINE ID",
-  country: "ประเทศ", address: "ที่อยู่", status: "สถานะ", note: "หมายเหตุ",
+  enroll1_university: "สถาบัน 1", enroll1_studentId: "รหัสนักศึกษา 1", enroll1_email: "อีเมลสถาบัน 1",
+  enroll1_faculty: "คณะ 1", enroll1_department: "ภาควิชา 1", enroll1_major: "สาขา 1",
+  enroll1_year: "ชั้นปี 1", enroll1_advisor: "อาจารย์ที่ปรึกษา 1", enroll1_project: "โปรเจกต์ 1",
+  enroll2_university: "สถาบัน 2", enroll2_studentId: "รหัสนักศึกษา 2", enroll2_email: "อีเมลสถาบัน 2",
+  enroll2_faculty: "คณะ 2", enroll2_department: "ภาควิชา 2", enroll2_major: "สาขา 2",
+  enroll2_year: "ชั้นปี 2", enroll2_advisor: "อาจารย์ที่ปรึกษา 2", enroll2_project: "โปรเจกต์ 2",
+  enroll3_university: "สถาบัน 3", enroll3_studentId: "รหัสนักศึกษา 3", enroll3_email: "อีเมลสถาบัน 3",
+  enroll3_faculty: "คณะ 3", enroll3_department: "ภาควิชา 3", enroll3_major: "สาขา 3",
+  enroll3_year: "ชั้นปี 3", enroll3_advisor: "อาจารย์ที่ปรึกษา 3", enroll3_project: "โปรเจกต์ 3",
+  prevSchool: "โรงเรียนเดิม", scholarship: "ทุนการศึกษา",
+  tel: "เบอร์โทร", email: "อีเมล", lineId: "LINE ID", country: "ประเทศ",
+  addr_th_houseNo: "บ้านเลขที่ (ไทย)", addr_th_subdistrict: "ตำบล/แขวง", addr_th_district: "อำเภอ/เขต",
+  addr_th_province: "จังหวัด", addr_th_postalCode: "รหัสไปรษณีย์ (ไทย)",
+  addr_jp_postalCode: "รหัสไปรษณีย์ (ญี่ปุ่น)", addr_jp_prefecture: "จังหวัด (ญี่ปุ่น)",
+  addr_jp_city: "เมือง", addr_jp_street: "ที่อยู่", addr_jp_building: "อาคาร/อพาร์ตเมนต์",
+  bankName: "ธนาคาร", bankBranch: "สาขาธนาคาร", bankAccountNo: "เลขที่บัญชี",
+  departureDateTH: "วันเดินทางออกจากไทย", arrivalDateJP: "วันที่ถึงญี่ปุ่น",
+  status: "สถานะ", note: "หมายเหตุ",
 };
 
 function normalizeVal(k, v) {
@@ -157,11 +249,12 @@ function computeDiff(incoming, existing) {
   const results = incoming.map((row) => {
     const prev = existingMap[row.id];
     if (!prev) return { type: "new", row, changes: [] };
+    const prevFlat = studentToFlat(prev);
     const changes = CSV_HEADERS.filter((k) => {
-      const a = normalizeVal(k, prev[k]);
+      const a = normalizeVal(k, prevFlat[k]);
       const b = normalizeVal(k, row[k]);
       return a !== b;
-    }).map((k) => ({ field: k, label: FIELD_LABEL_MAP[k] ?? k, before: prev[k] ?? "", after: row[k] ?? "" }));
+    }).map((k) => ({ field: k, label: FIELD_LABEL_MAP[k] ?? k, before: prevFlat[k] ?? "", after: row[k] ?? "" }));
     return { type: changes.length > 0 ? "update" : "unchanged", row, changes };
   });
   const deleted = (existing ?? []).filter((s) => !incomingIds.has(s.id));
@@ -1136,19 +1229,20 @@ export default function StudentListClient() {
   );
 
   const handleImport = (rows, mode) => {
+    const studentObjects = rows.map(rowToStudent);
     if (mode === "replace") {
-      replaceAll(rows);
-      setImportDone({ count: rows.length, mode: "replace" });
+      replaceAll(studentObjects);
+      setImportDone({ count: studentObjects.length, mode: "replace" });
     } else {
       const existingIds = new Set(students.map((s) => s.id));
       let added = 0,
         updated = 0;
-      rows.forEach((row) => {
-        if (existingIds.has(row.id)) {
-          updateStudent(row.id, row);
+      studentObjects.forEach((stu) => {
+        if (existingIds.has(stu.id)) {
+          updateStudent(stu.id, stu);
           updated++;
         } else {
-          addStudent(row);
+          addStudent(stu);
           added++;
         }
       });

@@ -79,12 +79,12 @@ export default function JobDetailPage() {
   }, [id]);
 
   if (!ready) {
-    return <div className="page-container py-20 text-center text-muted text-sm">กำลังโหลด...</div>;
+    return <div className="w-full max-w-[1440px] mx-auto px-6 md:px-12 py-20 text-center text-muted text-sm">กำลังโหลด...</div>;
   }
 
   if (!job) {
     return (
-      <div className="page-container py-20 text-center">
+      <div className="w-full max-w-[1440px] mx-auto px-6 md:px-12 py-20 text-center">
         <p className="text-5xl mb-4">🔍</p>
         <h1 className="text-xl font-bold text-foreground mb-2">ไม่พบตำแหน่งงานนี้</h1>
         <p className="text-muted text-sm mb-6">อาจถูกปิดรับหรือลบออกจากระบบแล้ว</p>
@@ -99,7 +99,7 @@ export default function JobDetailPage() {
   const days      = daysLeft(job.deadline);
 
   return (
-    <div className="page-container py-10 md:py-14">
+    <div className="w-full max-w-[1440px] mx-auto px-6 md:px-12 py-10 md:py-14">
 
       {/* Breadcrumb */}
       <nav className="mb-6 flex items-center gap-2 text-sm text-muted">
@@ -116,7 +116,7 @@ export default function JobDetailPage() {
           {/* Hero block */}
           <div className="rounded-2xl border border-border bg-surface p-6 md:p-8">
             <div className="flex items-start gap-5">
-              <CompanyAvatar name={job.companyName} logo={job.companyLogo} size="xl" />
+              <CompanyAvatar name={job.companyName} size="xl" />
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap gap-2 mb-3">
                   <span className={`rounded-full border px-3 py-1 text-xs font-bold ${statusCfg.color}`}>

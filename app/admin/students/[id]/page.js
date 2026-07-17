@@ -75,6 +75,12 @@ function formatDob(dob) {
     if (isNaN(d)) return dob;
     return d.toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" });
 }
+function formatDate(dateStr) {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    if (isNaN(d)) return dateStr;
+    return d.toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" });
+}
 function computeAge(dob) {
     if (!dob) return null;
     const birth = new Date(dob);
@@ -893,6 +899,27 @@ function StudentDetail({ student, students, updateStudent, deleteStudent, histor
                                 </Section>
                             </div>
 
+                            {/* บัญชีธนาคาร */}
+                            {(d.bankName || d.bankBranch || d.bankAccountNo) && (
+                                <Section icon="🏦" title="บัญชีธนาคาร" description="บัญชีรับทุนการศึกษา">
+                                    <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                                        <Field label="ธนาคาร"      value={d.bankName} />
+                                        <Field label="สาขา"        value={d.bankBranch} />
+                                        <Field label="เลขที่บัญชี" value={d.bankAccountNo} mono fullWidth />
+                                    </div>
+                                </Section>
+                            )}
+
+                            {/* การเดินทาง */}
+                            {(d.departureDateTH || d.arrivalDateJP) && (
+                                <Section icon="✈️" title="การเดินทาง" description="ข้อมูลวันเดินทางไป-กลับ">
+                                    <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                                        <Field label="วันเดินทางออกจากไทย" value={formatDate(d.departureDateTH)} />
+                                        <Field label="วันที่ถึงญี่ปุ่น"     value={formatDate(d.arrivalDateJP)} />
+                                    </div>
+                                </Section>
+                            )}
+
                             {/* หมายเหตุ */}
                             {d.note && (
                                 <Section icon="📝" title="หมายเหตุ">
@@ -1059,6 +1086,36 @@ function StudentDetail({ student, students, updateStudent, deleteStudent, histor
                                     </div>
                                 </Section>
                             </div>
+
+                            {/* บัญชีธนาคาร */}
+                            <Section icon="🏦" title="บัญชีธนาคาร" description="บัญชีรับทุนการศึกษา">
+                                <div className="grid gap-4 sm:grid-cols-3">
+                                    <EField label="ธนาคาร">
+                                        <input type="text" value={form.bankName ?? ""} onChange={set("bankName")}
+                                            placeholder="กสิกรไทย / ไทยพาณิชย์ / กรุงเทพ" className={inputCls} />
+                                    </EField>
+                                    <EField label="สาขา">
+                                        <input type="text" value={form.bankBranch ?? ""} onChange={set("bankBranch")}
+                                            placeholder="สาขาลาดพร้าว" className={inputCls} />
+                                    </EField>
+                                    <EField label="เลขที่บัญชี">
+                                        <input type="text" value={form.bankAccountNo ?? ""} onChange={set("bankAccountNo")}
+                                            placeholder="000-0-00000-0" className={inputCls} />
+                                    </EField>
+                                </div>
+                            </Section>
+
+                            {/* การเดินทาง */}
+                            <Section icon="✈️" title="การเดินทาง" description="ข้อมูลวันเดินทางไป-กลับ">
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    <EField label="วันเดินทางออกจากไทย">
+                                        <input type="date" value={form.departureDateTH ?? ""} onChange={set("departureDateTH")} className={inputCls} />
+                                    </EField>
+                                    <EField label="วันที่ถึงญี่ปุ่น">
+                                        <input type="date" value={form.arrivalDateJP ?? ""} onChange={set("arrivalDateJP")} className={inputCls} />
+                                    </EField>
+                                </div>
+                            </Section>
 
                             {/* หมายเหตุ */}
                             <Section icon="📝" title="หมายเหตุ" description="ข้อมูลเพิ่มเติม (ไม่บังคับ)">

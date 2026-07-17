@@ -5,7 +5,7 @@ import { DEFAULT_STUDENTS } from "@/lib/studentData";
 
 const STORAGE_KEY = "kosen_students";
 const SEED_VERSION_KEY = "kosen_students_seed_version";
-const SEED_VERSION = `v${DEFAULT_STUDENTS.length}r4`;
+const SEED_VERSION = `v${DEFAULT_STUDENTS.length}r7`;
 
 const StudentContext = createContext(null);
 
