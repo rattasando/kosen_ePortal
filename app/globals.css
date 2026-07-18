@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+@utility grid-cols-16 { grid-template-columns: repeat(16, minmax(0, 1fr)); }
+@utility col-span-13  { grid-column: span 13 / span 13; }
+@utility col-span-14  { grid-column: span 14 / span 14; }
+@utility col-span-16  { grid-column: span 16 / span 16; }
+
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;

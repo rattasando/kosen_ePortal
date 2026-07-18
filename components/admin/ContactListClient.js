@@ -44,19 +44,45 @@ function DeleteButton({ onDelete }) {
 }
 
 const SPAN_OPTS = [
-  { value: 0.5, label: "½",  title: "½ ช่อง (12.5%)" },
-  { value: 1,   label: "1",  title: "1 ช่อง (25%)" },
-  { value: 1.5, label: "1½", title: "1½ ช่อง (37.5%)" },
-  { value: 2,   label: "2",  title: "2 ช่อง (50%)" },
-  { value: 2.5, label: "2½", title: "2½ ช่อง (62.5%)" },
-  { value: 3,   label: "3",  title: "3 ช่อง (75%)" },
-  { value: 3.5, label: "3½", title: "3½ ช่อง (87.5%)" },
-  { value: 4,   label: "4",  title: "เต็มแถว (100%)" },
+  { value: 0.5,  label: "½",   title: "½ ช่อง (12.5%)" },
+  { value: 0.75, label: "¾",   title: "¾ ช่อง (18.75%)" },
+  { value: 1,    label: "1",   title: "1 ช่อง (25%)" },
+  { value: 1.5,  label: "1½",  title: "1½ ช่อง (37.5%)" },
+  { value: 2,    label: "2",   title: "2 ช่อง (50%)" },
+  { value: 2.5,  label: "2½",  title: "2½ ช่อง (62.5%)" },
+  { value: 3,    label: "3",   title: "3 ช่อง (75%)" },
+  { value: 3.5,  label: "3½",  title: "3½ ช่อง (87.5%)" },
+  { value: 4,    label: "4",   title: "เต็มแถว (100%)" },
 ];
-// grid-cols-8: span 0.5 → col-span-1, span 1 → col-span-2, … span 4 → col-span-8
+// grid-cols-16: span 0.5 → col-span-2, span 0.75 → col-span-3, span 1 → col-span-4, … span 4 → col-span-16
 const SPAN_CLASS = {
-  0.5: "col-span-1", 1: "col-span-2", 1.5: "col-span-3", 2: "col-span-4",
-  2.5: "col-span-5", 3: "col-span-6", 3.5: "col-span-7", 4: "col-span-8",
+  0.5:  "col-span-2",  0.75: "col-span-3",  1:   "col-span-4",
+  1.5:  "col-span-6",  2:    "col-span-8",   2.5: "col-span-10",
+  3:    "col-span-12", 3.5:  "col-span-14",  4:   "col-span-16",
+};
+const ICON_CLASS = {
+  0.5:  "h-7 w-7 text-base",  0.75: "h-8 w-8 text-lg",   1:   "h-9 w-9 text-xl",
+  1.5:  "h-10 w-10 text-xl",  2:    "h-11 w-11 text-2xl", 2.5: "h-11 w-11 text-2xl",
+  3:    "h-12 w-12 text-2xl", 3.5:  "h-12 w-12 text-2xl", 4:   "h-12 w-12 text-2xl",
+};
+const PAD_CLASS = {
+  0.5:  "p-3", 0.75: "p-3", 1:   "p-4",
+  1.5:  "p-5", 2:    "p-6", 2.5: "p-6",
+  3:    "p-6", 3.5:  "p-6", 4:   "p-6",
+};
+const FONT_OPTS = [
+  { value: "xs",   label: "XS" },
+  { value: "sm",   label: "S"  },
+  { value: "base", label: "M"  },
+  { value: "lg",   label: "L"  },
+  { value: "xl",   label: "XL" },
+];
+const FONT_CLASSES = {
+  xs:   { label: "text-xs",   body: "text-xs"   },
+  sm:   { label: "text-xs",   body: "text-sm"   },
+  base: { label: "text-sm",   body: "text-base" },
+  lg:   { label: "text-sm",   body: "text-lg"   },
+  xl:   { label: "text-base", body: "text-xl"   },
 };
 
 // ── Size picker (dropdown) ──
@@ -95,6 +121,45 @@ function SizeToggle({ span, onChange }) {
                 title={o.title}
                 className={`rounded-lg py-1 text-xs font-bold transition-colors ${(span ?? 1) === o.value ? "bg-primary text-white" : "text-muted hover:bg-surface-muted hover:text-foreground"}`}
               >
+                {o.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Font size picker ──
+function FontToggle({ fontSize, onChange }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const current = FONT_OPTS.find((o) => o.value === (fontSize ?? "base")) ?? FONT_OPTS[2];
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        title="ปรับขนาดฟอนต์"
+        className={`flex h-7 items-center gap-1 rounded-lg border px-2 text-xs font-bold transition-colors ${open ? "border-primary bg-primary text-white" : "border-border text-muted hover:border-primary hover:text-primary"}`}
+      >
+        T<span className="text-[10px]">{current.label}</span>
+      </button>
+      {open && (
+        <div className="absolute right-0 top-8 z-50 rounded-xl border border-border bg-surface shadow-xl p-1.5 min-w-[5rem]">
+          <p className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted">ฟอนต์</p>
+          <div className="flex flex-col gap-0.5">
+            {FONT_OPTS.map((o) => (
+              <button key={o.value} onClick={() => { onChange(o.value); setOpen(false); }}
+                className={`rounded-lg px-2 py-1 text-xs font-bold text-left transition-colors ${(fontSize ?? "base") === o.value ? "bg-primary text-white" : "text-muted hover:bg-surface-muted hover:text-foreground"}`}>
                 {o.label}
               </button>
             ))}
@@ -221,38 +286,44 @@ function MainInfoSection() {
     <div className="rounded-2xl border border-border bg-surface p-5 space-y-4">
       <SectionHeader title="ข้อมูลสำนักงานกลาง" desc="ที่อยู่ โทรศัพท์ อีเมล และเวลาทำการ" onAdd={() => setModal({})} />
       <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">⚠️ Preview นี้แคบกว่าหน้าจริงเนื่องจาก sidebar — ถ้า text ตกบรรทัดในหน้าจริง ให้เพิ่มขนาด card</p>
-      <div className="grid gap-5 grid-cols-8">
+      <div className="grid gap-5 grid-cols-16">
         {main.map((item, idx) => {
           const span = item.span ?? 1;
+          const iconCls = ICON_CLASS[span] ?? "h-10 w-10 text-xl";
+          const padCls = PAD_CLASS[span] ?? "p-5";
+          const fc = FONT_CLASSES[item.fontSize ?? "base"] ?? FONT_CLASSES.base;
           return (
             <div
               key={item.id}
               {...dragProps(idx)}
-              className={`relative rounded-xl border p-6 transition-all select-none flex flex-col gap-2 ${overIdx === idx ? "border-primary bg-accent-soft/30" : "border-border"} ${SPAN_CLASS[span] ?? "col-span-2"}`}
+              className={`relative rounded-xl border ${padCls} transition-all select-none flex flex-col gap-2 ${overIdx === idx ? "border-primary bg-accent-soft/30" : "border-border"} ${SPAN_CLASS[span] ?? "col-span-2"}`}
             >
               {/* top toolbar */}
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center justify-between gap-1 flex-wrap">
                 <div className="cursor-grab text-muted active:cursor-grabbing"><DragHandle /></div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 flex-wrap">
+                  <FontToggle fontSize={item.fontSize} onChange={(f) => updateMainItem(item.id, { fontSize: f })} />
                   <SizeToggle span={span} onChange={(s) => updateMainItem(item.id, { span: s })} />
                   <button onClick={() => setModal({ item })} className="rounded-lg border border-border px-2.5 py-1 text-xs text-muted hover:border-primary hover:text-primary transition-colors">แก้ไข</button>
                   <DeleteButton onDelete={() => deleteMainItem(item.id)} />
                 </div>
               </div>
-              {/* preview — ตรงกับ public/contact */}
-              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-accent-soft text-2xl">
-                {item.icon}
+              {/* preview */}
+              <div className="flex items-center gap-2 mb-1">
+                <div className={`flex shrink-0 items-center justify-center rounded-xl bg-accent-soft ${iconCls}`}>
+                  {item.icon}
+                </div>
+                <p className={`${fc.label} font-semibold uppercase tracking-wide text-muted`}>{item.label}</p>
               </div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-muted mb-1">{item.label}</p>
               {item.href ? (
-                <a href={item.href} className="font-medium text-primary hover:underline text-base leading-relaxed"
+                <a href={item.href} className={`font-medium text-primary hover:underline ${fc.body} leading-relaxed`}
                   {...(item.href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}>
                   {item.lines[0]}
                 </a>
               ) : (
                 <div className="space-y-0.5">
                   {item.lines.map((line, i) => (
-                    <p key={i} className="text-base font-medium text-foreground leading-relaxed">{line}</p>
+                    <p key={i} className={`${fc.body} font-medium text-foreground leading-relaxed`}>{line}</p>
                   ))}
                 </div>
               )}
@@ -272,7 +343,7 @@ function UniversityModal({ item, onClose, onSave }) {
   const isEdit = !!item;
   const [form, setForm] = useState(
     item ? { ...item } :
-    { id: "", name: "", fullName: "", location: "", phone: "", email: "", color: COLOR_OPTIONS[0].value, dot: COLOR_OPTIONS[0].dot, span: 1 }
+    { id: "", name: "", fullName: "", location: "", phone: "", email: "", website: "", facebook: "", color: COLOR_OPTIONS[0].value, dot: COLOR_OPTIONS[0].dot, span: 1 }
   );
 
   useEffect(() => {
@@ -322,6 +393,16 @@ function UniversityModal({ item, onClose, onSave }) {
               <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={inputCls} placeholder="kosen@uni.ac.th" />
             </div>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={`mb-1 block ${labelCls}`}>เว็บไซต์</label>
+              <input value={form.website ?? ""} onChange={(e) => setForm({ ...form, website: e.target.value })} className={inputCls} placeholder="https://kosen.kmitl.ac.th" />
+            </div>
+            <div>
+              <label className={`mb-1 block ${labelCls}`}>Facebook</label>
+              <input value={form.facebook ?? ""} onChange={(e) => setForm({ ...form, facebook: e.target.value })} className={inputCls} placeholder="https://facebook.com/..." />
+            </div>
+          </div>
           <div>
             <label className={`mb-2 block ${labelCls}`}>สีธีม</label>
             <div className="flex flex-wrap gap-2">
@@ -365,47 +446,62 @@ function UniversitiesSection() {
   return (
     <div className="rounded-2xl border border-border bg-surface p-5 space-y-4">
       <SectionHeader title="มหาวิทยาลัยพาร์ทเนอร์" desc="ข้อมูลติดต่อแต่ละสถาบัน" onAdd={() => setModal({})} />
-      <div className="grid gap-5 grid-cols-8">
+      <div className="grid gap-5 grid-cols-16">
         {universities.map((u, idx) => {
           const span = u.span ?? 1;
+          const padCls = PAD_CLASS[span] ?? "p-5";
+          const fc = FONT_CLASSES[u.fontSize ?? "base"] ?? FONT_CLASSES.base;
           return (
             <div
               key={u.id}
               {...dragProps(idx)}
-              className={`rounded-xl border p-6 flex flex-col gap-2 transition-all select-none ${overIdx === idx ? "border-primary bg-accent-soft/30" : "border-border"} ${SPAN_CLASS[span] ?? "col-span-2"}`}
+              className={`rounded-xl border ${padCls} flex flex-col gap-2 transition-all select-none ${overIdx === idx ? "border-primary bg-accent-soft/30" : "border-border"} ${SPAN_CLASS[span] ?? "col-span-2"}`}
             >
               {/* top toolbar */}
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center justify-between gap-1 flex-wrap">
                 <div className="cursor-grab text-muted active:cursor-grabbing"><DragHandle /></div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 flex-wrap">
+                  <FontToggle fontSize={u.fontSize} onChange={(f) => updateUniversity(u.id, { fontSize: f })} />
                   <SizeToggle span={span} onChange={(s) => updateUniversity(u.id, { span: s })} />
                   <button onClick={() => setModal({ item: u })} className="rounded-lg border border-border px-2.5 py-1 text-xs text-muted hover:border-primary hover:text-primary transition-colors">แก้ไข</button>
                   <DeleteButton onDelete={() => deleteUniversity(u.id)} />
                 </div>
               </div>
-              {/* preview — ตรงกับ public/contact */}
-              <div className="mb-3">
-                <span className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1 text-sm font-bold ${u.color}`}>
+              {/* preview */}
+              <div className="mb-2">
+                <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-0.5 text-sm font-bold ${u.color}`}>
                   <span className={`h-1.5 w-1.5 rounded-full ${u.dot}`} />{u.name}
                 </span>
               </div>
-              <h3 className="text-base font-bold text-foreground leading-snug mb-3">{u.fullName}</h3>
-              <div className="space-y-2">
+              <h3 className={`${fc.body} font-bold text-foreground leading-snug mb-2`}>{u.fullName}</h3>
+              <div className="space-y-1.5">
                 {u.location && (
-                  <div className="flex items-center gap-2 text-base text-muted">
+                  <div className={`flex items-center gap-2 ${fc.body} text-muted`}>
                     <span>📍</span><span>{u.location}</span>
                   </div>
                 )}
                 {u.phone && (
-                  <div className="flex items-center gap-2 text-base">
+                  <div className={`flex items-center gap-2 ${fc.body}`}>
                     <span>📞</span>
                     <a href={`tel:${u.phone.replace(/\s/g,"")}`} className="text-primary hover:underline font-medium">{u.phone}</a>
                   </div>
                 )}
                 {u.email && (
-                  <div className="flex items-center gap-2 text-base">
+                  <div className={`flex items-center gap-2 ${fc.body}`}>
                     <span>✉️</span>
                     <a href={`mailto:${u.email}`} className="text-primary hover:underline font-medium">{u.email}</a>
+                  </div>
+                )}
+                {u.website && (
+                  <div className={`flex items-center gap-2 ${fc.body}`}>
+                    <span>🌐</span>
+                    <a href={u.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium truncate">{u.website}</a>
+                  </div>
+                )}
+                {u.facebook && (
+                  <div className={`flex items-center gap-2 ${fc.body}`}>
+                    <span>📘</span>
+                    <a href={u.facebook} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium truncate">{u.facebook}</a>
                   </div>
                 )}
               </div>
@@ -492,30 +588,34 @@ function SocialSection() {
   return (
     <div className="rounded-2xl border border-border bg-surface p-5 space-y-4">
       <SectionHeader title="โซเชียลมีเดีย" desc="ช่องทาง Social ของโครงการ" onAdd={() => setModal({})} />
-      <div className="grid gap-5 grid-cols-8">
+      <div className="grid gap-5 grid-cols-16">
         {social.map((s, idx) => {
           const span = s.span ?? 1;
+          const iconCls = ICON_CLASS[span] ?? "h-10 w-10 text-xl";
+          const padCls = PAD_CLASS[span] ?? "p-5";
+          const fc = FONT_CLASSES[s.fontSize ?? "base"] ?? FONT_CLASSES.base;
           return (
             <div
               key={s.id}
               {...dragProps(idx)}
-              className={`flex flex-col gap-2 rounded-xl border p-6 transition-all select-none ${overIdx === idx ? "border-primary bg-accent-soft/30" : "border-border"} ${SPAN_CLASS[span] ?? "col-span-2"}`}
+              className={`flex flex-col gap-2 rounded-xl border ${padCls} transition-all select-none ${overIdx === idx ? "border-primary bg-accent-soft/30" : "border-border"} ${SPAN_CLASS[span] ?? "col-span-2"}`}
             >
               {/* top toolbar */}
-              <div className="flex items-center justify-between gap-1">
+              <div className="flex items-center justify-between gap-1 flex-wrap">
                 <div className="cursor-grab text-muted active:cursor-grabbing"><DragHandle /></div>
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 flex-wrap">
+                  <FontToggle fontSize={s.fontSize} onChange={(f) => updateSocial(s.id, { fontSize: f })} />
                   <SizeToggle span={span} onChange={(sv) => updateSocial(s.id, { span: sv })} />
                   <button onClick={() => setModal({ item: s })} className="rounded-lg border border-border px-2.5 py-1 text-xs text-muted hover:border-primary hover:text-primary transition-colors">แก้ไข</button>
                   <DeleteButton onDelete={() => deleteSocial(s.id)} />
                 </div>
               </div>
-              {/* preview — ตรงกับ public/contact */}
-              <div className="flex items-center gap-4">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-2xl">{s.icon}</div>
+              {/* preview */}
+              <div className="flex items-center gap-3">
+                <div className={`flex shrink-0 items-center justify-center rounded-xl bg-accent-soft ${iconCls}`}>{s.icon}</div>
                 <div className="min-w-0">
-                  <p className="text-base font-bold text-foreground">{s.label}</p>
-                  <p className="text-sm text-muted truncate">{s.handle}</p>
+                  <p className={`${fc.body} font-bold text-foreground`}>{s.label}</p>
+                  <p className={`${fc.label} text-muted truncate`}>{s.handle}</p>
                 </div>
               </div>
             </div>

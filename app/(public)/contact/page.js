@@ -10,8 +10,26 @@ const FALLBACK_COLORS = [
 ];
 const FALLBACK_DOTS = ["bg-blue-500", "bg-green-500", "bg-violet-500", "bg-amber-500"];
 const SPAN_CLASS = {
-  0.5: "col-span-1", 1: "col-span-2", 1.5: "col-span-3", 2: "col-span-4",
-  2.5: "col-span-5", 3: "col-span-6", 3.5: "col-span-7", 4: "col-span-8",
+  0.5:  "col-span-2",  0.75: "col-span-3",  1:   "col-span-4",
+  1.5:  "col-span-6",  2:    "col-span-8",   2.5: "col-span-10",
+  3:    "col-span-12", 3.5:  "col-span-14",  4:   "col-span-16",
+};
+const ICON_CLASS = {
+  0.5:  "h-7 w-7 text-base",  0.75: "h-8 w-8 text-lg",   1:   "h-9 w-9 text-xl",
+  1.5:  "h-10 w-10 text-xl",  2:    "h-11 w-11 text-2xl", 2.5: "h-11 w-11 text-2xl",
+  3:    "h-12 w-12 text-2xl", 3.5:  "h-12 w-12 text-2xl", 4:   "h-12 w-12 text-2xl",
+};
+const PAD_CLASS = {
+  0.5:  "p-3", 0.75: "p-3", 1:   "p-4",
+  1.5:  "p-5", 2:    "p-6", 2.5: "p-6",
+  3:    "p-6", 3.5:  "p-6", 4:   "p-6",
+};
+const FONT_CLASSES = {
+  xs:   { label: "text-xs",   body: "text-xs"   },
+  sm:   { label: "text-xs",   body: "text-sm"   },
+  base: { label: "text-sm",   body: "text-base" },
+  lg:   { label: "text-sm",   body: "text-lg"   },
+  xl:   { label: "text-base", body: "text-xl"   },
 };
 
 export default function ContactPage() {
@@ -41,32 +59,40 @@ export default function ContactPage() {
           สำนักงานกลาง
         </h2>
 
-        <div className="grid gap-5 grid-cols-4 lg:grid-cols-8">
-          {main.map((c) => (
-            <div key={c.id} className={`card p-6 ${SPAN_CLASS[c.span ?? 1] ?? "col-span-2"}`}>
-              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-accent-soft text-2xl">
-                {c.icon}
-              </div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-muted mb-1">
-                {c.label}
-              </p>
-              {c.href ? (
-                <a
-                  href={c.href}
-                  className="font-medium text-primary hover:underline text-base leading-relaxed"
-                  {...(c.href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-                >
-                  {c.lines[0]}
-                </a>
-              ) : (
-                <div className="space-y-0.5">
-                  {c.lines.map((line, i) => (
-                    <p key={i} className="text-base font-medium text-foreground leading-relaxed">{line}</p>
-                  ))}
+        <div className="grid gap-5 grid-cols-8 lg:grid-cols-16">
+          {main.map((c) => {
+            const span = c.span ?? 1;
+            const iconCls = ICON_CLASS[span] ?? "h-10 w-10 text-xl";
+            const padCls = PAD_CLASS[span] ?? "p-5";
+            const fc = FONT_CLASSES[c.fontSize ?? "base"] ?? FONT_CLASSES.base;
+            return (
+              <div key={c.id} className={`card ${padCls} ${SPAN_CLASS[span] ?? "col-span-2"}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className={`flex shrink-0 items-center justify-center rounded-xl bg-accent-soft ${iconCls}`}>
+                    {c.icon}
+                  </div>
+                  <p className={`${fc.label} font-semibold uppercase tracking-wide text-muted`}>
+                    {c.label}
+                  </p>
                 </div>
-              )}
-            </div>
-          ))}
+                {c.href ? (
+                  <a
+                    href={c.href}
+                    className={`font-medium text-primary hover:underline ${fc.body} leading-relaxed`}
+                    {...(c.href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                  >
+                    {c.lines[0]}
+                  </a>
+                ) : (
+                  <div className="space-y-0.5">
+                    {c.lines.map((line, i) => (
+                      <p key={i} className={`${fc.body} font-medium text-foreground leading-relaxed`}>{line}</p>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -78,37 +104,54 @@ export default function ContactPage() {
               ติดต่อแต่ละมหาวิทยาลัย
             </h2>
 
-            <div className="grid gap-5 grid-cols-4 lg:grid-cols-8">
-              {universities.map((u, idx) => (
-                <div key={u.id} className={`card p-6 ${SPAN_CLASS[u.span ?? 1] ?? "col-span-2"}`}>
+            <div className="grid gap-5 grid-cols-8 lg:grid-cols-16">
+              {universities.map((u, idx) => {
+                const span = u.span ?? 1;
+                const padCls = PAD_CLASS[span] ?? "p-5";
+                const fc = FONT_CLASSES[u.fontSize ?? "base"] ?? FONT_CLASSES.base;
+                return (
+                <div key={u.id} className={`card ${padCls} ${SPAN_CLASS[span] ?? "col-span-2"}`}>
                   <div className="mb-3">
                     <span className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1 text-sm font-bold ${u.color ?? FALLBACK_COLORS[idx % FALLBACK_COLORS.length]}`}>
                       <span className={`h-1.5 w-1.5 rounded-full ${u.dot ?? FALLBACK_DOTS[idx % FALLBACK_DOTS.length]}`} />
                       {u.name}
                     </span>
                   </div>
-                  <h3 className="text-base font-bold text-foreground leading-snug mb-3">{u.fullName}</h3>
+                  <h3 className={`${fc.body} font-bold text-foreground leading-snug mb-3`}>{u.fullName}</h3>
                   <div className="space-y-2">
                     {u.location && (
-                      <div className="flex items-center gap-2 text-base text-muted">
+                      <div className={`flex items-center gap-2 ${fc.body} text-muted`}>
                         <span>📍</span><span>{u.location}</span>
                       </div>
                     )}
                     {u.phone && (
-                      <div className="flex items-center gap-2 text-base">
+                      <div className={`flex items-center gap-2 ${fc.body}`}>
                         <span>📞</span>
                         <a href={`tel:${u.phone.replace(/\s/g, "")}`} className="text-primary hover:underline font-medium">{u.phone}</a>
                       </div>
                     )}
                     {u.email && (
-                      <div className="flex items-center gap-2 text-base">
+                      <div className={`flex items-center gap-2 ${fc.body}`}>
                         <span>✉️</span>
                         <a href={`mailto:${u.email}`} className="text-primary hover:underline font-medium">{u.email}</a>
                       </div>
                     )}
+                    {u.website && (
+                      <div className={`flex items-center gap-2 ${fc.body}`}>
+                        <span>🌐</span>
+                        <a href={u.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">{u.website}</a>
+                      </div>
+                    )}
+                    {u.facebook && (
+                      <div className={`flex items-center gap-2 ${fc.body}`}>
+                        <span>📘</span>
+                        <a href={u.facebook} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-medium">{u.facebook}</a>
+                      </div>
+                    )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
@@ -121,23 +164,29 @@ export default function ContactPage() {
             ติดตามเราได้ที่
           </h2>
 
-          <div className="grid gap-4 grid-cols-4 lg:grid-cols-8">
-            {social.map((s) => (
+          <div className="grid gap-4 grid-cols-8 lg:grid-cols-16">
+            {social.map((s) => {
+              const span = s.span ?? 1;
+              const iconCls = ICON_CLASS[span] ?? "h-10 w-10 text-xl";
+              const padCls = PAD_CLASS[span] ?? "p-5";
+              const fc = FONT_CLASSES[s.fontSize ?? "base"] ?? FONT_CLASSES.base;
+              return (
               <a
                 key={s.id}
                 href={s.href || "#"}
-                className={`card card-hover p-5 flex flex-row items-center gap-4 ${SPAN_CLASS[s.span ?? 1] ?? "col-span-2"}`}
+                className={`card card-hover ${padCls} flex flex-row items-center gap-3 ${SPAN_CLASS[span] ?? "col-span-2"}`}
                 {...(s.href?.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}
               >
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-2xl">
+                <div className={`flex shrink-0 items-center justify-center rounded-xl bg-accent-soft ${iconCls}`}>
                   {s.icon}
                 </div>
-                <div>
-                  <p className="text-base font-bold text-foreground">{s.label}</p>
-                  <p className="text-sm text-muted">{s.handle}</p>
+                <div className="min-w-0">
+                  <p className={`${fc.body} font-bold text-foreground`}>{s.label}</p>
+                  <p className={`${fc.label} text-muted truncate`}>{s.handle}</p>
                 </div>
               </a>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
