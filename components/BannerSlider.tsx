@@ -30,11 +30,38 @@ interface Slide {
   secondaryHref?: string;
   image: string;
   imagePosition?: string;
+  textSize?: "sm" | "base" | "lg" | "xl";
+  textAlign?: "left" | "center" | "right";
   status: "active" | "inactive";
   order: number;
   newsId?: string;
   badge?: string;
 }
+
+const ALIGN_TEXT: Record<string, string> = {
+  left: "text-left", center: "text-center", right: "text-right",
+};
+const ALIGN_FLEX: Record<string, string> = {
+  left: "justify-start", center: "justify-center", right: "justify-end",
+};
+const ALIGN_CONTAINER: Record<string, string> = {
+  left: "", center: "mx-auto", right: "ml-auto",
+};
+
+const HEADLINE_CLS: Record<string, string> = {
+  xs:   "text-xl md:text-2xl lg:text-3xl",
+  sm:   "text-2xl md:text-3xl lg:text-4xl",
+  base: "text-3xl md:text-4xl lg:text-5xl",
+  lg:   "text-4xl md:text-5xl lg:text-6xl",
+  xl:   "text-5xl md:text-6xl lg:text-7xl",
+};
+const BODY_CLS: Record<string, string> = {
+  xs:   "text-xs md:text-sm",
+  sm:   "text-sm md:text-base",
+  base: "text-base md:text-lg",
+  lg:   "text-lg md:text-xl",
+  xl:   "text-xl md:text-2xl",
+};
 
 interface ContentProps {
   slide: Slide;
@@ -63,10 +90,15 @@ function useBannerSlides(): Slide[] {
     load();
 
     const onStorage = (e: StorageEvent) => {
-      if (e.key === BANNER_STORAGE_KEY) load();
+      if (e.key === BANNER_STORAGE_KEY || e.key === null) load();
     };
+    const onVisible = () => { if (document.visibilityState === "visible") load(); };
     window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, []);
 
   return slides;
@@ -74,20 +106,26 @@ function useBannerSlides(): Slide[] {
 
 // ── Slide content renderers ────────────────────────────────
 function HeroContent({ slide, animating, onPause, onResume }: ContentProps) {
+  const ta = slide.textAlign ?? "left";
+  const atxt = ALIGN_TEXT[ta];
+  const aflex = ALIGN_FLEX[ta];
+  const acont = ALIGN_CONTAINER[ta];
   return (
     <div
       key={slide.id}
-      className={`max-w-2xl transition-all duration-500 ${animating ? "translate-x-4 opacity-0" : "translate-x-0 opacity-100"}`}
+      className={`max-w-2xl transition-all duration-500 ${acont} ${animating ? "translate-x-4 opacity-0" : "translate-x-0 opacity-100"}`}
     >
-      <p className="mb-4 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-white/70">
-        <span className="h-px w-8 bg-white/50" />
-        {slide.eyebrow}
-      </p>
-      <h1 className="text-3xl font-extrabold leading-tight tracking-tight md:text-4xl lg:text-5xl">
+      {slide.eyebrow && (
+        <p className={`mb-4 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-white/70 ${ta === "right" ? "flex-row-reverse" : ""} ${ta === "center" ? "justify-center w-full" : ""}`}>
+          <span className="h-px w-8 bg-white/50" />
+          {slide.eyebrow}
+        </p>
+      )}
+      <h1 className={`font-extrabold leading-tight tracking-tight ${HEADLINE_CLS[slide.textSize ?? "sm"]} ${atxt}`}>
         {slide.headline}
       </h1>
-      {slide.body && <p className="mt-4 text-base text-white/80 md:text-lg max-w-2xl">{slide.body}</p>}
-      <div className="mt-6 flex flex-wrap gap-3">
+      {slide.body && <p className={`mt-4 text-white/80 max-w-2xl ${BODY_CLS[slide.textSize ?? "sm"]} ${atxt}`}>{slide.body}</p>}
+      <div className={`mt-6 flex flex-wrap gap-3 ${aflex}`}>
         <Link href={slide.ctaHref} className="btn-primary text-base px-6 py-3" onMouseEnter={onPause} onMouseLeave={onResume}>
           {slide.ctaLabel}
         </Link>
@@ -249,10 +287,10 @@ function ActivityContent({ slide, animating, onPause, onResume }: ContentProps) 
 function NewsSingleContent({ slide, animating, onPause, onResume }: ContentProps) {
   const { news: allNews } = useNews();
   const pub = publishedNews(allNews);
-  // Look up by news.id first; fall back to index for legacy data
   const news = pub.find((n) => n.id === slide.newsId)
     ?? pub[parseInt(slide.newsId ?? "0", 10)]
     ?? pub[0];
+  const atxt = ALIGN_TEXT[slide.textAlign ?? "left"];
   return (
     <div
       key={slide.id}
@@ -266,9 +304,9 @@ function NewsSingleContent({ slide, animating, onPause, onResume }: ContentProps
         <div className="min-w-0">
           {(() => {
             const text = slide.headline?.trim() || news.title;
-            const long = text.length > 50;
+            const sizeCls = HEADLINE_CLS[slide.textSize ?? "sm"] ?? "text-2xl md:text-3xl lg:text-4xl";
             return (
-              <h1 className={`font-extrabold leading-tight tracking-tight line-clamp-3 ${long ? "text-2xl md:text-3xl lg:text-4xl" : "text-3xl md:text-4xl lg:text-5xl"}`}>
+              <h1 className={`font-extrabold leading-tight tracking-tight line-clamp-3 ${sizeCls} ${atxt}`}>
                 {text}
               </h1>
             );

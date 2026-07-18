@@ -164,6 +164,13 @@ a {
   max-width: 42rem;
 }
 
+/* contentEditable placeholder for banner live editor */
+[data-ph]:empty::before {
+  content: attr(data-ph);
+  color: rgba(255, 255, 255, 0.35);
+  pointer-events: none;
+}
+
 .page-container {
   width: 100%;
   max-width: 72rem;

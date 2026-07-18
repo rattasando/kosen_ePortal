@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react";
 import Image from "next/image";
 import { useBanners } from "./BannerContext";
 import { useNews } from "./NewsContext";
@@ -76,6 +76,38 @@ function nextId(banners) {
   return `BNR${String((nums.length ? Math.max(...nums) : 0) + 1).padStart(3, "0")}`;
 }
 
+const TEXT_ALIGN_OPTS = [
+  { value: "left",   label: "←",  title: "ชิดซ้าย"  },
+  { value: "center", label: "↔",  title: "กึ่งกลาง" },
+  { value: "right",  label: "→",  title: "ชิดขวา"  },
+];
+const ALIGN_TEXT  = { left: "text-left",     center: "text-center",    right: "text-right"    };
+const ALIGN_FLEX  = { left: "justify-start", center: "justify-center", right: "justify-end"   };
+const ALIGN_CONT  = { left: "",              center: "mx-auto",        right: "ml-auto"       };
+
+const TEXT_SIZE_OPTS = [
+  { value: "xs",   label: "XS", desc: "เล็กมาก" },
+  { value: "sm",   label: "S",  desc: "เล็ก" },
+  { value: "base", label: "M",  desc: "กลาง" },
+  { value: "lg",   label: "L",  desc: "ใหญ่" },
+  { value: "xl",   label: "XL", desc: "ใหญ่มาก" },
+];
+// ต้องตรงกับ HEADLINE_CLS / BODY_CLS ใน BannerSlider.tsx
+const BANNER_HEADLINE_CLS = {
+  xs:   "text-xl md:text-2xl lg:text-3xl",
+  sm:   "text-2xl md:text-3xl lg:text-4xl",
+  base: "text-3xl md:text-4xl lg:text-5xl",
+  lg:   "text-4xl md:text-5xl lg:text-6xl",
+  xl:   "text-5xl md:text-6xl lg:text-7xl",
+};
+const BANNER_BODY_CLS = {
+  xs:   "text-xs md:text-sm",
+  sm:   "text-sm md:text-base",
+  base: "text-base md:text-lg",
+  lg:   "text-lg md:text-xl",
+  xl:   "text-xl md:text-2xl",
+};
+
 function emptyForm() {
   return {
     layout: "hero",
@@ -90,6 +122,8 @@ function emptyForm() {
     secondaryHref: "",
     image: PRESET_IMAGES[0],
     imagePosition: "center",
+    textSize: "sm",
+    textAlign: "left",
     status: "active",
   };
 }
@@ -242,12 +276,39 @@ function ImageUploader({ value, onChange }) {
 
 // ── NewsPicker ─────────────────────────────────────────────────
 function NewsPicker({ value, onChange, pubNews }) {
+  const [search, setSearch] = useState("");
+
   if (!pubNews.length) {
     return <p className="text-xs text-muted">ไม่มีข่าวที่เผยแพร่อยู่ในระบบ</p>;
   }
+
+  const q = search.trim().toLowerCase();
+  const filtered = q
+    ? pubNews.filter((n) => n.title.toLowerCase().includes(q) || n.category.toLowerCase().includes(q))
+    : pubNews;
+
   return (
-    <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-      {pubNews.map((n) => {
+    <div>
+      {/* Search / filter */}
+      <div className="relative mb-2">
+        <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-sm text-muted select-none">🔍</span>
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="ค้นหาชื่อข่าวหรือหมวดหมู่…"
+          className="w-full rounded-lg border border-border bg-surface py-2 pl-8 pr-8 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft placeholder:text-muted"
+        />
+        {search && (
+          <button type="button" onClick={() => setSearch("")}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-foreground text-xs leading-none">✕</button>
+        )}
+      </div>
+
+      <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
+        {filtered.length === 0 ? (
+          <p className="py-4 text-center text-xs text-muted">ไม่พบข่าวที่ตรงกับการค้นหา</p>
+        ) : filtered.map((n) => {
         const selected = value === n.id;
         return (
           <button
@@ -276,7 +337,30 @@ function NewsPicker({ value, onChange, pubNews }) {
           </button>
         );
       })}
+      </div>
     </div>
+  );
+}
+
+// ── EditableField ─────────────────────────────────────────────
+// contentEditable ที่ sync กับ form state ได้ — ใช้ใน live banner editor
+function EditableField({ value, onChange, tag: Tag = "div", className = "", placeholder = "", multiline = false }) {
+  const ref = useRef(null);
+  useLayoutEffect(() => {
+    if (ref.current && ref.current.textContent !== (value ?? "")) {
+      ref.current.textContent = value ?? "";
+    }
+  }, [value]);
+  return (
+    <Tag
+      ref={ref}
+      contentEditable
+      suppressContentEditableWarning
+      data-ph={placeholder}
+      onInput={(e) => onChange(e.currentTarget.textContent ?? "")}
+      onKeyDown={!multiline ? (e) => { if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); } } : undefined}
+      className={`outline-none cursor-text ${className}`}
+    />
   );
 }
 
@@ -348,181 +432,283 @@ function BannerModal({ item, onClose, onSave }) {
     </div>
   );
 
-  // ── Preview box ──────────────────────────────────────────────
-  const previewImg  = isNewsSingle ? (selectedNews?.image ?? form.image) : form.image;
-  const PreviewBox = () => {
-    if (!previewImg && !(isNewsSingle && !selectedNews)) return null;
-    const displayTitle = form.headline?.trim() || selectedNews?.title || "";
-    const isLong = displayTitle.length > 50;
-    return (
-      <div className="relative w-full overflow-hidden rounded-xl border border-border" style={{ height: "200px" }}>
-        {previewImg ? (
-          <Image src={previewImg} alt="preview" fill className="object-cover" style={{ objectPosition: form.imagePosition ?? "center" }} sizes="100%" />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-700 to-slate-900" />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-black/10" />
+  // ── Live preview zoom ─────────────────────────────────────────
+  const liveRef = useRef(null);
+  const [zoom, setZoom] = useState(0.5);
+  useEffect(() => {
+    const el = liveRef.current;
+    if (!el) return;
+    const update = () => {
+      const w = el.clientWidth;
+      const h = el.clientHeight;
+      if (w && h) setZoom(Math.min(w / 1200, h / 720));
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
-        {form.badge && (
-          <div className="absolute top-3 left-3">
-            <span className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3 py-1 text-xs font-bold text-white shadow tracking-wide">✦ {form.badge}</span>
-          </div>
-        )}
-
-        <div className="absolute inset-0 flex flex-col justify-end px-5 pb-4">
-          {isNewsSingle && selectedNews ? (
-            <>
-              <div className="flex items-center gap-2 mb-2">
-                <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${selectedNews.catColor}`}>{selectedNews.category}</span>
-                <time className="text-xs text-white/80">{formatDate(selectedNews.updatedAt)}</time>
-              </div>
-              <p className={`font-extrabold text-white leading-tight line-clamp-3 mb-2.5 ${isLong ? "text-lg" : "text-xl"}`}>
-                {displayTitle}
-              </p>
-            </>
-          ) : isNewsSingle ? (
-            <p className="text-sm text-white/50 italic mb-3">← เลือกข่าวด้านบนเพื่อดูพรีวิว</p>
-          ) : (
-            <>
-              {form.eyebrow && <p className="text-[10px] font-semibold uppercase tracking-widest text-white/60 mb-1">{form.eyebrow}</p>}
-              <p className={`font-extrabold text-white leading-tight line-clamp-3 mb-1.5 ${(form.headline || "").length > 50 ? "text-lg" : "text-xl"}`}>
-                {form.headline || "หัวข้อหลัก…"}
-              </p>
-              {form.body && <p className="text-xs text-white/70 line-clamp-1 mb-1.5">{form.body}</p>}
-            </>
-          )}
-          {form.ctaLabel && (
-            <div className="flex gap-2">
-              <span className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white">{form.ctaLabel}</span>
-              {!isNewsSingle && form.secondaryLabel && (
-                <span className="rounded-lg border border-white/40 px-3 py-1.5 text-xs font-semibold text-white">{form.secondaryLabel}</span>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  };
+  const previewImg = isNewsSingle ? (selectedNews?.image ?? form.image) : form.image;
+  // mirrors BannerSlider effectiveBadge logic
+  const effectiveBadge = form.badge || (isNewsSingle && selectedNews?.featured ? "เรื่องเด่น" : "");
+  const ts   = form.textSize  ?? "sm";
+  const ta   = form.textAlign ?? "left";
+  const hCls = BANNER_HEADLINE_CLS[ts] ?? BANNER_HEADLINE_CLS.sm;
+  const bCls = BANNER_BODY_CLS[ts]     ?? BANNER_BODY_CLS.sm;
+  const atxt = ALIGN_TEXT[ta] ?? "text-left";
+  const aflex = ALIGN_FLEX[ta] ?? "justify-start";
+  const acont = ALIGN_CONT[ta] ?? "";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ backgroundColor: "rgba(0,0,0,0.5)" }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="flex w-full max-w-2xl flex-col rounded-2xl border border-border bg-surface shadow-2xl max-h-[90vh]">
+      <div className="flex w-full max-w-6xl flex-col rounded-2xl border border-border bg-surface shadow-2xl"
+        style={{ height: "92vh" }}>
 
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-border px-5 py-4 flex-shrink-0">
+        {/* ── Header ── */}
+        <div className="flex items-center justify-between border-b border-border px-5 py-3 flex-shrink-0">
           <div>
             <p className="text-sm font-semibold text-foreground">{isEdit ? "แก้ไข Banner" : "เพิ่ม Banner ใหม่"}</p>
-            <p className="text-xs text-muted">{isEdit ? `รหัส ${item.id}` : "สไลด์ใหม่จะปรากฏในหน้า Home"}</p>
+            <p className="text-xs text-muted">{isEdit ? `รหัส ${item.id}` : "สไลด์ใหม่จะปรากฏในหน้า Home"} — คลิกที่ข้อความในพรีวิวเพื่อแก้ไขได้เลย</p>
           </div>
           <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-surface-muted hover:text-foreground transition-colors">
             <XIcon />
           </button>
         </div>
 
-        <div className="overflow-y-auto flex-1 p-5 space-y-5">
+        {/* ── Body: left preview + right controls ── */}
+        <div className="flex flex-1 min-h-0">
 
-          {/* ── Layout picker ── */}
-          <div>
-            <label className={`mb-2 block ${labelCls}`}>รูปแบบ Layout</label>
-            <div className="grid grid-cols-2 gap-3">
-              {Object.entries(LAYOUT_CONFIG).map(([key, cfg]) => (
-                <button key={key} type="button" onClick={() => set("layout", key)}
-                  className={`rounded-xl border-2 p-4 text-left transition-all ${form.layout === key ? "border-primary bg-accent-soft ring-2 ring-primary/20" : "border-border hover:border-primary/40"}`}>
-                  <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${cfg.color}`}>{cfg.label}</span>
-                  <p className="mt-2 text-xs text-muted leading-relaxed">{cfg.desc}</p>
-                </button>
-              ))}
+          {/* ── Left: live banner preview ── */}
+          <div className="flex flex-col flex-1 min-w-0 border-r border-border">
+            <p className="px-4 py-2 text-[11px] font-medium text-muted flex-shrink-0">
+              พรีวิว — <span className="text-primary">คลิกข้อความเพื่อแก้ไขตรงนี้</span>
+            </p>
+            {/* Outer measured container */}
+            <div ref={liveRef} className="flex-1 min-h-0 overflow-hidden rounded-bl-2xl bg-slate-900">
+              {/* Inner banner at 1200×720, zoomed to fit — 720 ≈ 80vh at 900px to match h-[80vh] */}
+              <div style={{ width: "1200px", height: "720px", zoom, transformOrigin: "top left", position: "relative" }}>
+                {/* Background image */}
+                {previewImg ? (
+                  <Image src={previewImg} alt="preview" fill className="object-cover"
+                    style={{ objectPosition: form.imagePosition ?? "center" }} sizes="1200px" />
+                ) : (
+                  <div className="absolute inset-0 bg-gradient-to-br from-slate-700 to-slate-900" />
+                )}
+
+                {/* Gradient overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/10" />
+
+                {/* Badge — mirrors real banner effectiveBadge logic */}
+                {effectiveBadge && (
+                  <div className="absolute top-6 left-8 z-20">
+                    <span className="inline-flex items-center gap-2 rounded-2xl px-5 py-2 text-sm font-extrabold shadow-lg tracking-wide"
+                      style={{ background: "linear-gradient(135deg, #f59e0b, #d97706)", color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,0.3)" }}>
+                      ★ <EditableField value={effectiveBadge} onChange={(v) => set("badge", v)} tag="span" placeholder="ป้ายกำกับ…" />
+                    </span>
+                  </div>
+                )}
+
+                {/* Content area — matches page-container */}
+                <div className="absolute inset-0 flex items-end text-white" style={{ pointerEvents: "none" }}>
+                  <div style={{ width: "100%", maxWidth: "1152px", margin: "0 auto", padding: "0 32px 64px", pointerEvents: "auto" }}>
+                    {isNewsSingle && selectedNews ? (
+                      <>
+                        <div className="flex items-center gap-3 mb-4">
+                          <span className={`rounded-full px-4 py-1.5 text-base font-bold ${selectedNews.catColor}`}>{selectedNews.category}</span>
+                          <time className="text-lg font-bold text-white/90 rounded-full bg-black/30 backdrop-blur-sm px-3 py-1">{formatDate(selectedNews.publishedAt)}</time>
+                        </div>
+                        <div className="flex items-end justify-between gap-10">
+                          <div className="min-w-0 flex-1">
+                            <EditableField
+                              value={form.headline?.trim() || selectedNews.title}
+                              onChange={(v) => set("headline", v)}
+                              tag="h1"
+                              placeholder={selectedNews.title}
+                              className={`font-extrabold leading-tight tracking-tight line-clamp-3 ${hCls} ${atxt}`}
+                            />
+                          </div>
+                          <EditableField
+                            value={form.ctaLabel || "อ่านข่าวเต็ม"}
+                            onChange={(v) => set("ctaLabel", v)}
+                            tag="span"
+                            placeholder="ข้อความปุ่ม…"
+                            className="btn-primary inline-flex shrink-0 text-base px-6 py-3 cursor-text"
+                          />
+                        </div>
+                      </>
+                    ) : isNewsSingle ? (
+                      <p className="text-white/50 italic text-2xl">← เลือกข่าวด้านขวาเพื่อดูพรีวิว</p>
+                    ) : (
+                      <div style={{ maxWidth: "42rem" }} className={acont}>
+                        <p className={`mb-4 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-white/70 ${ta === "right" ? "flex-row-reverse" : ""} ${ta === "center" ? "justify-center w-full" : ""}`}>
+                          {form.eyebrow && <span className="h-px w-8 bg-white/50 flex-shrink-0" />}
+                          <EditableField
+                            value={form.eyebrow ?? ""}
+                            onChange={(v) => set("eyebrow", v)}
+                            tag="span"
+                            placeholder="คลิกเพื่อเพิ่ม eyebrow…"
+                          />
+                        </p>
+                        <EditableField
+                          value={form.headline ?? ""}
+                          onChange={(v) => set("headline", v)}
+                          tag="h1"
+                          placeholder="หัวข้อหลัก…"
+                          className={`font-extrabold leading-tight tracking-tight ${hCls} ${atxt}`}
+                          multiline
+                        />
+                        <EditableField
+                          value={form.body ?? ""}
+                          onChange={(v) => set("body", v)}
+                          tag="p"
+                          placeholder="ข้อความอธิบาย…"
+                          className={`mt-4 text-white/80 ${bCls} ${atxt}`}
+                          multiline
+                        />
+                        <div className={`mt-6 flex flex-wrap gap-3 ${aflex}`}>
+                          <EditableField
+                            value={form.ctaLabel ?? ""}
+                            onChange={(v) => set("ctaLabel", v)}
+                            tag="span"
+                            placeholder="ข้อความปุ่ม…"
+                            className="btn-primary text-base px-6 py-3 cursor-text"
+                          />
+                          {!!(form.secondaryLabel && form.secondaryHref) && (
+                            <EditableField
+                              value={form.secondaryLabel}
+                              onChange={(v) => set("secondaryLabel", v)}
+                              tag="span"
+                              placeholder="ปุ่มรอง…"
+                              className="inline-flex items-center rounded-xl border border-white/30 px-6 py-3 text-base font-semibold text-white cursor-text"
+                            />
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* ── News-Single: news picker ── */}
-          {isNewsSingle && (
-            <div className="space-y-4">
+          {/* ── Right: controls panel ── */}
+          <div className="w-[340px] flex-shrink-0 overflow-y-auto p-4 space-y-4">
+
+            {/* Layout picker */}
+            <div>
+              <label className={`mb-1.5 block ${labelCls}`}>รูปแบบ Layout</label>
+              <div className="grid grid-cols-2 gap-2">
+                {Object.entries(LAYOUT_CONFIG).map(([key, cfg]) => (
+                  <button key={key} type="button" onClick={() => set("layout", key)}
+                    className={`rounded-xl border-2 p-3 text-left transition-all ${form.layout === key ? "border-primary bg-accent-soft ring-2 ring-primary/20" : "border-border hover:border-primary/40"}`}>
+                    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${cfg.color}`}>{cfg.label}</span>
+                    <p className="mt-1.5 text-[11px] text-muted leading-relaxed">{cfg.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* News picker (news-single only) */}
+            {isNewsSingle && (
               <div>
-                <label className={`mb-2 block ${labelCls}`}>
-                  เลือกข่าวที่จะแสดง<span className="ml-0.5 text-red-500">*</span>
+                <label className={`mb-1.5 block ${labelCls}`}>
+                  เลือกข่าว<span className="ml-0.5 text-red-500">*</span>
                 </label>
                 <NewsPicker value={form.newsId} onChange={pickNews} pubNews={pubNews} />
                 {errors.newsId && <p className="mt-1 text-xs text-red-500">{errors.newsId}</p>}
               </div>
+            )}
+
+            {/* Image uploader (hero only) */}
+            {!isNewsSingle && (
+              <ImageUploader value={form.image} onChange={(v) => set("image", v)} />
+            )}
+
+            {/* Image position */}
+            <PositionPicker value={form.imagePosition ?? "center"} onChange={(v) => set("imagePosition", v)} />
+
+            {/* Font size + alignment */}
+            <div className="grid grid-cols-[1fr_auto] gap-3 items-end">
               <div>
-                <label className={`mb-1 block ${labelCls}`}>
-                  หัวข้อที่แสดงบน Banner
-                  <span className="ml-1 font-normal text-muted">(ไม่บังคับ — หากว่างจะใช้หัวข้อข่าวจริง)</span>
-                </label>
-                <input
-                  type="text"
-                  value={form.headline ?? ""}
-                  onChange={(e) => set("headline", e.target.value)}
-                  placeholder={selectedNews?.title ?? "ปล่อยว่างเพื่อใช้หัวข้อข่าวจริง"}
-                  className={inputCls}
-                />
+                <label className={`mb-1.5 block ${labelCls}`}>ขนาดฟอนต์</label>
+                <div className="flex gap-1.5">
+                  {TEXT_SIZE_OPTS.map((opt) => (
+                    <button key={opt.value} type="button" onClick={() => set("textSize", opt.value)}
+                      className={`flex-1 rounded-lg border-2 py-1.5 text-xs font-bold transition-all ${(form.textSize ?? "sm") === opt.value ? "border-primary bg-accent-soft text-primary" : "border-border text-muted hover:border-primary/40"}`}>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className={`mb-1.5 block ${labelCls}`}>จัดวาง</label>
+                <div className="flex gap-1">
+                  {TEXT_ALIGN_OPTS.map(({ value, label, title }) => (
+                    <button key={value} type="button" title={title}
+                      onClick={() => set("textAlign", value)}
+                      className={`w-9 h-9 rounded-lg border-2 text-sm font-bold transition-all ${(form.textAlign ?? "left") === value ? "border-primary bg-accent-soft text-primary" : "border-border text-muted hover:border-primary/40"}`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
-          )}
 
-          {/* ── Hero: image picker ── */}
-          {!isNewsSingle && (
-            <ImageUploader value={form.image} onChange={(v) => set("image", v)} />
-          )}
-
-          {/* ── Image position ── */}
-          <PositionPicker value={form.imagePosition ?? "center"} onChange={(v) => set("imagePosition", v)} />
-
-          {/* ── Preview ── */}
-          <div>
-            <p className={`mb-2 ${labelCls}`}>พรีวิว</p>
-            <PreviewBox />
-          </div>
-
-          {/* ── Badge (top-left label) ── */}
-          {field("Badge (ป้ายมุมบนซ้าย — ไม่บังคับ)", "badge", { placeholder: "เช่น ข่าวเด่น, ประกาศ" })}
-
-          {/* ── Hero-only text fields ── */}
-          {!isNewsSingle && (
-            <>
-              {field("Eyebrow (ข้อความเล็กเหนือหัวข้อ)", "eyebrow", { placeholder: "เช่น เกี่ยวกับโครงการ THAI-KOSEN" })}
-              {field("หัวข้อหลัก (Headline)", "headline", { required: true, placeholder: "หัวข้อที่แสดงขนาดใหญ่" })}
-              {field("ข้อความอธิบาย (Body)", "body", { textarea: true, rows: 2, placeholder: "อธิบายเนื้อหาของสไลด์นี้ (ไม่บังคับ)" })}
-            </>
-          )}
-
-          {/* ── CTA ── */}
-          <div className="rounded-xl border border-border p-4 space-y-3">
-            <p className="text-xs font-semibold text-muted uppercase tracking-wide">ปุ่ม CTA</p>
-            <div className="grid grid-cols-2 gap-3">
-              {field("ข้อความปุ่ม", "ctaLabel", { required: true, placeholder: isNewsSingle ? "อ่านข่าวเต็ม" : "อ่านรายละเอียดเพิ่มเติม" })}
-              {field("URL ปุ่ม", "ctaHref", { required: true, placeholder: "/news/1 หรือ https://..." })}
+            {/* Badge */}
+            <div>
+              <label className={`mb-1 block ${labelCls}`}>Badge (ป้ายกำกับ — ไม่บังคับ)</label>
+              <input type="text" value={form.badge ?? ""} onChange={(e) => set("badge", e.target.value)}
+                placeholder="เช่น ข่าวเด่น, ประกาศ" className={inputCls} />
             </div>
-          </div>
 
-          {/* ── Secondary CTA (hero only) ── */}
-          {!isNewsSingle && (
-            <div className="rounded-xl border border-border p-4 space-y-3">
-              <p className="text-xs font-semibold text-muted uppercase tracking-wide">ปุ่มรอง (ไม่บังคับ)</p>
-              <div className="grid grid-cols-2 gap-3">
-                {field("ข้อความปุ่มรอง", "secondaryLabel", { placeholder: "เช่น ติดต่อสอบถาม" })}
-                {field("URL ปุ่มรอง", "secondaryHref", { placeholder: "/contact" })}
+            {/* CTA */}
+            <div className="rounded-xl border border-border p-3 space-y-2.5">
+              <p className="text-[11px] font-semibold text-muted uppercase tracking-wide">ปุ่ม CTA</p>
+              <div>
+                <label className={`mb-1 block ${labelCls}`}>URL ปุ่มหลัก<span className="ml-0.5 text-red-500">*</span></label>
+                <input type="text" value={form.ctaHref ?? ""} onChange={(e) => set("ctaHref", e.target.value)}
+                  placeholder="/news/1 หรือ https://…" className={inputCls} />
+                {errors.ctaHref && <p className="mt-1 text-xs text-red-500">{errors.ctaHref}</p>}
               </div>
+              {errors.ctaLabel && <p className="text-xs text-red-500">{errors.ctaLabel}</p>}
             </div>
-          )}
 
-          {/* ── Status ── */}
-          <div>
-            <label className={`mb-1 block ${labelCls}`}>สถานะ</label>
-            <select value={form.status} onChange={(e) => set("status", e.target.value)}
-              className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft w-full">
-              <option value="active">แสดงอยู่ (Active)</option>
-              <option value="inactive">ซ่อนอยู่ (Inactive)</option>
-            </select>
+            {/* Secondary CTA (hero only) */}
+            {!isNewsSingle && (
+              <div className="rounded-xl border border-border p-3 space-y-2.5">
+                <p className="text-[11px] font-semibold text-muted uppercase tracking-wide">ปุ่มรอง (ไม่บังคับ)</p>
+                <div>
+                  <label className={`mb-1 block ${labelCls}`}>URL ปุ่มรอง</label>
+                  <input type="text" value={form.secondaryHref ?? ""} onChange={(e) => set("secondaryHref", e.target.value)}
+                    placeholder="/contact" className={inputCls} />
+                </div>
+              </div>
+            )}
+
+            {/* Status */}
+            <div>
+              <label className={`mb-1 block ${labelCls}`}>สถานะ</label>
+              <select value={form.status} onChange={(e) => set("status", e.target.value)}
+                className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft w-full">
+                <option value="active">แสดงอยู่ (Active)</option>
+                <option value="inactive">ซ่อนอยู่ (Inactive)</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-4 flex-shrink-0">
-          <button onClick={onClose} className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted hover:text-foreground transition-colors">ยกเลิก</button>
-          <button onClick={handleSubmit} className="btn-primary">{isEdit ? "บันทึกการแก้ไข" : "เพิ่ม Banner"}</button>
+        {/* ── Footer ── */}
+        <div className="flex items-center justify-between gap-2 border-t border-border px-5 py-3 flex-shrink-0">
+          <div className="text-xs text-red-500 space-y-0.5">
+            {Object.values(errors).map((e, i) => e && <p key={i}>{e}</p>)}
+          </div>
+          <div className="flex gap-2">
+            <button onClick={onClose} className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted hover:text-foreground transition-colors">ยกเลิก</button>
+            <button onClick={handleSubmit} className="btn-primary">{isEdit ? "บันทึกการแก้ไข" : "เพิ่ม Banner"}</button>
+          </div>
         </div>
       </div>
     </div>
