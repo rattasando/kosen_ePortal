@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { publicNav } from "@/lib/navigation";
+import { publicNav } from "@/lib/config/navigation";
 
 export default function PublicFooter() {
   return (

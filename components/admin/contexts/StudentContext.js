@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { DEFAULT_STUDENTS } from "@/lib/studentData";
+import { DEFAULT_STUDENTS } from "@/lib/data/studentData";
 
 const STORAGE_KEY = "kosen_students";
 const SEED_VERSION_KEY = "kosen_students_seed_version";

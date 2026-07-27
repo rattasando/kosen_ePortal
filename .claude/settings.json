@@ -7,7 +7,8 @@
       "Bash(grep -v \"^$\")",
       "Bash(python3)",
       "Bash(curl -L \"https://scontent.fbkk29-1.fna.fbcdn.net/v/t39.30808-6/744820523_1040254305413094_5544867598885998520_n.jpg?stp=dst-jpg_tt6&cstp=mx1148x1370&ctp=s1148x1370&_nc_cat=103&_nc_map=urlgen_bucketless&ccb=1-7&_nc_sid=833d8c&_nc_ohc=6Yu8r5u9h9AQ7kNvwFzqDV_&_nc_oc=AdqMh8CF2yZDSC_Y3cHVP7b9Hby_YpdV6k5AqGlp5K7YwMouMCZoJNpQ9PniPLaXO_ILw5_tUl0LQDesQqKe6lPe&_nc_zt=23&_nc_ht=scontent.fbkk29-1.fna&_nc_gid=_es7U2Fp5W_Dmz5zB-rfpw&_nc_ss=7b2a8&oh=00_AQCmtSpHFHa7l8RYiVubLVlEH69ln9kHQdHTJBedD-76XA&oe=6A5DB44C\" -o /Users/dodo/Desktop/kosen_demo/public/banners/banner_news011.jpg --silent -w \"%{http_code} %{size_download}bytes\")",
-      "Bash(python3 -)"
+      "Bash(python3 -)",
+      "Bash(brew install *)"
     ]
   }
 }

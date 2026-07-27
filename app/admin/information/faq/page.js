@@ -1,4 +1,4 @@
-import AdminTopBar from "@/components/admin/AdminTopBar";
+import AdminTopBar from "@/components/admin/ui/AdminTopBar";
 import FaqListClient from "@/components/admin/FaqListClient";
 
 export default function FAQPage() {

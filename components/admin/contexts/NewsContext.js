@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { DEFAULT_NEWS } from "@/lib/newsData";
+import { DEFAULT_NEWS } from "@/lib/data/newsData";
 
 const STORAGE_KEY = "kosen_news";
 const SEED_VERSION_KEY = "kosen_news_seed_version";

@@ -1,4 +1,4 @@
-import AdminTopBar from "@/components/admin/AdminTopBar";
+import AdminTopBar from "@/components/admin/ui/AdminTopBar";
 import MappingListClient from "@/components/admin/MappingListClient";
 
 export default function StudentMappingPage() {

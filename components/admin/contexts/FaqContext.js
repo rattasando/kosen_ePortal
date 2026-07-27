@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { DEFAULT_FAQS, FAQ_STORAGE_KEY, FAQ_SEED_KEY, FAQ_SEED_VER } from "@/lib/faqData";
+import { DEFAULT_FAQS, FAQ_STORAGE_KEY, FAQ_SEED_KEY, FAQ_SEED_VER } from "@/lib/data/faqData";
 
 const FaqContext = createContext(null);
 

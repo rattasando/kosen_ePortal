@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { useDocuments } from "./DocumentContext";
-import { DOCUMENT_CATEGORIES, FILE_TYPES } from "@/lib/documentsData";
+import { useDocuments } from "./contexts/DocumentContext";
+import { DOCUMENT_CATEGORIES, FILE_TYPES } from "@/lib/data/documentsData";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 

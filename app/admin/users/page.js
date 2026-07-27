@@ -1,4 +1,4 @@
-import AdminTopBar from "@/components/admin/AdminTopBar";
+import AdminTopBar from "@/components/admin/ui/AdminTopBar";
 import UserListClient from "@/components/admin/UserListClient";
 
 export default function UserManagementPage() {

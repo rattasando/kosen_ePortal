@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import Link from "next/link";
-import { DEFAULT_COMPANIES } from "@/lib/companyData";
-import { DEFAULT_JOBS } from "@/lib/jobData";
+import { DEFAULT_COMPANIES } from "@/lib/data/companyData";
+import { DEFAULT_JOBS } from "@/lib/data/jobData";
 
 function loadFromStorage(key, fallback) {
   if (typeof window === "undefined") return fallback;

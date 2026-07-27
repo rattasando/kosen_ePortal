@@ -1,4 +1,4 @@
-import AdminTopBar from "@/components/admin/AdminTopBar";
+import AdminTopBar from "@/components/admin/ui/AdminTopBar";
 import InternshipListClient from "@/components/admin/InternshipListClient";
 
 export default function InternshipTrackingPage() {

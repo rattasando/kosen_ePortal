@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useLanguage } from "@/components/admin/LanguageContext";
-import { usePageTitle } from "@/components/admin/PageTitleContext";
+import { useLanguage } from "@/components/admin/contexts/LanguageContext";
+import { usePageTitle } from "@/components/admin/contexts/PageTitleContext";
 
 export default function AdminHeader() {
   const router = useRouter();

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
-import { DEFAULT_FAQS, FAQ_STORAGE_KEY, FAQ_SEED_KEY, FAQ_SEED_VER } from "@/lib/faqData";
+import { DEFAULT_FAQS, FAQ_STORAGE_KEY, FAQ_SEED_KEY, FAQ_SEED_VER } from "@/lib/data/faqData";
 
 const BOT_INTRO = "สวัสดีครับ! ฉันคือผู้ช่วย KOSEN 👋\nพิมพ์คำถาม หรือเลือกหัวข้อด้านล่างได้เลยครับ";
 const NO_RESULT_MSG = (q) =>

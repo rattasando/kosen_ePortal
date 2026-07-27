@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { DEFAULT_BANNERS, BANNER_STORAGE_KEY, BANNER_SEED_KEY, BANNER_SEED_VER } from "@/lib/bannerData";
+import { DEFAULT_BANNERS, BANNER_STORAGE_KEY, BANNER_SEED_KEY, BANNER_SEED_VER } from "@/lib/data/bannerData";
 
 const BannerContext = createContext(null);
 
@@ -28,6 +28,7 @@ export function BannerProvider({ children }) {
   const save = useCallback((next) => {
     setBanners(next);
     localStorage.setItem(BANNER_STORAGE_KEY, JSON.stringify(next));
+    window.dispatchEvent(new StorageEvent("storage", { key: BANNER_STORAGE_KEY }));
   }, []);
 
   const addBanner    = useCallback((b)       => save([...banners, b]), [banners, save]);

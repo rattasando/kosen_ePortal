@@ -3,8 +3,8 @@
 import { useState, useEffect, useMemo, useCallback, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { DEFAULT_JOBS } from "@/lib/jobData";
-import { DEFAULT_COMPANIES } from "@/lib/companyData";
+import { DEFAULT_JOBS } from "@/lib/data/jobData";
+import { DEFAULT_COMPANIES } from "@/lib/data/companyData";
 
 // ── helpers ────────────────────────────────────────────────────────────────
 const SEED_VERSION = `v${DEFAULT_JOBS.length}r8`;

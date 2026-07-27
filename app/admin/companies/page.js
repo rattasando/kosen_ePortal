@@ -1,9 +1,9 @@
 "use client";
 
-import AdminTopBar from "@/components/admin/AdminTopBar";
-import StatCard from "@/components/admin/StatCard";
+import AdminTopBar from "@/components/admin/ui/AdminTopBar";
+import StatCard from "@/components/admin/ui/StatCard";
 import Link from "next/link";
-import { useCompanies } from "@/components/admin/CompanyContext";
+import { useCompanies } from "@/components/admin/contexts/CompanyContext";
 
 const STATUS_COLOR = {
   ร่วมมือ:     { bar: "bg-emerald-500", badge: "bg-emerald-100 text-emerald-700" },

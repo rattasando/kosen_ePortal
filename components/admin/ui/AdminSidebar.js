@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useRef, useEffect } from "react";
-import { adminNav } from "@/lib/navigation";
+import { adminNav } from "@/lib/config/navigation";
 
 function isActive(pathname, href, children) {
   if (href === "/admin") return pathname === "/admin";

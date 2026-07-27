@@ -1,4 +1,4 @@
-import AdminTopBar from "@/components/admin/AdminTopBar";
+import AdminTopBar from "@/components/admin/ui/AdminTopBar";
 import JobListClient from "@/components/admin/JobListClient";
 
 export default function JobPositionsPage() {

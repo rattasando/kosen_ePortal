@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import AdminTopBar from "@/components/admin/AdminTopBar";
-import StatCard from "@/components/admin/StatCard";
-import { useJobs } from "@/components/admin/JobContext";
-import { useMappings } from "@/components/admin/MappingContext";
-import { useStudents } from "@/components/admin/StudentContext";
+import AdminTopBar from "@/components/admin/ui/AdminTopBar";
+import StatCard from "@/components/admin/ui/StatCard";
+import { useJobs } from "@/components/admin/contexts/JobContext";
+import { useMappings } from "@/components/admin/contexts/MappingContext";
+import { useStudents } from "@/components/admin/contexts/StudentContext";
 
 // ── Config ────────────────────────────────────────────────────
 const JOB_STATUS_COLOR = {

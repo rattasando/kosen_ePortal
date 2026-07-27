@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { DEFAULT_ACTIVITIES } from "@/lib/activitiesData";
+import { DEFAULT_ACTIVITIES } from "@/lib/data/activitiesData";
 
 const STORAGE_KEY = "kosen_activities_admin";
 const SEED_VERSION_KEY = "kosen_activities_admin_seed_version";

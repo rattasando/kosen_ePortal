@@ -4,10 +4,10 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import React from "react";
-import { useNews } from "@/components/admin/NewsContext";
-import { useActivities } from "@/components/admin/ActivitiesContext";
-import { publishedNews, publishedActivities, formatDate } from "@/lib/newsUtils";
-import { DEFAULT_BANNERS, BANNER_STORAGE_KEY, BANNER_SEED_KEY, BANNER_SEED_VER } from "@/lib/bannerData";
+import { useNews } from "@/components/admin/contexts/NewsContext";
+import { useActivities } from "@/components/admin/contexts/ActivitiesContext";
+import { publishedNews, publishedActivities, formatDate } from "@/lib/utils/newsUtils";
+import { DEFAULT_BANNERS, BANNER_STORAGE_KEY, BANNER_SEED_KEY, BANNER_SEED_VER } from "@/lib/data/bannerData";
 
 // ─── CONFIG ───────────────────────────────────────────────
 const AUTOPLAY_MS = 6000;

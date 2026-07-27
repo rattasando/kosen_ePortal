@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { DEFAULT_JOBS } from "@/lib/jobData";
+import { DEFAULT_JOBS } from "@/lib/data/jobData";
 
 const STORAGE_KEY = "kosen_jobs";
 const SEED_VERSION_KEY = "kosen_jobs_seed_version";

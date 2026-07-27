@@ -1,4 +1,4 @@
-import AdminTopBar from "@/components/admin/AdminTopBar";
+import AdminTopBar from "@/components/admin/ui/AdminTopBar";
 import StudentListClient from "@/components/admin/StudentListClient";
 
 export default function StudentsListPage() {

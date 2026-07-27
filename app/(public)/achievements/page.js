@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { topStudents } from "@/lib/achievementsData";
+import { topStudents } from "@/lib/data/achievementsData";
 
 function StudentAvatar({ size = "md" }) {
   const dim = size === "lg" ? "w-20 h-20" : "w-14 h-14";

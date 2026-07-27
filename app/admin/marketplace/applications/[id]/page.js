@@ -3,11 +3,11 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import AdminTopBar from "@/components/admin/AdminTopBar";
-import { useMappings } from "@/components/admin/MappingContext";
-import { useStudents } from "@/components/admin/StudentContext";
-import { useJobs } from "@/components/admin/JobContext";
-import { useInternships } from "@/components/admin/InternshipContext";
+import AdminTopBar from "@/components/admin/ui/AdminTopBar";
+import { useMappings } from "@/components/admin/contexts/MappingContext";
+import { useStudents } from "@/components/admin/contexts/StudentContext";
+import { useJobs } from "@/components/admin/contexts/JobContext";
+import { useInternships } from "@/components/admin/contexts/InternshipContext";
 
 const MAPPING_STATUSES = ["สมัครแล้ว", "ผ่านการคัดเลือก", "ไม่ผ่านการคัดเลือก"];
 const JOB_TYPES        = ["ฝึกงาน", "งานประจำ"];

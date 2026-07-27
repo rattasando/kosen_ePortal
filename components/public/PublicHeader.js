@@ -4,11 +4,11 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSyncExternalStore, useMemo, useState } from "react";
-import { publicNav } from "@/lib/navigation";
+import { publicNav } from "@/lib/config/navigation";
 import { usePublicLanguage } from "@/components/public/PublicLanguageContext";
-import { useNews } from "@/components/admin/NewsContext";
-import { publishedNews } from "@/lib/newsUtils";
-import { DOCUMENT_CATEGORIES } from "@/lib/documentsData";
+import { useNews } from "@/components/admin/contexts/NewsContext";
+import { publishedNews } from "@/lib/utils/newsUtils";
+import { DOCUMENT_CATEGORIES } from "@/lib/data/documentsData";
 
 function NavItem({ item, active, label, pathname, dropdownLinks }) {
   const [open, setOpen] = useState(false);

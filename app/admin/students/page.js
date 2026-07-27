@@ -1,9 +1,9 @@
 "use client";
 
-import AdminTopBar from "@/components/admin/AdminTopBar";
-import StatCard from "@/components/admin/StatCard";
+import AdminTopBar from "@/components/admin/ui/AdminTopBar";
+import StatCard from "@/components/admin/ui/StatCard";
 import Link from "next/link";
-import { useStudents } from "@/components/admin/StudentContext";
+import { useStudents } from "@/components/admin/contexts/StudentContext";
 
 const STATUS_COLOR = {
   กำลังศึกษา: { bar: "bg-emerald-500", badge: "bg-emerald-100 text-emerald-700" },

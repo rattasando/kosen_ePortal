@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { DEFAULT_COMPANIES } from "@/lib/companyData";
+import { DEFAULT_COMPANIES } from "@/lib/data/companyData";
 
 const STORAGE_KEY = "kosen_companies";
 const SEED_VERSION_KEY = "kosen_companies_seed_version";

@@ -1,9 +1,9 @@
 import Link from "next/link";
-import AdminTopBar from "@/components/admin/AdminTopBar";
-import { DEFAULT_STUDENTS } from "@/lib/studentData";
-import { DEFAULT_COMPANIES } from "@/lib/companyData";
-import { DEFAULT_JOBS } from "@/lib/jobData";
-import { NEWS, ACTIVITIES } from "@/lib/publicData";
+import AdminTopBar from "@/components/admin/ui/AdminTopBar";
+import { DEFAULT_STUDENTS } from "@/lib/data/studentData";
+import { DEFAULT_COMPANIES } from "@/lib/data/companyData";
+import { DEFAULT_JOBS } from "@/lib/data/jobData";
+import { NEWS, ACTIVITIES } from "@/lib/config/publicData";
 
 const totalStudents    = DEFAULT_STUDENTS.length;
 const studyingStudents = DEFAULT_STUDENTS.filter((s) => s.status === "กำลังศึกษา").length;

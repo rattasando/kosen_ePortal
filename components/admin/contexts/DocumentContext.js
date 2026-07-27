@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { DEFAULT_DOCUMENTS } from "@/lib/documentsData";
+import { DEFAULT_DOCUMENTS } from "@/lib/data/documentsData";
 
 const STORAGE_KEY = "kosen_documents";
 const SEED_VERSION_KEY = "kosen_documents_seed_version";

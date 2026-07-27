@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useSplash } from "./SplashContext";
+import { useSplash } from "./contexts/SplashContext";
 
 const inputCls    = "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft placeholder:text-muted";
 const labelCls    = "text-xs font-medium text-foreground";

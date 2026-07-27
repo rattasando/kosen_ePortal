@@ -4,8 +4,8 @@ import { useMemo, Suspense } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useNews } from "@/components/admin/NewsContext";
-import { formatDate, estimatedReadTime, publishedNews } from "@/lib/newsUtils";
+import { useNews } from "@/components/admin/contexts/NewsContext";
+import { formatDate, estimatedReadTime, publishedNews } from "@/lib/utils/newsUtils";
 
 function NewsCard({ item, featured = false }) {
   return (

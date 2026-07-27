@@ -3,9 +3,9 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import AdminTable from "@/components/admin/AdminTable";
-import StudentActionButtons from "@/components/admin/StudentActionButtons";
-import { useStudents } from "@/components/admin/StudentContext";
+import AdminTable from "@/components/admin/ui/AdminTable";
+import StudentActionButtons from "@/components/admin/ui/StudentActionButtons";
+import { useStudents } from "@/components/admin/contexts/StudentContext";
 
 // ── CSV helpers ──────────────────────────────────────────────
 // One row per student; up to 3 enrollments; both TH + JP addresses; banking & travel fields

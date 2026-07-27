@@ -1,6 +1,6 @@
 "use client";
 
-import { useContact } from "@/components/admin/ContactContext";
+import { useContact } from "@/components/admin/contexts/ContactContext";
 
 const FALLBACK_COLORS = [
   "bg-blue-50 border-blue-200 text-blue-700",

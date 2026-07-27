@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import AdminTopBar from "@/components/admin/AdminTopBar";
-import { useJobs } from "@/components/admin/JobContext";
+import AdminTopBar from "@/components/admin/ui/AdminTopBar";
+import { useJobs } from "@/components/admin/contexts/JobContext";
 
 // ── Constants ─────────────────────────────────────────────────
 const JOB_TYPES    = ["ฝึกงาน", "งานประจำ"];

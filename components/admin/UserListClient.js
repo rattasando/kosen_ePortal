@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
-import { useUsers } from "./UserContext";
-import StatCard from "./StatCard";
+import { useUsers } from "./contexts/UserContext";
+import StatCard from "./ui/StatCard";
 
 // ── Constants ─────────────────────────────────────────────────
 const ROLES    = ["superadmin", "admin", "staff", "viewer"];

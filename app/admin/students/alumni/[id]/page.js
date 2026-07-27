@@ -4,10 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { notFound } from "next/navigation";
-import AdminTopBar from "@/components/admin/AdminTopBar";
-import { SCHOLARSHIP_STATUS_COLOR, calcDisplayedYears } from "@/lib/alumniData";
-import { useAlumni } from "@/components/admin/AlumniContext";
-import { useStudents } from "@/components/admin/StudentContext";
+import AdminTopBar from "@/components/admin/ui/AdminTopBar";
+import { SCHOLARSHIP_STATUS_COLOR, calcDisplayedYears } from "@/lib/data/alumniData";
+import { useAlumni } from "@/components/admin/contexts/AlumniContext";
+import { useStudents } from "@/components/admin/contexts/StudentContext";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 

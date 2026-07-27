@@ -1,4 +1,4 @@
-import AdminTopBar from "@/components/admin/AdminTopBar";
+import AdminTopBar from "@/components/admin/ui/AdminTopBar";
 import CompanyListClient from "@/components/admin/CompanyListClient";
 
 export default function CompaniesListPage() {

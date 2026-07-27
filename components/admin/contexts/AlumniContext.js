@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { ALUMNI } from "@/lib/alumniData";
+import { ALUMNI } from "@/lib/data/alumniData";
 
 const STORAGE_KEY = "kosen_alumni";
 const SEED_VERSION_KEY = "kosen_alumni_seed_version";

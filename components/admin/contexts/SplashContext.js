@@ -6,7 +6,7 @@ import {
   SPLASH_STORAGE_KEY,
   SPLASH_SEED_KEY,
   SPLASH_SEED_VER,
-} from "@/lib/splashData";
+} from "@/lib/data/splashData";
 
 const SplashContext = createContext(null);
 

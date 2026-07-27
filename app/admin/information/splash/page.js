@@ -1,4 +1,4 @@
-import AdminTopBar from "@/components/admin/AdminTopBar";
+import AdminTopBar from "@/components/admin/ui/AdminTopBar";
 import SplashConfigClient from "@/components/admin/SplashConfigClient";
 
 export default function SplashPage() {

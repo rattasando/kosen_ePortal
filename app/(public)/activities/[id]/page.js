@@ -3,8 +3,8 @@
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { useActivities } from "@/components/admin/ActivitiesContext";
-import { publishedActivities } from "@/lib/newsUtils";
+import { useActivities } from "@/components/admin/contexts/ActivitiesContext";
+import { publishedActivities } from "@/lib/utils/newsUtils";
 
 function formatDate(iso) {
   if (!iso) return "";

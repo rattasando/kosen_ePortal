@@ -3,8 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import AdminTopBar from "@/components/admin/AdminTopBar";
-import { useAlumni } from "@/components/admin/AlumniContext";
+import AdminTopBar from "@/components/admin/ui/AdminTopBar";
+import { useAlumni } from "@/components/admin/contexts/AlumniContext";
 
 const PREFIXES = ["นาย", "นางสาว", "นาง"];
 const SCHOLARSHIP_STATUSES = ["กำลังทำงาน", "ครบตามสัญญา", "ได้รับยกเว้น"];

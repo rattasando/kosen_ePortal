@@ -9,7 +9,7 @@ import {
   SPLASH_SEED_VER,
   SPLASH_SEEN_SESSION_KEY,
   SPLASH_SEEN_DATE_KEY,
-} from "@/lib/splashData";
+} from "@/lib/data/splashData";
 
 const WIDTH_MAP = {
   sm: "max-w-sm",

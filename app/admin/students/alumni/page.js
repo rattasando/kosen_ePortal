@@ -3,9 +3,9 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import AdminTopBar from "@/components/admin/AdminTopBar";
-import { SCHOLARSHIP_STATUS_COLOR, calcDisplayedYears } from "@/lib/alumniData";
-import { useAlumni } from "@/components/admin/AlumniContext";
+import AdminTopBar from "@/components/admin/ui/AdminTopBar";
+import { SCHOLARSHIP_STATUS_COLOR, calcDisplayedYears } from "@/lib/data/alumniData";
+import { useAlumni } from "@/components/admin/contexts/AlumniContext";
 
 // ── CSV ──────────────────────────────────────────────────────────────────────
 

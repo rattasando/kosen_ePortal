@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { DEFAULT_USERS } from "@/lib/userData";
+import { DEFAULT_USERS } from "@/lib/data/userData";
 
 const STORAGE_KEY = "kosen_users";
 const SEED_VERSION_KEY = "kosen_users_seed_version";

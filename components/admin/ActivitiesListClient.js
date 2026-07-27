@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from "react";
 import Image from "next/image";
-import { useActivities } from "./ActivitiesContext";
+import { useActivities } from "./contexts/ActivitiesContext";
 
 // ── Constants ──────────────────────────────────────────────────
 const TYPES = ["Workshop", "การแข่งขัน", "Career", "สังคม", "สัมมนา", "กีฬา"];

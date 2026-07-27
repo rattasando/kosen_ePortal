@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { DEFAULT_INTERNSHIPS } from "@/lib/internshipData";
+import { DEFAULT_INTERNSHIPS } from "@/lib/data/internshipData";
 
 const STORAGE_KEY      = "kosen_internships";
 const SEED_VERSION_KEY = "kosen_internships_seed_version";

@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import AdminTopBar from "@/components/admin/AdminTopBar";
-import { useStudents } from "@/components/admin/StudentContext";
-import { useStudentHistory } from "@/components/admin/StudentHistoryContext";
-import { diffSnapshot, buildSummary, formatHistoryDate } from "@/lib/studentHistoryHelpers";
+import AdminTopBar from "@/components/admin/ui/AdminTopBar";
+import { useStudents } from "@/components/admin/contexts/StudentContext";
+import { useStudentHistory } from "@/components/admin/contexts/StudentHistoryContext";
+import { diffSnapshot, buildSummary, formatHistoryDate } from "@/lib/utils/studentHistoryHelpers";
 
 // ── Constants ────────────────────────────────────────────────
 const PREFIXES    = ["นาย", "นางสาว", "นาง"];

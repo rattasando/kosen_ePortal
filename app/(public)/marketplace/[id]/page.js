@@ -3,8 +3,8 @@
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { DEFAULT_JOBS } from "@/lib/jobData";
-import { DEFAULT_COMPANIES } from "@/lib/companyData";
+import { DEFAULT_JOBS } from "@/lib/data/jobData";
+import { DEFAULT_COMPANIES } from "@/lib/data/companyData";
 
 function loadFromStorage(key, fallback) {
   try { const r = localStorage.getItem(key); return r ? JSON.parse(r) : fallback; }

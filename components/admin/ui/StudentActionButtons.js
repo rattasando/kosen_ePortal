@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useStudents } from "@/components/admin/StudentContext";
+import { useStudents } from "@/components/admin/contexts/StudentContext";
 
 function DeleteModal({ name, id, onConfirm, onCancel }) {
   return (

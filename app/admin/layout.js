@@ -1,24 +1,24 @@
-import AdminSidebar from "@/components/admin/AdminSidebar";
-import AdminHeader from "@/components/admin/AdminHeader";
-import AdminGuard from "@/components/admin/AdminGuard";
-import { LanguageProvider } from "@/components/admin/LanguageContext";
-import { StudentProvider } from "@/components/admin/StudentContext";
-import { StudentHistoryProvider } from "@/components/admin/StudentHistoryContext";
-import { CompanyProvider } from "@/components/admin/CompanyContext";
-import { JobProvider } from "@/components/admin/JobContext";
-import { MappingProvider } from "@/components/admin/MappingContext";
-import { InternshipProvider } from "@/components/admin/InternshipContext";
-import { UserProvider } from "@/components/admin/UserContext";
-import { NewsProvider } from "@/components/admin/NewsContext";
-import { ActivitiesProvider } from "@/components/admin/ActivitiesContext";
-import { ScholarshipTypesProvider } from "@/components/admin/ScholarshipTypesContext";
-import { BannerProvider } from "@/components/admin/BannerContext";
-import { ContactProvider } from "@/components/admin/ContactContext";
-import { FaqProvider } from "@/components/admin/FaqContext";
-import { SplashProvider } from "@/components/admin/SplashContext";
-import { AlumniProvider } from "@/components/admin/AlumniContext";
-import { DocumentProvider } from "@/components/admin/DocumentContext";
-import { PageTitleProvider } from "@/components/admin/PageTitleContext";
+import AdminSidebar from "@/components/admin/ui/AdminSidebar";
+import AdminHeader from "@/components/admin/ui/AdminHeader";
+import AdminGuard from "@/components/admin/ui/AdminGuard";
+import { LanguageProvider } from "@/components/admin/contexts/LanguageContext";
+import { StudentProvider } from "@/components/admin/contexts/StudentContext";
+import { StudentHistoryProvider } from "@/components/admin/contexts/StudentHistoryContext";
+import { CompanyProvider } from "@/components/admin/contexts/CompanyContext";
+import { JobProvider } from "@/components/admin/contexts/JobContext";
+import { MappingProvider } from "@/components/admin/contexts/MappingContext";
+import { InternshipProvider } from "@/components/admin/contexts/InternshipContext";
+import { UserProvider } from "@/components/admin/contexts/UserContext";
+import { NewsProvider } from "@/components/admin/contexts/NewsContext";
+import { ActivitiesProvider } from "@/components/admin/contexts/ActivitiesContext";
+import { ScholarshipTypesProvider } from "@/components/admin/contexts/ScholarshipTypesContext";
+import { BannerProvider } from "@/components/admin/contexts/BannerContext";
+import { ContactProvider } from "@/components/admin/contexts/ContactContext";
+import { FaqProvider } from "@/components/admin/contexts/FaqContext";
+import { SplashProvider } from "@/components/admin/contexts/SplashContext";
+import { AlumniProvider } from "@/components/admin/contexts/AlumniContext";
+import { DocumentProvider } from "@/components/admin/contexts/DocumentContext";
+import { PageTitleProvider } from "@/components/admin/contexts/PageTitleContext";
 
 export default function AdminLayout({ children }) {
   return (

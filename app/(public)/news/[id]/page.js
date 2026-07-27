@@ -3,8 +3,8 @@
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import { useNews } from "@/components/admin/NewsContext";
-import { formatDate, estimatedReadTime, publishedNews } from "@/lib/newsUtils";
+import { useNews } from "@/components/admin/contexts/NewsContext";
+import { formatDate, estimatedReadTime, publishedNews } from "@/lib/utils/newsUtils";
 
 const FONT_SIZE_CLS = { sm: "text-sm leading-7", base: "text-base leading-8", lg: "text-lg leading-9", xl: "text-xl leading-9" };
 

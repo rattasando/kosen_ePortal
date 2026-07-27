@@ -2,10 +2,10 @@
 
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import { useInternships } from "./InternshipContext";
-import { useStudents } from "./StudentContext";
-import { useJobs } from "./JobContext";
-import { useMappings } from "./MappingContext";
+import { useInternships } from "./contexts/InternshipContext";
+import { useStudents } from "./contexts/StudentContext";
+import { useJobs } from "./contexts/JobContext";
+import { useMappings } from "./contexts/MappingContext";
 
 // ── Constants ─────────────────────────────────────────────────
 const INTERNSHIP_STATUSES = ["อยู่ในระหว่างฝึกงาน", "เสร็จสิ้น", "ยกเลิก"];

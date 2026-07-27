@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
-import { useScholarshipTypes } from "./ScholarshipTypesContext";
+import { useScholarshipTypes } from "./contexts/ScholarshipTypesContext";
 
 // ── Constants ──────────────────────────────────────────────────
 const BADGE_OPTIONS = [

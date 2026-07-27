@@ -3,8 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import AdminTopBar from "@/components/admin/AdminTopBar";
-import { useStudents } from "@/components/admin/StudentContext";
+import AdminTopBar from "@/components/admin/ui/AdminTopBar";
+import { useStudents } from "@/components/admin/contexts/StudentContext";
 
 // ── Constants ─────────────────────────────────────────────────
 const PREFIXES = ["นาย", "นางสาว", "นาง"];

@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import Link from "next/link";
-import { useCompanies } from "./CompanyContext";
+import { useCompanies } from "./contexts/CompanyContext";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 

@@ -1,4 +1,4 @@
-import AdminTopBar from "@/components/admin/AdminTopBar";
+import AdminTopBar from "@/components/admin/ui/AdminTopBar";
 import ScholarshipTypesListClient from "@/components/admin/ScholarshipTypesListClient";
 
 export default function AdminScholarshipTypesPage() {

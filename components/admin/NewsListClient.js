@@ -2,8 +2,8 @@
 
 import { useState, useMemo, useEffect } from "react";
 import Image from "next/image";
-import { useNews } from "./NewsContext";
-import NewsEditor, { emptyNewsForm, NewsPreview } from "./NewsEditor";
+import { useNews } from "./contexts/NewsContext";
+import NewsEditor, { emptyNewsForm, NewsPreview } from "./editors/NewsEditor";
 
 // ── Constants ──────────────────────────────────────────────────
 const CATEGORIES = [

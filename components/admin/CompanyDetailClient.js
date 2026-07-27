@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import AdminTopBar from "@/components/admin/AdminTopBar";
-import { useCompanies } from "@/components/admin/CompanyContext";
+import AdminTopBar from "@/components/admin/ui/AdminTopBar";
+import { useCompanies } from "@/components/admin/contexts/CompanyContext";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 

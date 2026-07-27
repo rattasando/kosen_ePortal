@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { DEFAULT_MAPPINGS } from "@/lib/mappingData";
+import { DEFAULT_MAPPINGS } from "@/lib/data/mappingData";
 
 const STORAGE_KEY      = "kosen_mappings";
 const SEED_VERSION_KEY = "kosen_mappings_seed_version";

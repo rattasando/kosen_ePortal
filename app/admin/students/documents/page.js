@@ -1,5 +1,5 @@
-import AdminTopBar from "@/components/admin/AdminTopBar";
-import AdminTable from "@/components/admin/AdminTable";
+import AdminTopBar from "@/components/admin/ui/AdminTopBar";
+import AdminTable from "@/components/admin/ui/AdminTable";
 
 export default function DocumentsPage() {
   return (

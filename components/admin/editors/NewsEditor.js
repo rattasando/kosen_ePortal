@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { useNews } from "@/components/admin/NewsContext";
-import { publishedNews, formatDate } from "@/lib/newsUtils";
+import { useNews } from "@/components/admin/contexts/NewsContext";
+import { publishedNews, formatDate } from "@/lib/utils/newsUtils";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 

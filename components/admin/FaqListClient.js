@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useFaq } from "./FaqContext";
-import { FAQ_CATEGORIES } from "@/lib/faqData";
+import { useFaq } from "./contexts/FaqContext";
+import { FAQ_CATEGORIES } from "@/lib/data/faqData";
 
 const inputCls    = "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft placeholder:text-muted";
 const labelCls    = "text-xs font-medium text-foreground";

@@ -2,9 +2,9 @@
 
 import { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react";
 import Image from "next/image";
-import { useBanners } from "./BannerContext";
-import { useNews } from "./NewsContext";
-import { publishedNews, formatDate } from "@/lib/newsUtils";
+import { useBanners } from "./contexts/BannerContext";
+import { useNews } from "./contexts/NewsContext";
+import { publishedNews, formatDate } from "@/lib/utils/newsUtils";
 
 // ── Constants ──────────────────────────────────────────────────
 const LAYOUT_CONFIG = {

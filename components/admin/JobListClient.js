@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { useJobs } from "./JobContext";
+import { useJobs } from "./contexts/JobContext";
 
 // ── Constants ─────────────────────────────────────────────────
 const JOB_TYPES  = ["ฝึกงาน", "งานประจำ"];

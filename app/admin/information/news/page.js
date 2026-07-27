@@ -1,4 +1,4 @@
-import AdminTopBar from "@/components/admin/AdminTopBar";
+import AdminTopBar from "@/components/admin/ui/AdminTopBar";
 import NewsListClient from "@/components/admin/NewsListClient";
 
 export default function AdminNewsPage() {

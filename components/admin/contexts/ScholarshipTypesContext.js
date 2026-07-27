@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { DEFAULT_SCHOLARSHIP_TYPES } from "@/lib/scholarshipTypesData";
+import { DEFAULT_SCHOLARSHIP_TYPES } from "@/lib/data/scholarshipTypesData";
 
 const STORAGE_KEY = "kosen_scholarship_types";
 const SEED_VERSION_KEY = "kosen_scholarship_types_seed_version";

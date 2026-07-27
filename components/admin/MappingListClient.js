@@ -2,11 +2,11 @@
 
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import { useMappings } from "./MappingContext";
-import { useStudents } from "./StudentContext";
-import { useJobs } from "./JobContext";
-import { useInternships } from "./InternshipContext";
-import { useLanguage } from "./LanguageContext";
+import { useMappings } from "./contexts/MappingContext";
+import { useStudents } from "./contexts/StudentContext";
+import { useJobs } from "./contexts/JobContext";
+import { useInternships } from "./contexts/InternshipContext";
+import { useLanguage } from "./contexts/LanguageContext";
 
 // ── Constants ─────────────────────────────────────────────────
 const MAPPING_STATUSES = ["สมัครแล้ว", "ผ่านการคัดเลือก", "ไม่ผ่านการคัดเลือก"];

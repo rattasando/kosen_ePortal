@@ -1,4 +1,4 @@
-import AdminTopBar from "@/components/admin/AdminTopBar";
+import AdminTopBar from "@/components/admin/ui/AdminTopBar";
 import DocumentListClient from "@/components/admin/DocumentListClient";
 
 export default function AdminDocumentsPage() {

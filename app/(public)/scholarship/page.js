@@ -1,5 +1,5 @@
 import Link from "next/link";
-import HeroSection from "@/components/HeroSection";
+import HeroSection from "@/components/public/HeroSection";
 
 const SCHOLARSHIP_TYPES = [
   {

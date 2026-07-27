@@ -3,13 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import BannerSlider from "@/components/BannerSlider";
-import SplashOverlay from "@/components/SplashOverlay";
-import { useNews } from "@/components/admin/NewsContext";
-import { formatDate, publishedNews } from "@/lib/newsUtils";
+import BannerSlider from "@/components/public/BannerSlider";
+import SplashOverlay from "@/components/public/SplashOverlay";
+import { useNews } from "@/components/admin/contexts/NewsContext";
+import { formatDate, publishedNews } from "@/lib/utils/newsUtils";
 import { usePublicLanguage } from "@/components/public/PublicLanguageContext";
 import FAQChatbot from "@/components/public/FAQChatbot";
-import { DEFAULT_JOBS } from "@/lib/jobData";
+import { DEFAULT_JOBS } from "@/lib/data/jobData";
 
 function SectionHeader({ eyebrow, title, subtitle, href, linkLabel }) {
   return (
@@ -159,7 +159,7 @@ export default function HomePage() {
     <>
       <SplashOverlay />
       {/* ── 1. Banner ── */}
-      <BannerSlider className="h-[65vh] shrink-0" />
+      <BannerSlider className="h-[80vh] shrink-0" />
 
       {/* ── 3. News ── */}
       <section className="bg-slate-50 pt-8 pb-14 md:pb-20">

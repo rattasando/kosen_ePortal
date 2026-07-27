@@ -2,7 +2,7 @@
 
 import { useState, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { DEFAULT_DOCUMENTS, DOCUMENT_CATEGORIES } from "@/lib/documentsData";
+import { DEFAULT_DOCUMENTS, DOCUMENT_CATEGORIES } from "@/lib/data/documentsData";
 
 const TODAY = new Date().toISOString().split("T")[0];
 const DOCUMENTS = DEFAULT_DOCUMENTS.filter(

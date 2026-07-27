@@ -8,7 +8,7 @@ import {
   CONTACT_STORAGE_KEY,
   CONTACT_SEED_KEY,
   CONTACT_SEED_VER,
-} from "@/lib/contactData";
+} from "@/lib/data/contactData";
 
 const ContactContext = createContext(null);
 
