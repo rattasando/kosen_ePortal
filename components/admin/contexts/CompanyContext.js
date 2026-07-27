@@ -1,11 +1,6 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { DEFAULT_COMPANIES } from "@/lib/data/companyData";
-
-const STORAGE_KEY = "kosen_companies";
-const SEED_VERSION_KEY = "kosen_companies_seed_version";
-const SEED_VERSION = `v${DEFAULT_COMPANIES.length}r2`;
 
 const CompanyContext = createContext(null);
 
@@ -14,58 +9,38 @@ export function CompanyProvider({ children }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    let initial = DEFAULT_COMPANIES;
-    try {
-      const savedVersion = localStorage.getItem(SEED_VERSION_KEY);
-      const stored = localStorage.getItem(STORAGE_KEY);
-      const needsReset = !stored || savedVersion !== SEED_VERSION;
-      if (needsReset) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_COMPANIES));
-        localStorage.setItem(SEED_VERSION_KEY, SEED_VERSION);
-      } else {
-        initial = JSON.parse(stored);
-      }
-    } catch {
-      /* use DEFAULT_COMPANIES */
-    }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setCompanies(initial);
-    setReady(true);
+    fetch("/api/companies")
+      .then((r) => r.json())
+      .then(setCompanies)
+      .catch(console.error)
+      .finally(() => setReady(true));
   }, []);
 
-  const persist = useCallback((next) => {
-    setCompanies(next);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  }, []);
-
-  const addCompany = useCallback((company) => {
-    setCompanies((prev) => {
-      const next = [...prev, company];
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
+  const addCompany = useCallback(async (company) => {
+    const res = await fetch("/api/companies", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(company),
     });
+    const created = await res.json();
+    setCompanies((prev) => [...prev, created]);
+    return created;
   }, []);
 
-  const updateCompany = useCallback((id, data) => {
-    setCompanies((prev) => {
-      const next = prev.map((c) => (c.id === id ? { ...c, ...data } : c));
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
+  const updateCompany = useCallback(async (id, data) => {
+    const res = await fetch(`/api/companies/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
     });
+    const updated = await res.json();
+    setCompanies((prev) => prev.map((c) => (c.id === id ? updated : c)));
+    return updated;
   }, []);
 
-  const deleteCompany = useCallback((id) => {
-    setCompanies((prev) => {
-      const next = prev.filter((c) => c.id !== id);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
-  }, []);
-
-  const replaceAll = useCallback((list) => {
-    setCompanies(list);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-    localStorage.setItem(SEED_VERSION_KEY, `custom-${list.length}`);
+  const deleteCompany = useCallback(async (id) => {
+    await fetch(`/api/companies/${id}`, { method: "DELETE" });
+    setCompanies((prev) => prev.filter((c) => c.id !== id));
   }, []);
 
   const getCompany = useCallback(
@@ -73,10 +48,25 @@ export function CompanyProvider({ children }) {
     [companies]
   );
 
+  const replaceAll = useCallback(async (list) => {
+    const existingIds = new Set(companies.map((c) => c.id));
+    await Promise.all(
+      list.map((item) => {
+        const opts = {
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(item),
+        };
+        return existingIds.has(item.id)
+          ? fetch(`/api/companies/${item.id}`, { method: "PUT", ...opts })
+          : fetch("/api/companies", { method: "POST", ...opts });
+      })
+    );
+    const fresh = await fetch("/api/companies").then((r) => r.json());
+    setCompanies(fresh);
+  }, [companies]);
+
   return (
-    <CompanyContext.Provider
-      value={{ companies, ready, addCompany, updateCompany, deleteCompany, getCompany, replaceAll }}
-    >
+    <CompanyContext.Provider value={{ companies, ready, addCompany, updateCompany, deleteCompany, getCompany, replaceAll }}>
       {children}
     </CompanyContext.Provider>
   );

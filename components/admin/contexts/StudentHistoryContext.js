@@ -2,58 +2,40 @@
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 
-const HISTORY_KEY      = "kosen_student_history";
-const MAX_EVENTS       = 500; // cap เพื่อไม่ให้ localStorage ใหญ่เกินไป
-
 const HistoryContext = createContext(null);
 
 export function StudentHistoryProvider({ children }) {
   const [events, setEvents] = useState([]);
-  const [ready, setReady]   = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(HISTORY_KEY);
-      if (stored) setEvents(JSON.parse(stored));
-    } catch { /* use empty */ }
-    setReady(true);
+    fetch("/api/student-history")
+      .then((r) => r.json())
+      .then(setEvents)
+      .catch(console.error)
+      .finally(() => setReady(true));
   }, []);
 
-  const persist = useCallback((next) => {
-    setEvents(next);
-    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(next)); } catch { /* ignore */ }
-  }, []);
-
-  // เพิ่ม event ใหม่เข้า history
-  const addEvent = useCallback(({ studentId, type, before, after, changes, summary }) => {
-    setEvents((prev) => {
-      const event = {
-        id:        `HIST${Date.now()}`,
-        studentId,
-        at:        new Date().toISOString(),
-        by:        "admin",
-        type,      // "create" | "update" | "delete"
-        before:    before ?? null,
-        after:     after  ?? null,
-        changes:   changes ?? [],  // [{ field, label, before, after }]
-        summary:   summary ?? "",
-      };
-      const next = [event, ...prev].slice(0, MAX_EVENTS);
-      try { localStorage.setItem(HISTORY_KEY, JSON.stringify(next)); } catch { /* ignore */ }
-      return next;
+  const addEvent = useCallback(async ({ studentId, type, before, after, changes, summary, by }) => {
+    const res = await fetch("/api/student-history", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ studentId, type, before, after, changes, summary, by }),
     });
+    const event = await res.json();
+    setEvents((prev) => [event, ...prev].slice(0, 500));
+    return event;
   }, []);
 
-  // ดึง history ของนักเรียน 1 คน เรียงล่าสุดก่อน
   const getStudentHistory = useCallback(
     (studentId) => events.filter((e) => e.studentId === studentId),
     [events]
   );
 
-  // ลบ history ทั้งหมดของนักเรียน 1 คน (ใช้ตอนลบนักเรียน)
-  const clearStudentHistory = useCallback((studentId) => {
-    persist(events.filter((e) => e.studentId !== studentId));
-  }, [events, persist]);
+  const clearStudentHistory = useCallback(async (studentId) => {
+    await fetch(`/api/student-history?studentId=${studentId}`, { method: "DELETE" });
+    setEvents((prev) => prev.filter((e) => e.studentId !== studentId));
+  }, []);
 
   return (
     <HistoryContext.Provider value={{ events, ready, addEvent, getStudentHistory, clearStudentHistory }}>

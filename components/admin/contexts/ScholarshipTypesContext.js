@@ -1,11 +1,6 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { DEFAULT_SCHOLARSHIP_TYPES } from "@/lib/data/scholarshipTypesData";
-
-const STORAGE_KEY = "kosen_scholarship_types";
-const SEED_VERSION_KEY = "kosen_scholarship_types_seed_version";
-const SEED_VERSION = `v${DEFAULT_SCHOLARSHIP_TYPES.length}r1`;
 
 const ScholarshipTypesContext = createContext(null);
 
@@ -14,55 +9,49 @@ export function ScholarshipTypesProvider({ children }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    let initial = DEFAULT_SCHOLARSHIP_TYPES;
-    try {
-      const savedVersion = localStorage.getItem(SEED_VERSION_KEY);
-      const stored = localStorage.getItem(STORAGE_KEY);
-      const needsReset = !stored || savedVersion !== SEED_VERSION;
-      if (needsReset) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_SCHOLARSHIP_TYPES));
-        localStorage.setItem(SEED_VERSION_KEY, SEED_VERSION);
-      } else {
-        initial = JSON.parse(stored);
-      }
-    } catch { /* use DEFAULT_SCHOLARSHIP_TYPES */ }
-    setScholarshipTypes(initial);
-    setReady(true);
+    fetch("/api/scholarship-types")
+      .then((r) => r.json())
+      .then(setScholarshipTypes)
+      .catch(console.error)
+      .finally(() => setReady(true));
   }, []);
 
-  const persist = useCallback((next) => {
-    setScholarshipTypes(next);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  }, []);
-
-  const addScholarshipType = useCallback((item) => {
-    setScholarshipTypes((prev) => {
-      const next = [...prev, item];
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
+  const addScholarshipType = useCallback(async (item) => {
+    const res = await fetch("/api/scholarship-types", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(item),
     });
+    const created = await res.json();
+    setScholarshipTypes((prev) => [...prev, created]);
+    return created;
   }, []);
 
-  const updateScholarshipType = useCallback((id, data) => {
-    setScholarshipTypes((prev) => {
-      const next = prev.map((s) => (s.id === id ? { ...s, ...data } : s));
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
+  const updateScholarshipType = useCallback(async (id, data) => {
+    const res = await fetch(`/api/scholarship-types/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
     });
+    const updated = await res.json();
+    setScholarshipTypes((prev) => prev.map((s) => (s.id === id ? updated : s)));
+    return updated;
   }, []);
 
-  const deleteScholarshipType = useCallback((id) => {
-    setScholarshipTypes((prev) => {
-      const next = prev.filter((s) => s.id !== id);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
+  const deleteScholarshipType = useCallback(async (id) => {
+    await fetch(`/api/scholarship-types/${id}`, { method: "DELETE" });
+    setScholarshipTypes((prev) => prev.filter((s) => s.id !== id));
   }, []);
 
   const getScholarshipType = useCallback(
     (id) => scholarshipTypes.find((s) => s.id === id) ?? null,
     [scholarshipTypes]
   );
+
+  const persist = useCallback(async () => {
+    const res = await fetch("/api/scholarship-types");
+    setScholarshipTypes(await res.json());
+  }, []);
 
   return (
     <ScholarshipTypesContext.Provider value={{ scholarshipTypes, ready, addScholarshipType, updateScholarshipType, deleteScholarshipType, getScholarshipType, persist }}>

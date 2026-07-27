@@ -1,11 +1,6 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { DEFAULT_USERS } from "@/lib/data/userData";
-
-const STORAGE_KEY = "kosen_users";
-const SEED_VERSION_KEY = "kosen_users_seed_version";
-const SEED_VERSION = `v${DEFAULT_USERS.length}r3`;
 
 const UserContext = createContext(null);
 
@@ -14,55 +9,49 @@ export function UserProvider({ children }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    let initial = DEFAULT_USERS;
-    try {
-      const savedVersion = localStorage.getItem(SEED_VERSION_KEY);
-      const stored = localStorage.getItem(STORAGE_KEY);
-      const needsReset = !stored || savedVersion !== SEED_VERSION;
-      if (needsReset) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_USERS));
-        localStorage.setItem(SEED_VERSION_KEY, SEED_VERSION);
-      } else {
-        initial = JSON.parse(stored);
-      }
-    } catch { /* use DEFAULT_USERS */ }
-    setUsers(initial);
-    setReady(true);
+    fetch("/api/users")
+      .then((r) => r.json())
+      .then(setUsers)
+      .catch(console.error)
+      .finally(() => setReady(true));
   }, []);
 
-  const persist = useCallback((next) => {
-    setUsers(next);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  }, []);
-
-  const addUser = useCallback((user) => {
-    setUsers((prev) => {
-      const next = [...prev, user];
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
+  const addUser = useCallback(async (user) => {
+    const res = await fetch("/api/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(user),
     });
+    const created = await res.json();
+    setUsers((prev) => [...prev, created]);
+    return created;
   }, []);
 
-  const updateUser = useCallback((id, data) => {
-    setUsers((prev) => {
-      const next = prev.map((u) => (u.id === id ? { ...u, ...data } : u));
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
+  const updateUser = useCallback(async (id, data) => {
+    const res = await fetch(`/api/users/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
     });
+    const updated = await res.json();
+    setUsers((prev) => prev.map((u) => (u.id === id ? updated : u)));
+    return updated;
   }, []);
 
-  const deleteUser = useCallback((id) => {
-    setUsers((prev) => {
-      const next = prev.filter((u) => u.id !== id);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
+  const deleteUser = useCallback(async (id) => {
+    await fetch(`/api/users/${id}`, { method: "DELETE" });
+    setUsers((prev) => prev.filter((u) => u.id !== id));
   }, []);
 
   const getUser = useCallback(
     (id) => users.find((u) => u.id === id) ?? null,
     [users]
   );
+
+  const persist = useCallback(async () => {
+    const res = await fetch("/api/users");
+    setUsers(await res.json());
+  }, []);
 
   return (
     <UserContext.Provider value={{ users, ready, addUser, updateUser, deleteUser, getUser, persist }}>

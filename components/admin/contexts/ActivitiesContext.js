@@ -1,11 +1,6 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { DEFAULT_ACTIVITIES } from "@/lib/data/activitiesData";
-
-const STORAGE_KEY = "kosen_activities_admin";
-const SEED_VERSION_KEY = "kosen_activities_admin_seed_version";
-const SEED_VERSION = `v${DEFAULT_ACTIVITIES.length}r3`;
 
 const ActivitiesContext = createContext(null);
 
@@ -14,55 +9,49 @@ export function ActivitiesProvider({ children }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    let initial = DEFAULT_ACTIVITIES;
-    try {
-      const savedVersion = localStorage.getItem(SEED_VERSION_KEY);
-      const stored = localStorage.getItem(STORAGE_KEY);
-      const needsReset = !stored || savedVersion !== SEED_VERSION;
-      if (needsReset) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_ACTIVITIES));
-        localStorage.setItem(SEED_VERSION_KEY, SEED_VERSION);
-      } else {
-        initial = JSON.parse(stored);
-      }
-    } catch { /* use DEFAULT_ACTIVITIES */ }
-    setActivities(initial);
-    setReady(true);
+    fetch("/api/activities")
+      .then((r) => r.json())
+      .then(setActivities)
+      .catch(console.error)
+      .finally(() => setReady(true));
   }, []);
 
-  const persist = useCallback((next) => {
-    setActivities(next);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  }, []);
-
-  const addActivity = useCallback((item) => {
-    setActivities((prev) => {
-      const next = [...prev, item];
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
+  const addActivity = useCallback(async (item) => {
+    const res = await fetch("/api/activities", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(item),
     });
+    const created = await res.json();
+    setActivities((prev) => [...prev, created]);
+    return created;
   }, []);
 
-  const updateActivity = useCallback((id, data) => {
-    setActivities((prev) => {
-      const next = prev.map((a) => (a.id === id ? { ...a, ...data } : a));
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
+  const updateActivity = useCallback(async (id, data) => {
+    const res = await fetch(`/api/activities/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
     });
+    const updated = await res.json();
+    setActivities((prev) => prev.map((a) => (a.id === id ? updated : a)));
+    return updated;
   }, []);
 
-  const deleteActivity = useCallback((id) => {
-    setActivities((prev) => {
-      const next = prev.filter((a) => a.id !== id);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
+  const deleteActivity = useCallback(async (id) => {
+    await fetch(`/api/activities/${id}`, { method: "DELETE" });
+    setActivities((prev) => prev.filter((a) => a.id !== id));
   }, []);
 
   const getActivity = useCallback(
     (id) => activities.find((a) => a.id === id) ?? null,
     [activities]
   );
+
+  const persist = useCallback(async () => {
+    const res = await fetch("/api/activities");
+    setActivities(await res.json());
+  }, []);
 
   return (
     <ActivitiesContext.Provider value={{ activities, ready, addActivity, updateActivity, deleteActivity, getActivity, persist }}>

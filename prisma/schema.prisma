@@ -580,8 +580,20 @@ model ContactUniversity {
   phone    String? @db.VarChar(30)
   email    String? @db.VarChar(150)
   mapUrl   String? @map("map_url") @db.VarChar(500)
+  order    Int     @default(0)
 
   @@map("contact_universities")
+}
+
+model ContactSocial {
+  id     String  @id @db.VarChar(10)
+  icon   String? @db.VarChar(10)
+  label  String  @db.VarChar(100)
+  handle String? @db.VarChar(100)
+  href   String? @db.VarChar(500)
+  order  Int     @default(0)
+
+  @@map("contact_social")
 }
 
 model StudentHistory {

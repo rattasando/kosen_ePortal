@@ -1,7 +1,6 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { DEFAULT_FAQS, FAQ_STORAGE_KEY, FAQ_SEED_KEY, FAQ_SEED_VER } from "@/lib/data/faqData";
 
 const FaqContext = createContext(null);
 
@@ -10,30 +9,48 @@ export function FaqProvider({ children }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    let initial = DEFAULT_FAQS;
-    try {
-      const savedVer = localStorage.getItem(FAQ_SEED_KEY);
-      const stored   = localStorage.getItem(FAQ_STORAGE_KEY);
-      if (stored && savedVer === FAQ_SEED_VER) {
-        initial = JSON.parse(stored);
-      } else {
-        localStorage.setItem(FAQ_STORAGE_KEY, JSON.stringify(DEFAULT_FAQS));
-        localStorage.setItem(FAQ_SEED_KEY, FAQ_SEED_VER);
-      }
-    } catch { /* use defaults */ }
-    setFaqs(initial);
-    setReady(true);
+    fetch("/api/faq")
+      .then((r) => r.json())
+      .then(setFaqs)
+      .catch(console.error)
+      .finally(() => setReady(true));
   }, []);
 
-  const save = useCallback((next) => {
-    setFaqs(next);
-    try { localStorage.setItem(FAQ_STORAGE_KEY, JSON.stringify(next)); } catch { /* ignore */ }
+  const addFaq = useCallback(async (f) => {
+    const res = await fetch("/api/faq", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(f),
+    });
+    const created = await res.json();
+    setFaqs((prev) => [...prev, created]);
+    return created;
   }, []);
 
-  const addFaq    = useCallback((f)        => save([...faqs, f]),                                [faqs, save]);
-  const updateFaq = useCallback((id, data) => save(faqs.map((f) => f.id === id ? { ...f, ...data } : f)), [faqs, save]);
-  const deleteFaq = useCallback((id)       => save(faqs.filter((f) => f.id !== id)),             [faqs, save]);
-  const reorder   = useCallback((ordered)  => save(ordered),                                     [save]);
+  const updateFaq = useCallback(async (id, data) => {
+    const res = await fetch(`/api/faq/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    const updated = await res.json();
+    setFaqs((prev) => prev.map((f) => (f.id === id ? updated : f)));
+    return updated;
+  }, []);
+
+  const deleteFaq = useCallback(async (id) => {
+    await fetch(`/api/faq/${id}`, { method: "DELETE" });
+    setFaqs((prev) => prev.filter((f) => f.id !== id));
+  }, []);
+
+  const reorder = useCallback(async (ordered) => {
+    setFaqs(ordered);
+    await fetch("/api/faq/reorder", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: ordered.map((f) => f.id) }),
+    });
+  }, []);
 
   return (
     <FaqContext.Provider value={{ faqs, ready, addFaq, updateFaq, deleteFaq, reorder }}>

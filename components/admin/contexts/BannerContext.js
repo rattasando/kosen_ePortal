@@ -1,7 +1,6 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { DEFAULT_BANNERS, BANNER_STORAGE_KEY, BANNER_SEED_KEY, BANNER_SEED_VER } from "@/lib/data/bannerData";
 
 const BannerContext = createContext(null);
 
@@ -10,31 +9,48 @@ export function BannerProvider({ children }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    let initial = DEFAULT_BANNERS;
-    try {
-      const savedVer = localStorage.getItem(BANNER_SEED_KEY);
-      const stored   = localStorage.getItem(BANNER_STORAGE_KEY);
-      if (!stored || savedVer !== BANNER_SEED_VER) {
-        localStorage.setItem(BANNER_STORAGE_KEY, JSON.stringify(DEFAULT_BANNERS));
-        localStorage.setItem(BANNER_SEED_KEY, BANNER_SEED_VER);
-      } else {
-        initial = JSON.parse(stored);
-      }
-    } catch { /* use DEFAULT_BANNERS */ }
-    setBanners(initial);
-    setReady(true);
+    fetch("/api/banners")
+      .then((r) => r.json())
+      .then(setBanners)
+      .catch(console.error)
+      .finally(() => setReady(true));
   }, []);
 
-  const save = useCallback((next) => {
-    setBanners(next);
-    localStorage.setItem(BANNER_STORAGE_KEY, JSON.stringify(next));
-    window.dispatchEvent(new StorageEvent("storage", { key: BANNER_STORAGE_KEY }));
+  const addBanner = useCallback(async (b) => {
+    const res = await fetch("/api/banners", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(b),
+    });
+    const created = await res.json();
+    setBanners((prev) => [...prev, created]);
+    return created;
   }, []);
 
-  const addBanner    = useCallback((b)       => save([...banners, b]), [banners, save]);
-  const updateBanner = useCallback((id, data) => save(banners.map((b) => b.id === id ? { ...b, ...data } : b)), [banners, save]);
-  const deleteBanner = useCallback((id)       => save(banners.filter((b) => b.id !== id)), [banners, save]);
-  const reorder      = useCallback((ordered)  => save(ordered), [save]);
+  const updateBanner = useCallback(async (id, data) => {
+    const res = await fetch(`/api/banners/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    const updated = await res.json();
+    setBanners((prev) => prev.map((b) => (b.id === id ? updated : b)));
+    return updated;
+  }, []);
+
+  const deleteBanner = useCallback(async (id) => {
+    await fetch(`/api/banners/${id}`, { method: "DELETE" });
+    setBanners((prev) => prev.filter((b) => b.id !== id));
+  }, []);
+
+  const reorder = useCallback(async (ordered) => {
+    setBanners(ordered);
+    await fetch("/api/banners/reorder", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: ordered.map((b) => b.id) }),
+    });
+  }, []);
 
   return (
     <BannerContext.Provider value={{ banners, ready, addBanner, updateBanner, deleteBanner, reorder }}>

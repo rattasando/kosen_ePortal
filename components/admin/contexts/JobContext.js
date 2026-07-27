@@ -1,11 +1,6 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { DEFAULT_JOBS } from "@/lib/data/jobData";
-
-const STORAGE_KEY = "kosen_jobs";
-const SEED_VERSION_KEY = "kosen_jobs_seed_version";
-const SEED_VERSION = `v${DEFAULT_JOBS.length}r8`;
 
 const JobContext = createContext(null);
 
@@ -14,51 +9,38 @@ export function JobProvider({ children }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    let initial = DEFAULT_JOBS;
-    try {
-      const savedVersion = localStorage.getItem(SEED_VERSION_KEY);
-      const stored = localStorage.getItem(STORAGE_KEY);
-      const needsReset = !stored || savedVersion !== SEED_VERSION;
-      if (needsReset) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_JOBS));
-        localStorage.setItem(SEED_VERSION_KEY, SEED_VERSION);
-      } else {
-        initial = JSON.parse(stored);
-      }
-    } catch {
-      /* use DEFAULT_JOBS */
-    }
-    setJobs(initial);
-    setReady(true);
+    fetch("/api/jobs")
+      .then((r) => r.json())
+      .then(setJobs)
+      .catch(console.error)
+      .finally(() => setReady(true));
   }, []);
 
-  const persist = useCallback((next) => {
-    setJobs(next);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  }, []);
-
-  const addJob = useCallback((job) => {
-    setJobs((prev) => {
-      const next = [...prev, job];
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
+  const addJob = useCallback(async (job) => {
+    const res = await fetch("/api/jobs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(job),
     });
+    const created = await res.json();
+    setJobs((prev) => [...prev, created]);
+    return created;
   }, []);
 
-  const updateJob = useCallback((id, data) => {
-    setJobs((prev) => {
-      const next = prev.map((j) => (j.id === id ? { ...j, ...data } : j));
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
+  const updateJob = useCallback(async (id, data) => {
+    const res = await fetch(`/api/jobs/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
     });
+    const updated = await res.json();
+    setJobs((prev) => prev.map((j) => (j.id === id ? updated : j)));
+    return updated;
   }, []);
 
-  const deleteJob = useCallback((id) => {
-    setJobs((prev) => {
-      const next = prev.filter((j) => j.id !== id);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
+  const deleteJob = useCallback(async (id) => {
+    await fetch(`/api/jobs/${id}`, { method: "DELETE" });
+    setJobs((prev) => prev.filter((j) => j.id !== id));
   }, []);
 
   const getJob = useCallback(
@@ -66,11 +48,22 @@ export function JobProvider({ children }) {
     [jobs]
   );
 
-  const replaceAll = useCallback((list) => {
-    setJobs(list);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-    localStorage.setItem(SEED_VERSION_KEY, `custom-${list.length}`);
-  }, []);
+  const replaceAll = useCallback(async (list) => {
+    const existingIds = new Set(jobs.map((j) => j.id));
+    await Promise.all(
+      list.map((item) => {
+        const opts = {
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(item),
+        };
+        return existingIds.has(item.id)
+          ? fetch(`/api/jobs/${item.id}`, { method: "PUT", ...opts })
+          : fetch("/api/jobs", { method: "POST", ...opts });
+      })
+    );
+    const fresh = await fetch("/api/jobs").then((r) => r.json());
+    setJobs(fresh);
+  }, [jobs]);
 
   return (
     <JobContext.Provider value={{ jobs, ready, addJob, updateJob, deleteJob, getJob, replaceAll }}>

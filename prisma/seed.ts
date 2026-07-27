@@ -12,6 +12,7 @@ import { DEFAULT_SPLASH } from "../lib/data/splashData.js";
 import {
   DEFAULT_CONTACT_MAIN,
   DEFAULT_CONTACT_UNIVERSITIES,
+  DEFAULT_CONTACT_SOCIAL,
 } from "../lib/data/contactData.js";
 import { DEFAULT_FAQS } from "../lib/data/faqData.js";
 import { DEFAULT_DOCUMENTS } from "../lib/data/documentsData.js";
@@ -397,6 +398,22 @@ async function seedContact() {
     });
   }
   console.log(`  ✓ ${DEFAULT_CONTACT_UNIVERSITIES.length} universities`);
+
+  for (const s of DEFAULT_CONTACT_SOCIAL) {
+    await prisma.contactSocial.upsert({
+      where: { id: s.id },
+      update: {},
+      create: {
+        id: s.id,
+        icon: s.icon ?? null,
+        label: s.label,
+        handle: s.handle ?? null,
+        href: s.href ?? null,
+        order: s.order ?? 0,
+      },
+    });
+  }
+  console.log(`  ✓ ${DEFAULT_CONTACT_SOCIAL.length} social links`);
 }
 
 // ─────────────────────────────────────────────────────────────

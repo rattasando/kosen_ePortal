@@ -1,73 +1,51 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { DEFAULT_STUDENTS } from "@/lib/data/studentData";
-
-const STORAGE_KEY = "kosen_students";
-const SEED_VERSION_KEY = "kosen_students_seed_version";
-const SEED_VERSION = `v${DEFAULT_STUDENTS.length}r7`;
 
 const StudentContext = createContext(null);
+
+async function apiFetch(url, opts) {
+  const res = await fetch(url, opts);
+  const json = await res.json();
+  if (!res.ok) throw new Error(json?.error ?? `API error ${res.status}`);
+  return json;
+}
 
 export function StudentProvider({ children }) {
   const [students, setStudents] = useState([]);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    let initial = DEFAULT_STUDENTS;
-    try {
-      const savedVersion = localStorage.getItem(SEED_VERSION_KEY);
-      const stored = localStorage.getItem(STORAGE_KEY);
-      const needsReset = !stored || savedVersion !== SEED_VERSION;
-      if (needsReset) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_STUDENTS));
-        localStorage.setItem(SEED_VERSION_KEY, SEED_VERSION);
-      } else {
-        initial = JSON.parse(stored);
-      }
-    } catch {
-      /* use DEFAULT_STUDENTS */
-    }
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setStudents(initial);
-    setReady(true);
+    fetch("/api/students")
+      .then((r) => r.json())
+      .then(setStudents)
+      .catch(console.error)
+      .finally(() => setReady(true));
   }, []);
 
-  const persist = useCallback((next) => {
-    setStudents(next);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  }, []);
-
-  const addStudent = useCallback((student) => {
-    const withId = student.id ? student : { ...student, id: crypto.randomUUID() };
-    setStudents((prev) => {
-      const next = [...prev, withId];
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
+  const addStudent = useCallback(async (student) => {
+    const created = await apiFetch("/api/students", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(student),
     });
-    return withId.id;
+    setStudents((prev) => [...prev, created]);
+    return created.id;
   }, []);
 
-  const updateStudent = useCallback((id, data) => {
-    setStudents((prev) => {
-      const next = prev.map((s) => (s.id === id ? { ...s, ...data } : s));
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
+  const updateStudent = useCallback(async (id, data) => {
+    const updated = await apiFetch(`/api/students/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
     });
+    setStudents((prev) => prev.map((s) => (s.id === id ? updated : s)));
+    return updated;
   }, []);
 
-  const deleteStudent = useCallback((id) => {
-    setStudents((prev) => {
-      const next = prev.filter((s) => s.id !== id);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
-  }, []);
-
-  const replaceAll = useCallback((list) => {
-    setStudents(list);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-    localStorage.setItem(SEED_VERSION_KEY, `custom-${list.length}`);
+  const deleteStudent = useCallback(async (id) => {
+    await fetch(`/api/students/${id}`, { method: "DELETE" });
+    setStudents((prev) => prev.filter((s) => s.id !== id));
   }, []);
 
   const getStudent = useCallback(
@@ -75,10 +53,25 @@ export function StudentProvider({ children }) {
     [students]
   );
 
+  const replaceAll = useCallback(async (list) => {
+    const existingIds = new Set(students.map((s) => s.id));
+    await Promise.all(
+      list.map((item) => {
+        const opts = {
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(item),
+        };
+        return existingIds.has(item.id)
+          ? fetch(`/api/students/${item.id}`, { method: "PUT", ...opts })
+          : fetch("/api/students", { method: "POST", ...opts });
+      })
+    );
+    const fresh = await fetch("/api/students").then((r) => r.json());
+    setStudents(fresh);
+  }, [students]);
+
   return (
-    <StudentContext.Provider
-      value={{ students, ready, addStudent, updateStudent, deleteStudent, getStudent, replaceAll }}
-    >
+    <StudentContext.Provider value={{ students, ready, addStudent, updateStudent, deleteStudent, getStudent, replaceAll }}>
       {children}
     </StudentContext.Provider>
   );

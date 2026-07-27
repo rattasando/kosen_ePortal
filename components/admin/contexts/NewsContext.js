@@ -1,11 +1,6 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { DEFAULT_NEWS } from "@/lib/data/newsData";
-
-const STORAGE_KEY = "kosen_news";
-const SEED_VERSION_KEY = "kosen_news_seed_version";
-const SEED_VERSION = `v${DEFAULT_NEWS.length}r9`;
 
 const NewsContext = createContext(null);
 
@@ -14,55 +9,47 @@ export function NewsProvider({ children }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    let initial = DEFAULT_NEWS;
-    try {
-      const savedVersion = localStorage.getItem(SEED_VERSION_KEY);
-      const stored = localStorage.getItem(STORAGE_KEY);
-      const needsReset = !stored || savedVersion !== SEED_VERSION;
-      if (needsReset) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_NEWS));
-        localStorage.setItem(SEED_VERSION_KEY, SEED_VERSION);
-      } else {
-        initial = JSON.parse(stored);
-      }
-    } catch { /* use DEFAULT_NEWS */ }
-    setNews(initial);
-    setReady(true);
+    fetch("/api/news")
+      .then((r) => r.json())
+      .then(setNews)
+      .catch(console.error)
+      .finally(() => setReady(true));
   }, []);
 
-  const persist = useCallback((next) => {
-    setNews(next);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  }, []);
-
-  const addNews = useCallback((item) => {
-    setNews((prev) => {
-      const next = [...prev, item];
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
+  const addNews = useCallback(async (item) => {
+    const res = await fetch("/api/news", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(item),
     });
+    const created = await res.json();
+    setNews((prev) => [...prev, created]);
+    return created;
   }, []);
 
-  const updateNews = useCallback((id, data) => {
-    setNews((prev) => {
-      const next = prev.map((n) => (n.id === id ? { ...n, ...data } : n));
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
+  const updateNews = useCallback(async (id, data) => {
+    const res = await fetch(`/api/news/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
     });
+    const updated = await res.json();
+    setNews((prev) => prev.map((n) => (n.id === id ? updated : n)));
+    return updated;
   }, []);
 
-  const deleteNews = useCallback((id) => {
-    setNews((prev) => {
-      const next = prev.filter((n) => n.id !== id);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
+  const deleteNews = useCallback(async (id) => {
+    await fetch(`/api/news/${id}`, { method: "DELETE" });
+    setNews((prev) => prev.filter((n) => n.id !== id));
   }, []);
 
-  const getNews = useCallback(
-    (id) => news.find((n) => n.id === id) ?? null,
-    [news]
-  );
+  const getNews = useCallback((id) => news.find((n) => n.id === id) ?? null, [news]);
+
+  const persist = useCallback(async (list) => {
+    const res = await fetch("/api/news");
+    const fresh = await res.json();
+    setNews(fresh);
+  }, []);
 
   return (
     <NewsContext.Provider value={{ news, ready, addNews, updateNews, deleteNews, getNews, persist }}>

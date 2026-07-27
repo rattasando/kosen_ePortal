@@ -11,29 +11,49 @@ export async function GET(_, { params }) {
   return NextResponse.json(student);
 }
 
-export async function PUT(request, { params }) {
-  const { id } = await params;
-  const { enrollments, ...data } = await request.json();
+const STUDENT_FIELDS = [
+  "prefix","prefixEn","name","nameEn","lastname","lastnameEn","nickname","gender","dob",
+  "nationalId","passport","militaryStatus","tel","email","lineId","country",
+  "addrThHouseNo","addrThSubdistrict","addrThDistrict","addrThProvince","addrThPostalCode",
+  "addrJpPostalCode","addrJpPrefecture","addrJpCity","addrJpStreetAddress","addrJpBuilding",
+  "prevSchool","scholarship","scholarshipTypeId",
+  "bankName","bankBranch","bankAccountNo",
+  "departureDateTh","arrivalDateJp","status","note","avatar","createdBy",
+];
 
-  const student = await prisma.$transaction(async (tx) => {
-    if (enrollments !== undefined) {
-      await tx.studentEnrollment.deleteMany({ where: { studentId: id } });
-    }
-    return tx.student.update({
-      where: { id },
-      data: {
-        ...data,
-        dob: data.dob ? new Date(data.dob) : null,
-        departureDateTh: data.departureDateTh ? new Date(data.departureDateTh) : null,
-        arrivalDateJp: data.arrivalDateJp ? new Date(data.arrivalDateJp) : null,
-        enrollments: enrollments?.length
-          ? { create: enrollments }
-          : undefined,
-      },
-      include: { enrollments: { orderBy: { order: "asc" } } },
+export async function PUT(request, { params }) {
+  try {
+    const { id } = await params;
+    const body = await request.json();
+    const { enrollments } = body;
+
+    const data = Object.fromEntries(
+      STUDENT_FIELDS.filter((k) => k in body).map((k) => [k, body[k]])
+    );
+
+    const student = await prisma.$transaction(async (tx) => {
+      if (enrollments !== undefined) {
+        await tx.studentEnrollment.deleteMany({ where: { studentId: id } });
+      }
+      return tx.student.update({
+        where: { id },
+        data: {
+          ...data,
+          dob: data.dob ? new Date(data.dob) : null,
+          departureDateTh: data.departureDateTh ? new Date(data.departureDateTh) : null,
+          arrivalDateJp: data.arrivalDateJp ? new Date(data.arrivalDateJp) : null,
+          enrollments: enrollments?.length
+            ? { create: enrollments }
+            : undefined,
+        },
+        include: { enrollments: { orderBy: { order: "asc" } } },
+      });
     });
-  });
-  return NextResponse.json(student);
+    return NextResponse.json(student);
+  } catch (err) {
+    console.error("PUT /api/students/[id]:", err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
 }
 
 export async function DELETE(_, { params }) {
