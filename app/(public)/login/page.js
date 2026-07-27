@@ -1,47 +1,32 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-
-const CREDENTIALS = { username: "admin", password: "kosen" };
 
 export default function LoginPage() {
   const router = useRouter();
-  const [form, setForm] = useState({ username: "", password: "", remember: false });
+  const [form, setForm] = useState({ username: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    const savedUser = localStorage.getItem("kosen_remember_user");
-    const savedPass = localStorage.getItem("kosen_remember_pass");
-    if (savedUser && savedPass) {
-      setForm({ username: savedUser, password: savedPass, remember: true });
-    }
-  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    await new Promise((r) => setTimeout(r, 500));
+    const result = await signIn("credentials", {
+      username: form.username.trim(),
+      password: form.password,
+      redirect: false,
+    });
 
-    if (
-      form.username.trim() === CREDENTIALS.username &&
-      form.password === CREDENTIALS.password
-    ) {
-      localStorage.setItem("kosen_auth", "1");
-      if (form.remember) {
-        localStorage.setItem("kosen_remember_user", form.username.trim());
-        localStorage.setItem("kosen_remember_pass", form.password);
-      } else {
-        localStorage.removeItem("kosen_remember_user");
-        localStorage.removeItem("kosen_remember_pass");
-      }
-      router.push("/admin");
-    } else {
+    setLoading(false);
+
+    if (result?.error) {
       setError("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
-      setLoading(false);
+    } else {
+      router.push("/admin");
     }
   };
 
@@ -57,13 +42,6 @@ export default function LoginPage() {
             เข้าสู่ระบบ
           </h1>
           <p className="mt-1 text-sm text-muted">KOSEN Admin Portal</p>
-        </div>
-
-        {/* Demo hint */}
-        <div className="mt-6 rounded-xl border border-accent bg-sky-50 px-4 py-3 text-xs text-accent">
-          <span className="font-semibold">Demo:</span> username{" "}
-          <span className="font-mono font-bold">admin</span> / password{" "}
-          <span className="font-mono font-bold">kosen</span>
         </div>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
@@ -83,9 +61,10 @@ export default function LoginPage() {
               onChange={(e) =>
                 setForm((p) => ({ ...p, username: e.target.value }))
               }
-              placeholder="admin"
+              placeholder="username"
               autoComplete="username"
               required
+              autoFocus
               className="w-full rounded-lg border border-border bg-surface px-4 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft"
             />
           </div>
@@ -105,18 +84,6 @@ export default function LoginPage() {
               required
               className="w-full rounded-lg border border-border bg-surface px-4 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft"
             />
-          </div>
-
-          <div className="flex items-center justify-between">
-            <label className="flex cursor-pointer items-center gap-2 select-none">
-              <input
-                type="checkbox"
-                checked={form.remember}
-                onChange={(e) => setForm((p) => ({ ...p, remember: e.target.checked }))}
-                className="h-4 w-4 rounded border-border accent-primary"
-              />
-              <span className="text-sm text-muted">จดจำฉันไว้</span>
-            </label>
           </div>
 
           <button

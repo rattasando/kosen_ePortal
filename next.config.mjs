@@ -6,6 +6,11 @@ const nextConfig = {
       { protocol: "http",  hostname: "**" },
     ],
   },
+  serverExternalPackages: [
+    "@prisma/client",
+    "@prisma/adapter-pg",
+    "pg",
+  ],
 };
 
 export default nextConfig;

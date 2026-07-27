@@ -1,27 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 export default function AdminGuard({ children }) {
+  const { status } = useSession();
   const router = useRouter();
-  const [checked, setChecked] = useState(false);
 
   useEffect(() => {
-    if (!localStorage.getItem("kosen_auth")) {
+    if (status === "unauthenticated") {
       router.replace("/login");
-    } else {
-      setChecked(true);
     }
-  }, [router]);
+  }, [status, router]);
 
-  if (!checked) {
+  if (status === "loading") {
     return (
       <div className="flex min-h-screen items-center justify-center text-muted text-sm">
         กำลังตรวจสอบสิทธิ์...
       </div>
     );
   }
+
+  if (status === "unauthenticated") return null;
 
   return children;
 }

@@ -39,3 +39,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/lib/generated/prisma
+
+# Auth secret (already covered by .env*, but explicit)
+.env.local
+
+# Large generated/vendor files
+skills-lock.json
+.agents/
+.windsurf/
+.claude/

@@ -1,0 +1,600 @@
+// ============================================================
+//  Kosen ePortal — Prisma Schema (PostgreSQL)
+//  Converted from design/kosen_schema.sql (MySQL)
+// ============================================================
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ──────────────────── Enums ────────────────────
+
+enum UserRole {
+  superadmin
+  admin
+  staff
+  viewer
+}
+
+enum ActiveStatus {
+  active
+  inactive
+  suspended
+}
+
+enum PublishStatus {
+  published
+  draft
+}
+
+enum BlockType {
+  paragraph
+  heading1
+  heading2
+  heading3
+  heading4
+  image
+  spacer
+}
+
+enum FontSize {
+  sm
+  base
+  lg
+  xl
+}
+
+enum BannerLayout {
+  hero
+  news_single     @map("news-single")
+  activity_single @map("activity-single")
+  news
+  activity
+}
+
+enum ShowFrequency {
+  always
+  once_per_session
+  once_per_day
+}
+
+enum SplashWidth {
+  sm
+  md
+  lg
+}
+
+enum SplashRadius {
+  none
+  lg
+  r2xl @map("2xl")
+  r3xl @map("3xl")
+}
+
+enum HistoryAction {
+  create
+  update
+  delete
+}
+
+// ──────────────────── Models ────────────────────
+
+model User {
+  id                String     @id @db.VarChar(20)
+  username          String     @unique @db.VarChar(100)
+  password          String     @db.VarChar(255)
+  passwordUpdatedAt DateTime?  @map("password_updated_at") @db.Date
+  name              String     @db.VarChar(100)
+  nameEn            String?    @map("name_en") @db.VarChar(100)
+  email             String     @unique @db.VarChar(150)
+  role              UserRole   @default(staff)
+  department        String?    @db.VarChar(100)
+  university        String?    @db.VarChar(100)
+  tel               String?    @db.VarChar(20)
+  lastLogin         DateTime?  @map("last_login") @db.Date
+  status            ActiveStatus @default(active)
+  note              String?
+  createdAt         DateTime   @default(now()) @map("created_at")
+  updatedAt         DateTime   @updatedAt @map("updated_at")
+
+  createdStudents      Student[]        @relation("StudentCreatedBy")
+  authoredNews         News[]           @relation("NewsAuthor")
+  createdActivities    Activity[]       @relation("ActivityCreatedBy")
+  uploadedDocuments    Document[]       @relation("DocumentUploadedBy")
+  createdFaqs          Faq[]            @relation("FaqCreatedBy")
+  createdJobs          Job[]            @relation("JobCreatedBy")
+  reviewedApplications JobApplication[] @relation("ApplicationReviewedBy")
+  updatedSplash        SplashConfig[]   @relation("SplashUpdatedBy")
+  historyChanges       StudentHistory[] @relation("HistoryChangedBy")
+
+  @@map("users")
+}
+
+model ScholarshipType {
+  id          String       @id @db.VarChar(20)
+  slug        String       @unique @db.VarChar(50)
+  name        String       @db.VarChar(100)
+  icon        String?      @db.VarChar(10)
+  coverage    String?      @db.VarChar(200)
+  valuePerSem String?      @map("value_per_sem") @db.VarChar(100)
+  valueTotal  String?      @map("value_total") @db.VarChar(100)
+  count       Int          @default(0)
+  featured    Boolean      @default(false)
+  criteria    Json?
+  benefits    Json?
+  note        String?
+  status      ActiveStatus @default(active)
+  order       Int          @default(0)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+
+  students Student[]
+  alumni   Alumni[]
+
+  @@map("scholarship_types")
+}
+
+model Student {
+  id                  String    @id @db.VarChar(20)
+
+  prefix              String?   @db.VarChar(20)
+  prefixEn            String?   @map("prefix_en") @db.VarChar(20)
+  name                String    @db.VarChar(100)
+  nameEn              String?   @map("name_en") @db.VarChar(100)
+  lastname            String    @db.VarChar(100)
+  lastnameEn          String?   @map("lastname_en") @db.VarChar(100)
+  nickname            String?   @db.VarChar(50)
+  gender              String?   @db.VarChar(20)
+  dob                 DateTime? @db.Date
+  nationalId          String?   @unique @map("national_id") @db.VarChar(20)
+  passport            String?   @db.VarChar(20)
+  militaryStatus      String?   @map("military_status") @db.VarChar(50)
+
+  tel                 String?   @db.VarChar(20)
+  email               String?   @db.VarChar(150)
+  lineId              String?   @map("line_id") @db.VarChar(100)
+  country             String?   @default("ไทย") @db.VarChar(50)
+
+  addrThHouseNo       String?   @map("addr_th_house_no") @db.VarChar(50)
+  addrThSubdistrict   String?   @map("addr_th_subdistrict") @db.VarChar(100)
+  addrThDistrict      String?   @map("addr_th_district") @db.VarChar(100)
+  addrThProvince      String?   @map("addr_th_province") @db.VarChar(100)
+  addrThPostalCode    String?   @map("addr_th_postal_code") @db.VarChar(10)
+
+  addrJpPostalCode    String?   @map("addr_jp_postal_code") @db.VarChar(10)
+  addrJpPrefecture    String?   @map("addr_jp_prefecture") @db.VarChar(100)
+  addrJpCity          String?   @map("addr_jp_city") @db.VarChar(100)
+  addrJpStreetAddress String?   @map("addr_jp_street_address") @db.VarChar(200)
+  addrJpBuilding      String?   @map("addr_jp_building") @db.VarChar(200)
+
+  prevSchool          String?   @map("prev_school") @db.VarChar(200)
+
+  scholarship         String?   @db.VarChar(100)
+  scholarshipTypeId   String?   @map("scholarship_type_id") @db.VarChar(20)
+
+  bankName            String?   @map("bank_name") @db.VarChar(100)
+  bankBranch          String?   @map("bank_branch") @db.VarChar(100)
+  bankAccountNo       String?   @map("bank_account_no") @db.VarChar(30)
+
+  departureDateTh     DateTime? @map("departure_date_th") @db.Date
+  arrivalDateJp       DateTime? @map("arrival_date_jp") @db.Date
+
+  status              String    @default("กำลังศึกษา") @db.VarChar(30)
+  note                String?
+  avatar              String?   @db.VarChar(500)
+  createdBy           String?   @map("created_by") @db.VarChar(20)
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  scholarshipType ScholarshipType?  @relation(fields: [scholarshipTypeId], references: [id])
+  creator         User?             @relation("StudentCreatedBy", fields: [createdBy], references: [id])
+  enrollments     StudentEnrollment[]
+  jobApplications JobApplication[]
+  internships     Internship[]
+  activities      StudentActivity[]
+  history         StudentHistory[]
+  alumni          Alumni[]
+
+  @@map("students")
+}
+
+model StudentEnrollment {
+  id         Int     @id @default(autoincrement())
+  studentId  String  @map("student_id") @db.VarChar(20)
+  order      Int     @default(1) @db.SmallInt
+  university String  @db.VarChar(200)
+  studentNo  String? @map("student_no") @db.VarChar(50)
+  univEmail  String? @map("univ_email") @db.VarChar(150)
+  faculty    String? @db.VarChar(100)
+  department String? @db.VarChar(100)
+  major      String? @db.VarChar(100)
+  year       String? @db.VarChar(5)
+  advisor    String? @db.VarChar(100)
+  project    String?
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, order], name: "uq_student_order")
+  @@map("student_enrollments")
+}
+
+model Alumni {
+  id                String    @id @db.VarChar(20)
+  studentId         String?   @map("student_id") @db.VarChar(20)
+  prefix            String?   @db.VarChar(20)
+  name              String    @db.VarChar(100)
+  lastname          String    @db.VarChar(100)
+  nickname          String?   @db.VarChar(50)
+  graduatedYear     Int?      @map("graduated_year")
+  major             String?   @db.VarChar(100)
+  university        String?   @db.VarChar(100)
+  scholarshipTypeId String?   @map("scholarship_type_id") @db.VarChar(20)
+  scholarshipYears  Int?      @map("scholarship_years")
+  scholarshipStatus String?   @map("scholarship_status") @db.VarChar(50)
+  contact           String?   @db.VarChar(150)
+  phone             String?   @db.VarChar(20)
+  remark            String?
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  student         Student?         @relation(fields: [studentId], references: [id])
+  scholarshipType ScholarshipType? @relation(fields: [scholarshipTypeId], references: [id])
+  employmentHistory AlumniEmploymentHistory[]
+
+  @@map("alumni")
+}
+
+model AlumniEmploymentHistory {
+  id        Int     @id @default(autoincrement())
+  alumniId  String  @map("alumni_id") @db.VarChar(20)
+  company   String  @db.VarChar(200)
+  position  String  @db.VarChar(100)
+  startDate String? @map("start_date") @db.VarChar(10)
+  endDate   String? @map("end_date") @db.VarChar(10)
+  location  String? @db.VarChar(100)
+  type      String? @db.VarChar(50)
+
+  alumni Alumni @relation(fields: [alumniId], references: [id], onDelete: Cascade)
+
+  @@map("alumni_employment_history")
+}
+
+model Company {
+  id            String    @id @db.VarChar(20)
+  name          String    @db.VarChar(200)
+  nameEn        String?   @map("name_en") @db.VarChar(200)
+  industry      String?   @db.VarChar(100)
+  type          String?   @db.VarChar(100)
+  country       String?   @db.VarChar(50)
+  province      String?   @db.VarChar(100)
+  address       String?
+  website       String?   @db.VarChar(300)
+  linkedin      String?   @db.VarChar(300)
+  contactName   String?   @map("contact_name") @db.VarChar(100)
+  contactEmail  String?   @map("contact_email") @db.VarChar(150)
+  contactTel    String?   @map("contact_tel") @db.VarChar(20)
+  status        String    @default("อยู่ระหว่างพิจารณา") @db.VarChar(50)
+  mouStatus     String?   @map("mou_status") @db.VarChar(50)
+  mouExpiry     DateTime? @map("mou_expiry") @db.Date
+  openPositions Int       @default(0) @map("open_positions")
+  description   String?
+  note          String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  jobs        Job[]
+  internships Internship[]
+
+  @@map("companies")
+}
+
+model Job {
+  id           String    @id @db.VarChar(20)
+  title        String    @db.VarChar(200)
+  titleEn      String?   @map("title_en") @db.VarChar(200)
+  companyId    String?   @map("company_id") @db.VarChar(20)
+  companyName  String?   @map("company_name") @db.VarChar(200)
+  companyLogo  String?   @map("company_logo") @db.VarChar(500)
+  type         String    @default("ฝึกงาน") @db.VarChar(20)
+  field        String?   @db.VarChar(100)
+  location     String?   @db.VarChar(100)
+  country      String?   @default("ไทย") @db.VarChar(50)
+  salary       String?   @db.VarChar(100)
+  duration     String?   @db.VarChar(100)
+  startDate    DateTime? @map("start_date") @db.Date
+  deadline     DateTime? @db.Date
+  slots        Int       @default(1)
+  applications Int       @default(0)
+  status       String    @default("เปิดรับ") @db.VarChar(20)
+  tags         Json?
+  description  String?
+  requirements String?
+  welfare      String?
+  note         String?
+  createdBy    String?   @map("created_by") @db.VarChar(20)
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  company         Company?         @relation(fields: [companyId], references: [id])
+  creator         User?            @relation("JobCreatedBy", fields: [createdBy], references: [id])
+  jobApplications JobApplication[]
+  internships     Internship[]
+
+  @@map("jobs")
+}
+
+model JobApplication {
+  id          String    @id @db.VarChar(20)
+  studentId   String    @map("student_id") @db.VarChar(20)
+  jobId       String    @map("job_id") @db.VarChar(20)
+  status      String    @default("สมัครแล้ว") @db.VarChar(30)
+  appliedDate DateTime? @map("applied_date") @db.Date
+  reviewedBy  String?   @map("reviewed_by") @db.VarChar(20)
+  note        String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  student     Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  job         Job        @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  reviewer    User?      @relation("ApplicationReviewedBy", fields: [reviewedBy], references: [id])
+  internships Internship[]
+
+  @@map("job_applications")
+}
+
+model Internship {
+  id             String    @id @db.VarChar(20)
+  applicationId  String?   @map("application_id") @db.VarChar(20)
+  studentId      String    @map("student_id") @db.VarChar(20)
+  jobId          String?   @map("job_id") @db.VarChar(20)
+  companyId      String?   @map("company_id") @db.VarChar(20)
+  startDate      DateTime? @map("start_date") @db.Date
+  endDate        DateTime? @map("end_date") @db.Date
+  hoursCompleted Int       @default(0) @map("hours_completed")
+  hoursRequired  Int       @default(0) @map("hours_required")
+  supervisorName String?   @map("supervisor_name") @db.VarChar(100)
+  advisorName    String?   @map("advisor_name") @db.VarChar(100)
+  status         String    @default("กำลังฝึกงาน") @db.VarChar(20)
+  grade          String?   @db.VarChar(5)
+  note           String?
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  student     Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  job         Job?            @relation(fields: [jobId], references: [id])
+  company     Company?        @relation(fields: [companyId], references: [id])
+  application JobApplication? @relation(fields: [applicationId], references: [id])
+
+  @@map("internships")
+}
+
+model News {
+  id            String        @id @db.VarChar(20)
+  title         String
+  slug          String?       @db.VarChar(300)
+  category      String?       @db.VarChar(100)
+  catColor      String?       @map("cat_color") @db.VarChar(100)
+  excerpt       String?
+  image         String?       @db.VarChar(500)
+  authorId      String?       @map("author_id") @db.VarChar(20)
+  authorName    String?       @map("author_name") @db.VarChar(100)
+  tags          Json?
+  status        PublishStatus @default(draft)
+  featured      Boolean       @default(false)
+  publishedAt   DateTime?     @map("published_at") @db.Date
+  heroAspect    String?       @default("21/9") @map("hero_aspect") @db.VarChar(10)
+  imagePosition String?       @default("center") @map("image_position") @db.VarChar(50)
+  views         Int           @default(0)
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  author  User?       @relation("NewsAuthor", fields: [authorId], references: [id])
+  blocks  NewsBlock[]
+  banners Banner[]
+
+  @@map("news")
+}
+
+model NewsBlock {
+  id             String     @id @db.VarChar(20)
+  newsId         String     @map("news_id") @db.VarChar(20)
+  order          Int        @default(0)
+  type           BlockType
+  content        String?
+  src            String?    @db.VarChar(500)
+  alt            String?    @db.VarChar(300)
+  caption        String?    @db.VarChar(300)
+  fontSize       FontSize?  @default(base) @map("font_size")
+  imageSize      String?    @default("16/9") @map("image_size") @db.VarChar(10)
+  objectPosition String?    @default("center") @map("object_position") @db.VarChar(50)
+
+  news News @relation(fields: [newsId], references: [id], onDelete: Cascade)
+
+  @@map("news_blocks")
+}
+
+model Activity {
+  id        String        @id @db.VarChar(20)
+  title     String
+  slug      String?       @db.VarChar(300)
+  type      String?       @db.VarChar(50)
+  typeColor String?       @map("type_color") @db.VarChar(100)
+  date      DateTime?     @db.Date
+  location  String?       @db.VarChar(200)
+  image     String?       @db.VarChar(500)
+  excerpt   String?
+  organizer String?       @db.VarChar(200)
+  tags      Json?
+  status    PublishStatus @default(draft)
+  featured  Boolean       @default(false)
+  views     Int           @default(0)
+  createdBy String?       @map("created_by") @db.VarChar(20)
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  creator      User?           @relation("ActivityCreatedBy", fields: [createdBy], references: [id])
+  blocks       ActivityBlock[]
+  participants StudentActivity[]
+  banners      Banner[]
+
+  @@map("activities")
+}
+
+model ActivityBlock {
+  id             String    @id @db.VarChar(20)
+  activityId     String    @map("activity_id") @db.VarChar(20)
+  order          Int       @default(0)
+  type           BlockType
+  content        String?
+  src            String?   @db.VarChar(500)
+  alt            String?   @db.VarChar(300)
+  caption        String?   @db.VarChar(300)
+  fontSize       FontSize? @default(base) @map("font_size")
+  imageSize      String?   @default("16/9") @map("image_size") @db.VarChar(10)
+  objectPosition String?   @default("center") @map("object_position") @db.VarChar(50)
+
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@map("activity_blocks")
+}
+
+model StudentActivity {
+  id         Int      @id @default(autoincrement())
+  studentId  String   @map("student_id") @db.VarChar(20)
+  activityId String   @map("activity_id") @db.VarChar(20)
+  joinedAt   DateTime @default(now()) @map("joined_at")
+
+  student  Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  activity Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, activityId], name: "uq_student_activity")
+  @@map("student_activities")
+}
+
+model Document {
+  id          String        @id @db.VarChar(20)
+  category    String?       @db.VarChar(50)
+  title       String        @db.VarChar(300)
+  description String?
+  rawDate     DateTime?     @map("raw_date") @db.Date
+  fileType    String?       @map("file_type") @db.VarChar(10)
+  fileSize    String?       @map("file_size") @db.VarChar(20)
+  fileUrl     String?       @map("file_url") @db.VarChar(500)
+  isNew       Boolean       @default(false) @map("is_new")
+  status      PublishStatus @default(draft)
+  uploadedBy  String?       @map("uploaded_by") @db.VarChar(20)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  uploader User? @relation("DocumentUploadedBy", fields: [uploadedBy], references: [id])
+
+  @@map("documents")
+}
+
+model Faq {
+  id        String        @id @db.VarChar(20)
+  question  String
+  answer    String
+  category  String?       @db.VarChar(50)
+  order     Int           @default(0)
+  status    PublishStatus @default(published)
+  createdBy String?       @map("created_by") @db.VarChar(20)
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  creator User? @relation("FaqCreatedBy", fields: [createdBy], references: [id])
+
+  @@map("faq")
+}
+
+model Banner {
+  id             String       @id @db.VarChar(20)
+  layout         BannerLayout @default(hero)
+  eyebrow        String?      @db.VarChar(200)
+  headline       String?      @db.VarChar(300)
+  body           String?
+  badge          String?      @db.VarChar(100)
+  newsId         String?      @map("news_id") @db.VarChar(20)
+  activityId     String?      @map("activity_id") @db.VarChar(20)
+  ctaLabel       String?      @map("cta_label") @db.VarChar(100)
+  ctaHref        String?      @map("cta_href") @db.VarChar(500)
+  secondaryLabel String?      @map("secondary_label") @db.VarChar(100)
+  secondaryHref  String?      @map("secondary_href") @db.VarChar(500)
+  image          String?      @db.VarChar(500)
+  imagePosition  String?      @default("center") @map("image_position") @db.VarChar(50)
+  textSize       String?      @map("text_size") @db.VarChar(10)
+  textAlign      String?      @map("text_align") @db.VarChar(20)
+  status         ActiveStatus @default(active)
+  order          Int          @default(0)
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  news     News?     @relation(fields: [newsId], references: [id])
+  activity Activity? @relation(fields: [activityId], references: [id])
+
+  @@map("banners")
+}
+
+model SplashConfig {
+  id            Int           @id @default(autoincrement())
+  enabled       Boolean       @default(false)
+  image         String?       @db.VarChar(500)
+  title         String?       @db.VarChar(300)
+  body          String?
+  ctaLabel      String?       @map("cta_label") @db.VarChar(100)
+  ctaHref       String?       @map("cta_href") @db.VarChar(500)
+  showFrequency ShowFrequency @default(once_per_session) @map("show_frequency")
+  delayMs       Int           @default(500) @map("delay_ms")
+  width         SplashWidth   @default(md)
+  border        Boolean       @default(true)
+  radius        SplashRadius  @default(r2xl)
+  updatedBy     String?       @map("updated_by") @db.VarChar(20)
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  updater User? @relation("SplashUpdatedBy", fields: [updatedBy], references: [id])
+
+  @@map("splash_config")
+}
+
+model ContactInfo {
+  id    String  @id @db.VarChar(10)
+  icon  String? @db.VarChar(10)
+  label String  @db.VarChar(100)
+  lines Json
+  href  String? @db.VarChar(300)
+  order Int     @default(0)
+
+  @@map("contact_info")
+}
+
+model ContactUniversity {
+  id       String  @id @db.VarChar(10)
+  name     String  @db.VarChar(50)
+  fullName String  @map("full_name") @db.VarChar(200)
+  location String? @db.VarChar(100)
+  phone    String? @db.VarChar(30)
+  email    String? @db.VarChar(150)
+  mapUrl   String? @map("map_url") @db.VarChar(500)
+
+  @@map("contact_universities")
+}
+
+model StudentHistory {
+  id         Int           @id @default(autoincrement())
+  studentId  String        @map("student_id") @db.VarChar(20)
+  oldData    Json?         @map("old_data")
+  newData    Json?         @map("new_data")
+  actionType HistoryAction @map("action_type")
+  changedBy  String?       @map("changed_by") @db.VarChar(20)
+  changedAt  DateTime      @default(now()) @map("changed_at")
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  changer User?   @relation("HistoryChangedBy", fields: [changedBy], references: [id])
+
+  @@map("student_history")
+}
