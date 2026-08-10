@@ -43,7 +43,7 @@ export async function PUT(request, { params }) {
           departureDateTh: data.departureDateTh ? new Date(data.departureDateTh) : null,
           arrivalDateJp: data.arrivalDateJp ? new Date(data.arrivalDateJp) : null,
           enrollments: enrollments?.length
-            ? { create: enrollments }
+            ? { create: enrollments.map(({ id: _id, studentId: _sid, ...e }) => e) }
             : undefined,
         },
         include: { enrollments: { orderBy: { order: "asc" } } },
