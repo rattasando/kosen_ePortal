@@ -133,11 +133,6 @@ export default function AdminSidebar() {
     setFlyout({ section, top: rect.top, left: sidebarRect.right });
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("kosen_auth");
-    router.push("/login");
-  };
-
   const handleMouseEnter = () => {
     setHovered(true);
     setFlyout(null);

@@ -1,13 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { useLanguage } from "@/components/admin/contexts/LanguageContext";
 import { usePageTitle } from "@/components/admin/contexts/PageTitleContext";
 
 export default function AdminHeader() {
-  const router = useRouter();
   const { lang, switchLang, t } = useLanguage();
   const { title, description } = usePageTitle();
   const [username, setUsername] = useState("admin");
@@ -20,8 +19,7 @@ export default function AdminHeader() {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("kosen_auth");
-    router.push("/login");
+    signOut({ callbackUrl: "/login" });
   };
 
   return (
