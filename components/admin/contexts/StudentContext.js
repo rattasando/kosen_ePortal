@@ -53,21 +53,32 @@ export function StudentProvider({ children }) {
     [students]
   );
 
+  // Returns [{ id, message }] for every row that failed (empty array = all succeeded)
   const replaceAll = useCallback(async (list) => {
     const existingIds = new Set(students.map((s) => s.id));
+    const errors = [];
     await Promise.all(
-      list.map((item) => {
+      list.map(async (item) => {
         const opts = {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(item),
         };
-        return existingIds.has(item.id)
-          ? fetch(`/api/students/${item.id}`, { method: "PUT", ...opts })
-          : fetch("/api/students", { method: "POST", ...opts });
+        try {
+          const res = existingIds.has(item.id)
+            ? await fetch(`/api/students/${item.id}`, { method: "PUT", ...opts })
+            : await fetch("/api/students", { method: "POST", ...opts });
+          if (!res.ok) {
+            const json = await res.json().catch(() => ({}));
+            errors.push({ id: item.id, message: json?.error ?? `API error ${res.status}` });
+          }
+        } catch (err) {
+          errors.push({ id: item.id, message: err.message });
+        }
       })
     );
     const fresh = await fetch("/api/students").then((r) => r.json());
     setStudents(fresh);
+    return errors;
   }, [students]);
 
   return (

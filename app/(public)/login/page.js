@@ -1,22 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+
+const REMEMBER_KEY = "kosen_remember_user";
 
 export default function LoginPage() {
   const router = useRouter();
   const [form, setForm] = useState({ username: "", password: "" });
+  const [remember, setRemember] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // เติมชื่อผู้ใช้ที่จำไว้ล่าสุด (ถ้ามี)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(REMEMBER_KEY);
+      if (saved) {
+        setForm((p) => ({ ...p, username: saved }));
+        setRemember(true);
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
+    const username = form.username.trim();
+
     const result = await signIn("credentials", {
-      username: form.username.trim(),
+      username,
       password: form.password,
       redirect: false,
     });
@@ -26,6 +42,10 @@ export default function LoginPage() {
     if (result?.error) {
       setError("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
     } else {
+      try {
+        if (remember) localStorage.setItem(REMEMBER_KEY, username);
+        else localStorage.removeItem(REMEMBER_KEY);
+      } catch { /* ignore */ }
       router.push("/admin");
     }
   };
@@ -85,6 +105,16 @@ export default function LoginPage() {
               className="w-full rounded-lg border border-border bg-surface px-4 py-2.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft"
             />
           </div>
+
+          <label className="flex items-center gap-2 text-sm text-muted cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={remember}
+              onChange={(e) => setRemember(e.target.checked)}
+              className="h-4 w-4 rounded border-border accent-primary"
+            />
+            จดจำผู้ใช้
+          </label>
 
           <button
             type="submit"

@@ -489,8 +489,15 @@ function ImportModal({ onClose, onConfirm, existingStudents }) {
 }
 
 // ── Enrollment helpers ───────────────────────────────────────
-function getPrimaryEnrollment(s) {
-  if (s.enrollments?.length) return s.enrollments[0];
+// ถ้ามีมากกว่า 1 สถาบัน ให้ใช้ "สถาบันปัจจุบัน" (endDate ว่าง = ยังไม่จบ/ยังไม่
+// ย้ายออก) แทนสถาบันแรกที่เคยเรียน — ถ้าไม่มีอันไหนที่ endDate ว่างเลย (ข้อมูล
+// เก่าก่อนมี field นี้ หรือกรอกวันจบไว้ครบทุกอัน) ค่อย fallback ไปใช้ตัวท้ายสุด
+// ของ array (เรียงตาม order จากน้อยไปมากมาจาก API อยู่แล้ว)
+function getLatestEnrollment(s) {
+  if (s.enrollments?.length) {
+    const current = [...s.enrollments].reverse().find((e) => !e.endDate);
+    return current ?? s.enrollments[s.enrollments.length - 1];
+  }
   return {
     university: s.university,
     faculty: s.faculty,
@@ -1041,7 +1048,7 @@ export default function StudentListClient() {
   const universities = useMemo(() => {
     const unique = [
       ...new Set(
-        students.map((s) => getPrimaryEnrollment(s).university).filter(Boolean),
+        students.map((s) => getLatestEnrollment(s).university).filter(Boolean),
       ),
     ];
     return ["ทั้งหมด", ...unique];
@@ -1120,9 +1127,9 @@ export default function StudentListClient() {
         filterStatus === "ทั้งหมด" || s.status === filterStatus;
       const matchUniversity =
         filterUniversity === "ทั้งหมด" ||
-        getPrimaryEnrollment(s).university === filterUniversity;
+        getLatestEnrollment(s).university === filterUniversity;
       const matchYear =
-        filterYear === "ทั้งหมด" || getPrimaryEnrollment(s).year === filterYear;
+        filterYear === "ทั้งหมด" || getLatestEnrollment(s).year === filterYear;
       const matchScholarship =
         filterScholarship === "ทั้งหมด" || s.scholarship === filterScholarship;
       const studentCountry = s.country === "ญี่ปุ่น" ? "ญี่ปุ่น" : "ไทย";
@@ -1228,28 +1235,36 @@ export default function StudentListClient() {
     [students],
   );
 
-  const handleImport = (rows, mode) => {
+  const handleImport = async (rows, mode) => {
     const studentObjects = rows.map(rowToStudent);
+    let result;
+
     if (mode === "replace") {
-      replaceAll(studentObjects);
-      setImportDone({ count: studentObjects.length, mode: "replace" });
+      const errors = await replaceAll(studentObjects);
+      result = { count: studentObjects.length - errors.length, mode: "replace", errors };
     } else {
       const existingIds = new Set(students.map((s) => s.id));
-      let added = 0,
-        updated = 0;
-      studentObjects.forEach((stu) => {
-        if (existingIds.has(stu.id)) {
-          updateStudent(stu.id, stu);
-          updated++;
-        } else {
-          addStudent(stu);
-          added++;
+      let added = 0, updated = 0;
+      const errors = [];
+      for (const stu of studentObjects) {
+        try {
+          if (existingIds.has(stu.id)) {
+            await updateStudent(stu.id, stu);
+            updated++;
+          } else {
+            await addStudent(stu);
+            added++;
+          }
+        } catch (err) {
+          errors.push({ id: stu.id, message: err.message });
         }
-      });
-      setImportDone({ added, updated, mode: "merge" });
+      }
+      result = { added, updated, mode: "merge", errors };
     }
+
+    setImportDone(result);
     setPage(1);
-    setTimeout(() => setImportDone(null), 4000);
+    setTimeout(() => setImportDone(null), result.errors.length > 0 ? 15000 : 4000);
   };
 
   const activeTerms = useMemo(
@@ -1281,24 +1296,50 @@ export default function StudentListClient() {
         />
       )}
       {importDone && (
-        <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5 shrink-0"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path
-              fillRule="evenodd"
-              d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-              clipRule="evenodd"
-            />
-          </svg>
-          <span>
-            {importDone.mode === "replace"
-              ? `นำเข้าสำเร็จ — แทนที่ด้วยข้อมูลใหม่ทั้งหมด ${importDone.count} รายการ`
-              : `รวมข้อมูลสำเร็จ — เพิ่มใหม่ ${importDone.added} รายการ, อัปเดต ${importDone.updated} รายการ`}
-          </span>
+        <div
+          className={`space-y-2 rounded-xl border px-4 py-3 text-sm ${
+            importDone.errors.length > 0
+              ? "border-amber-200 bg-amber-50 text-amber-800"
+              : "border-emerald-200 bg-emerald-50 text-emerald-700"
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5 shrink-0"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              {importDone.errors.length > 0 ? (
+                <path
+                  fillRule="evenodd"
+                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l6.28 11.166c.75 1.334-.213 2.985-1.742 2.985H3.72c-1.53 0-2.493-1.65-1.743-2.985L8.257 3.1zM11 14a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V7a1 1 0 00-1-1z"
+                  clipRule="evenodd"
+                />
+              ) : (
+                <path
+                  fillRule="evenodd"
+                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                  clipRule="evenodd"
+                />
+              )}
+            </svg>
+            <span>
+              {importDone.mode === "replace"
+                ? `นำเข้าสำเร็จ ${importDone.count} รายการ`
+                : `รวมข้อมูลสำเร็จ — เพิ่มใหม่ ${importDone.added} รายการ, อัปเดต ${importDone.updated} รายการ`}
+              {importDone.errors.length > 0 && ` — ล้มเหลว ${importDone.errors.length} รายการ`}
+            </span>
+          </div>
+          {importDone.errors.length > 0 && (
+            <ul className="ml-8 list-disc space-y-0.5 text-xs">
+              {importDone.errors.map((e, i) => (
+                <li key={i}>
+                  <span className="font-mono font-semibold">{e.id}</span>: {e.message}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 
@@ -1781,7 +1822,7 @@ export default function StudentListClient() {
             { label: "Actions", align: "center" },
           ]}
           rows={paginated.map((s) => {
-            const pe = getPrimaryEnrollment(s);
+            const pe = getLatestEnrollment(s);
             return [
               <input
                 key="cb"

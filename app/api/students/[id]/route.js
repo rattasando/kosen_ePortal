@@ -1,5 +1,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import {
+  STUDENT_VARCHAR_LIMITS,
+  ENROLLMENT_VARCHAR_LIMITS,
+  findTooLongFields,
+  describeTooLongFields,
+} from "@/lib/utils/studentFieldLimits";
+import { prepEnrollments } from "@/lib/utils/studentEnrollments";
 
 export async function GET(_, { params }) {
   const { id } = await params;
@@ -31,6 +38,22 @@ export async function PUT(request, { params }) {
       STUDENT_FIELDS.filter((k) => k in body).map((k) => [k, body[k]])
     );
 
+    const tooLong = [
+      ...findTooLongFields(data, STUDENT_VARCHAR_LIMITS),
+      ...(enrollments ?? []).flatMap((e, i) =>
+        findTooLongFields(e, ENROLLMENT_VARCHAR_LIMITS).map((err) => ({
+          ...err,
+          field: `enrollments[${i}].${err.field}`,
+        }))
+      ),
+    ];
+    if (tooLong.length > 0) {
+      return NextResponse.json(
+        { error: `ข้อมูลนักเรียน ${id}: มีข้อความยาวเกินกำหนด — ${describeTooLongFields(tooLong)}` },
+        { status: 400 }
+      );
+    }
+
     const student = await prisma.$transaction(async (tx) => {
       if (enrollments !== undefined) {
         await tx.studentEnrollment.deleteMany({ where: { studentId: id } });
@@ -43,7 +66,7 @@ export async function PUT(request, { params }) {
           departureDateTh: data.departureDateTh ? new Date(data.departureDateTh) : null,
           arrivalDateJp: data.arrivalDateJp ? new Date(data.arrivalDateJp) : null,
           enrollments: enrollments?.length
-            ? { create: enrollments.map(({ id: _id, studentId: _sid, ...e }) => e) }
+            ? { create: prepEnrollments(enrollments) }
             : undefined,
         },
         include: { enrollments: { orderBy: { order: "asc" } } },

@@ -3,7 +3,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useSyncExternalStore, useMemo, useState } from "react";
+import { useSession, signOut } from "next-auth/react";
+import { useMemo, useState } from "react";
 import { publicNav } from "@/lib/config/navigation";
 import { usePublicLanguage } from "@/components/public/PublicLanguageContext";
 import { useNews } from "@/components/admin/contexts/NewsContext";
@@ -99,11 +100,8 @@ export default function PublicHeader() {
     { label: "🏢 รายชื่อบริษัท",    href: "/marketplace/companies" },
   ];
 
-  const authed = useSyncExternalStore(
-    (cb) => { window.addEventListener("storage", cb); return () => window.removeEventListener("storage", cb); },
-    () => localStorage.getItem("kosen_auth") === "1",
-    () => false,
-  );
+  const { data: session, status } = useSession();
+  const authed = status === "authenticated";
 
   const isActive = (href) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
@@ -172,11 +170,17 @@ export default function PublicHeader() {
 
           {authed ? (
             <>
+              <div className="hidden sm:flex items-center gap-2.5 rounded-lg border border-border bg-surface-muted px-3 py-1.5">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full gradient-hero text-[11px] font-bold text-white shrink-0">
+                  {(session.user?.name || "?").charAt(0).toUpperCase()}
+                </span>
+                <span className="text-sm font-medium text-foreground whitespace-nowrap">{session.user?.name}</span>
+              </div>
               <Link href="/admin" className="rounded-lg px-4 py-2 text-sm font-semibold text-white bg-primary hover:opacity-90 transition-opacity whitespace-nowrap">
                 {t("nav.portal")}
               </Link>
               <button
-                onClick={() => { localStorage.removeItem("kosen_auth"); window.dispatchEvent(new Event("storage")); }}
+                onClick={() => signOut({ callbackUrl: "/" })}
                 className="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-muted hover:border-red-400 hover:text-red-500 transition-colors whitespace-nowrap"
               >
                 ออกจากระบบ

@@ -5,10 +5,27 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AdminTopBar from "@/components/admin/ui/AdminTopBar";
 import { useStudents } from "@/components/admin/contexts/StudentContext";
+import { onlyThai, onlyThaiText, onlyEnglish, onlyEnglishAddress, onlyNumeric, onlyAscii, formatThaiPhone, formatThaiNationalId } from "@/lib/utils/inputFilters";
 
 // ── Constants ─────────────────────────────────────────────────
-const PREFIXES = ["นาย", "นางสาว", "นาง"];
-const PREFIXES_EN = ["Mr.", "Miss", "Mrs."];
+// TH ↔ EN คำนำหน้า ผูกกันเป็นชุดเดียว — เลือกฝั่งไหนอีกฝั่งและเพศจะเซ็ตให้อัตโนมัติ
+const PREFIX_OPTIONS = [
+    { th: "นาย",      en: "Mr.",    gender: "ชาย" },
+    { th: "นางสาว",   en: "Miss",   gender: "หญิง" },
+    { th: "นาง",      en: "Mrs.",   gender: "หญิง" },
+    { th: "เด็กชาย",  en: "Master", gender: "ชาย" },
+    { th: "เด็กหญิง", en: "Miss",   gender: "หญิง" },
+];
+const PREFIXES = PREFIX_OPTIONS.map((p) => p.th);
+const PREFIXES_EN = PREFIX_OPTIONS.map((p) => p.en);
+
+// หา index ของ PREFIX_OPTIONS ที่ตรงกับค่าปัจจุบัน — ใช้ th+en คู่กันเพราะ "Miss"
+// ซ้ำกันได้ทั้งนางสาวและเด็กหญิง (ไม่มีคำ EN แยกที่ใช้กันทั่วไปสำหรับเด็กหญิง)
+function findPrefixIndex(prefix, prefixEn) {
+    const byBoth = PREFIX_OPTIONS.findIndex((o) => o.th === prefix && o.en === prefixEn);
+    if (byBoth !== -1) return byBoth;
+    return PREFIX_OPTIONS.findIndex((o) => o.th === prefix);
+}
 const STATUSES = ["กำลังศึกษา", "ฝึกงาน", "จบการศึกษา", "พักการเรียน", "พ้นสภาพ"];
 const SCHOLARSHIPS = ["ทุน 2 ปี", "ทุน 3 ปี", "ทุน 5 ปี", "ทุน จภ."];
 const MILITARY_STATUSES = ["ยังไม่ถึงเกณฑ์", "ผ่อนผัน", "ผ่านการเกณฑ์", "ได้รับการยกเว้น", "-"];
@@ -40,7 +57,7 @@ const JP_PREFECTURES = [
     "Fukuoka","Saga","Nagasaki","Kumamoto","Oita","Miyazaki","Kagoshima","Okinawa",
 ];
 
-const EMPTY_ENROLLMENT = { university: "", studentId: "", univEmail: "", faculty: "", department: "", major: "", year: "", advisor: "", project: "" };
+const EMPTY_ENROLLMENT = { university: "", studentId: "", univEmail: "", faculty: "", department: "", major: "", year: "", advisor: "", project: "", startDate: "", endDate: "" };
 const EMPTY_ADDRESS_TH = { houseNo: "", subdistrict: "", district: "", province: "", postalCode: "" };
 const EMPTY_ADDRESS_JP = { postalCode: "", prefecture: "", city: "", streetAddress: "", building: "" };
 
@@ -76,9 +93,16 @@ function Section({ icon, title, description, children }) {
 const inputCls = "w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft placeholder:text-muted";
 const selectCls = "w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft";
 
+// <input type="date"> ต้องการ format YYYY-MM-DD เป๊ะๆ — กันไว้เผื่อค่าที่มาจากที่อื่น
+// ไม่ใช่ string ว่างเปล่า (เช่น โคลนข้อมูลจากนักเรียนคนอื่น)
+function toDateInputValue(v) {
+    if (!v) return "";
+    return String(v).slice(0, 10);
+}
+
 // ── Address sub-forms ─────────────────────────────────────────
 function AddressEditTH({ value, onChange }) {
-    const set = (key) => (e) => onChange({ ...value, [key]: e.target.value });
+    const setT = (key, sanitize) => (e) => onChange({ ...value, [key]: sanitize(e.target.value) });
     return (
         <div className="rounded-xl border border-border border-l-4 border-l-emerald-500 overflow-hidden">
             <div className="px-4 py-3 border-b border-border bg-surface-muted/50">
@@ -87,23 +111,23 @@ function AddressEditTH({ value, onChange }) {
             <div className="grid gap-3 p-4 sm:grid-cols-2">
                 <div className="sm:col-span-2">
                     <Field label="บ้านเลขที่ / ซอย / ถนน">
-                        <input type="text" value={value.houseNo} onChange={set("houseNo")} placeholder="123/4 ซอย 5 ถนนสุขุมวิท" className={inputCls} />
+                        <input type="text" value={value.houseNo} onChange={setT("houseNo", onlyThaiText)} placeholder="123/4 ซอย 5 ถนนสุขุมวิท" className={inputCls} />
                     </Field>
                 </div>
                 <Field label="แขวง / ตำบล">
-                    <input type="text" value={value.subdistrict} onChange={set("subdistrict")} placeholder="คลองเตย" className={inputCls} />
+                    <input type="text" value={value.subdistrict} onChange={setT("subdistrict", onlyThai)} placeholder="คลองเตย" className={inputCls} />
                 </Field>
                 <Field label="เขต / อำเภอ">
-                    <input type="text" value={value.district} onChange={set("district")} placeholder="คลองเตย" className={inputCls} />
+                    <input type="text" value={value.district} onChange={setT("district", onlyThai)} placeholder="คลองเตย" className={inputCls} />
                 </Field>
                 <Field label="จังหวัด">
-                    <select value={value.province} onChange={set("province")} className={selectCls}>
+                    <select value={value.province} onChange={(e) => onChange({ ...value, province: e.target.value })} className={selectCls}>
                         <option value="">-- เลือกจังหวัด --</option>
                         {THAI_PROVINCES.map(p => <option key={p}>{p}</option>)}
                     </select>
                 </Field>
                 <Field label="รหัสไปรษณีย์">
-                    <input type="text" value={value.postalCode} onChange={set("postalCode")} placeholder="10110" className={inputCls} maxLength={5} />
+                    <input type="text" value={value.postalCode} onChange={setT("postalCode", onlyNumeric)} placeholder="10110" className={inputCls} maxLength={5} inputMode="numeric" />
                 </Field>
             </div>
         </div>
@@ -111,7 +135,7 @@ function AddressEditTH({ value, onChange }) {
 }
 
 function AddressEditJP({ value, onChange }) {
-    const set = (key) => (e) => onChange({ ...value, [key]: e.target.value });
+    const setT = (key, sanitize) => (e) => onChange({ ...value, [key]: sanitize(e.target.value) });
     return (
         <div className="rounded-xl border border-border border-l-4 border-l-rose-400 overflow-hidden">
             <div className="px-4 py-3 border-b border-border bg-surface-muted/50">
@@ -119,23 +143,23 @@ function AddressEditJP({ value, onChange }) {
             </div>
             <div className="grid gap-3 p-4 sm:grid-cols-2">
                 <Field label="รหัสไปรษณีย์">
-                    <input type="text" value={value.postalCode} onChange={set("postalCode")} placeholder="150-0002" className={inputCls} />
+                    <input type="text" value={value.postalCode} onChange={setT("postalCode", onlyNumeric)} placeholder="150-0002" className={inputCls} inputMode="numeric" />
                 </Field>
                 <Field label="จังหวัด (Prefecture)">
-                    <select value={value.prefecture} onChange={set("prefecture")} className={selectCls}>
+                    <select value={value.prefecture} onChange={(e) => onChange({ ...value, prefecture: e.target.value })} className={selectCls}>
                         <option value="">-- เลือกจังหวัด --</option>
                         {JP_PREFECTURES.map(p => <option key={p}>{p}</option>)}
                     </select>
                 </Field>
                 <Field label="เมือง / เขต (City / Ward)">
-                    <input type="text" value={value.city} onChange={set("city")} placeholder="Shibuya-ku" className={inputCls} />
+                    <input type="text" value={value.city} onChange={setT("city", onlyEnglishAddress)} placeholder="Shibuya-ku" className={inputCls} />
                 </Field>
                 <Field label="ที่อยู่ (Street Address)">
-                    <input type="text" value={value.streetAddress} onChange={set("streetAddress")} placeholder="4-5-6 Shibuya" className={inputCls} />
+                    <input type="text" value={value.streetAddress} onChange={setT("streetAddress", onlyEnglishAddress)} placeholder="4-5-6 Shibuya" className={inputCls} />
                 </Field>
                 <div className="sm:col-span-2">
                     <Field label="อาคาร / ห้อง (Building / Room)">
-                        <input type="text" value={value.building} onChange={set("building")} placeholder="Shibuya Tower 301" className={inputCls} />
+                        <input type="text" value={value.building} onChange={setT("building", onlyEnglishAddress)} placeholder="Shibuya Tower 301" className={inputCls} />
                     </Field>
                 </div>
             </div>
@@ -179,12 +203,19 @@ export default function AddStudentPage() {
     const [saved, setSaved] = useState(false);
     const [savedId, setSavedId] = useState("");
 
-    const set = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e.target.value }));
+    const set  = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e.target.value }));
+    const setT = (key, sanitize) => (e) => setForm((prev) => ({ ...prev, [key]: sanitize(e.target.value) }));
 
     const setEnrollment = (key) => (e) =>
         setForm((prev) => ({
             ...prev,
             enrollments: [{ ...prev.enrollments[0], [key]: e.target.value }],
+        }));
+
+    const setEnrollmentT = (key, sanitize) => (e) =>
+        setForm((prev) => ({
+            ...prev,
+            enrollments: [{ ...prev.enrollments[0], [key]: sanitize(e.target.value) }],
         }));
 
     const setAddressTH = (updated) =>
@@ -293,33 +324,45 @@ export default function AddStudentPage() {
                                 <div className="grid gap-4 sm:grid-cols-3">
                                     <Field label="คำนำหน้า (ไทย)" required>
                                         <select value={form.prefix} onChange={(e) => {
-                                            const i = PREFIXES.indexOf(e.target.value);
+                                            const opt = PREFIX_OPTIONS.find((o) => o.th === e.target.value);
                                             setForm((prev) => ({
                                                 ...prev,
                                                 prefix: e.target.value,
-                                                prefixEn: PREFIXES_EN[i] ?? prev.prefixEn,
-                                                gender: e.target.value === "นาย" ? "ชาย" : "หญิง",
+                                                prefixEn: opt?.en ?? prev.prefixEn,
+                                                gender: opt?.gender ?? prev.gender,
                                             }));
                                         }} className={selectCls}>
                                             {PREFIXES.map((p) => <option key={p}>{p}</option>)}
                                         </select>
                                     </Field>
                                     <Field label="ชื่อ (ไทย)" required>
-                                        <input type="text" value={form.name} onChange={set("name")} placeholder="สมชาย" className={inputCls} />
+                                        <input type="text" value={form.name} onChange={setT("name", onlyThai)} placeholder="สมชาย" className={inputCls} />
                                     </Field>
                                     <Field label="นามสกุล (ไทย)" required>
-                                        <input type="text" value={form.lastname} onChange={set("lastname")} placeholder="ประเสริฐ" className={inputCls} />
+                                        <input type="text" value={form.lastname} onChange={setT("lastname", onlyThai)} placeholder="ประเสริฐ" className={inputCls} />
                                     </Field>
                                 </div>
                                 <div className="grid gap-4 sm:grid-cols-3">
                                     <Field label="คำนำหน้า (EN)">
-                                        <input type="text" value={form.prefixEn} onChange={set("prefixEn")} placeholder="Mr." className={inputCls} />
+                                        <select
+                                            value={String(findPrefixIndex(form.prefix, form.prefixEn))}
+                                            onChange={(e) => {
+                                                const opt = PREFIX_OPTIONS[Number(e.target.value)];
+                                                if (!opt) return;
+                                                setForm((prev) => ({ ...prev, prefix: opt.th, prefixEn: opt.en, gender: opt.gender }));
+                                            }}
+                                            className={selectCls}
+                                        >
+                                            {PREFIX_OPTIONS.map((o, i) => (
+                                                <option key={i} value={i}>{o.en}{o.th.startsWith("เด็ก") ? ` (${o.th})` : ""}</option>
+                                            ))}
+                                        </select>
                                     </Field>
                                     <Field label="First Name (EN)">
-                                        <input type="text" value={form.nameEn} onChange={set("nameEn")} placeholder="Somchai" className={inputCls} />
+                                        <input type="text" value={form.nameEn} onChange={setT("nameEn", onlyEnglish)} placeholder="Somchai" className={inputCls} />
                                     </Field>
                                     <Field label="Last Name (EN)">
-                                        <input type="text" value={form.lastnameEn} onChange={set("lastnameEn")} placeholder="Prasert" className={inputCls} />
+                                        <input type="text" value={form.lastnameEn} onChange={setT("lastnameEn", onlyEnglish)} placeholder="Prasert" className={inputCls} />
                                     </Field>
                                 </div>
                                 <div className="grid gap-4 sm:grid-cols-3">
@@ -333,15 +376,15 @@ export default function AddStudentPage() {
                                         </select>
                                     </Field>
                                     <Field label="วันเกิด">
-                                        <input type="date" value={form.dob} onChange={set("dob")} className={inputCls} />
+                                        <input type="date" value={toDateInputValue(form.dob)} onChange={set("dob")} className={inputCls} />
                                     </Field>
                                 </div>
                                 <div className="grid gap-4 sm:grid-cols-3">
                                     <Field label="เลขบัตรประชาชน" hint="13 หลัก">
-                                        <input type="text" value={form.nationalId} onChange={set("nationalId")} placeholder="1-2345-67890-12-3" className={inputCls} />
+                                        <input type="text" value={form.nationalId} onChange={setT("nationalId", formatThaiNationalId)} placeholder="1-2345-67890-12-3" maxLength={17} className={inputCls} inputMode="numeric" />
                                     </Field>
                                     <Field label="เลข Passport">
-                                        <input type="text" value={form.passport} onChange={set("passport")} placeholder="AB1234567" className={inputCls} />
+                                        <input type="text" value={form.passport} onChange={setT("passport", onlyAscii)} placeholder="AB1234567" className={inputCls} />
                                     </Field>
                                     <Field label="สถานะเกณฑ์ทหาร" hint="เฉพาะเพศชาย">
                                         <select value={form.militaryStatus} onChange={set("militaryStatus")} className={selectCls}>
@@ -361,13 +404,13 @@ export default function AddStudentPage() {
                             <div className="space-y-4">
                                 <div className="grid gap-4 sm:grid-cols-2">
                                     <Field label="เบอร์โทรศัพท์" required hint="เช่น 081-234-5678">
-                                        <input type="tel" value={form.tel} onChange={set("tel")} placeholder="081-234-5678" className={inputCls} />
+                                        <input type="tel" value={form.tel} onChange={setT("tel", formatThaiPhone)} placeholder="081-234-5678" maxLength={12} className={inputCls} inputMode="numeric" />
                                     </Field>
                                     <Field label="อีเมล" required>
-                                        <input type="email" value={form.email} onChange={set("email")} placeholder="student@kosen.ac.th" className={inputCls} />
+                                        <input type="email" value={form.email} onChange={setT("email", onlyAscii)} placeholder="student@kosen.ac.th" className={inputCls} />
                                     </Field>
                                     <Field label="LINE ID">
-                                        <input type="text" value={form.lineId} onChange={set("lineId")} placeholder="student_line" className={inputCls} />
+                                        <input type="text" value={form.lineId} onChange={setT("lineId", onlyAscii)} placeholder="student_line" className={inputCls} />
                                     </Field>
                                     <Field label="ประเทศที่พำนักปัจจุบัน">
                                         <select value={form.country} onChange={set("country")} className={selectCls}>
@@ -392,7 +435,7 @@ export default function AddStudentPage() {
                         <Section icon="🏫" title="ข้อมูลการศึกษา" description="ประวัติและสถาบันการศึกษา">
                             <div className="space-y-4">
                                 <Field label="โรงเรียนเดิม">
-                                    <input type="text" value={form.prevSchool} onChange={set("prevSchool")} placeholder="โรงเรียนมหิดลวิทยานุสรณ์" className={inputCls} />
+                                    <input type="text" value={form.prevSchool} onChange={setT("prevSchool", onlyThaiText)} placeholder="โรงเรียนมหิดลวิทยานุสรณ์" className={inputCls} />
                                 </Field>
 
                                 <div className="border-t border-border pt-4 space-y-4">
@@ -413,10 +456,19 @@ export default function AddStudentPage() {
                                             </datalist>
                                         </Field>
                                         <Field label="รหัสนักศึกษา (สถาบันนี้)">
-                                            <input type="text" value={enr.studentId} onChange={setEnrollment("studentId")} placeholder="64XXXXXXX" className={inputCls} />
+                                            <input type="text" value={enr.studentId} onChange={setEnrollmentT("studentId", onlyAscii)} placeholder="64XXXXXXX" className={inputCls} />
                                         </Field>
                                         <Field label="อีเมล (สถาบัน)">
-                                            <input type="email" value={enr.univEmail} onChange={setEnrollment("univEmail")} placeholder="student@university.ac.th" className={inputCls} />
+                                            <input type="email" value={enr.univEmail} onChange={setEnrollmentT("univEmail", onlyAscii)} placeholder="student@university.ac.th" className={inputCls} />
+                                        </Field>
+                                    </div>
+
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        <Field label="วันที่เริ่มเรียน">
+                                            <input type="date" value={toDateInputValue(enr.startDate)} onChange={setEnrollment("startDate")} className={inputCls} />
+                                        </Field>
+                                        <Field label="วันที่จบ / ย้ายออก" hint="เว้นว่างไว้ถ้ายังเรียนอยู่สถาบันนี้">
+                                            <input type="date" value={toDateInputValue(enr.endDate)} onChange={setEnrollment("endDate")} className={inputCls} />
                                         </Field>
                                     </div>
 

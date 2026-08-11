@@ -216,6 +216,8 @@ model StudentEnrollment {
   year       String? @db.VarChar(5)
   advisor    String? @db.VarChar(100)
   project    String?
+  startDate  DateTime? @map("start_date") @db.Date
+  endDate    DateTime? @map("end_date") @db.Date // null = สถาบันปัจจุบัน (ยังไม่จบ/ยังไม่ย้ายออก)
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 

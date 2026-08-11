@@ -7,10 +7,27 @@ import AdminTopBar from "@/components/admin/ui/AdminTopBar";
 import { useStudents } from "@/components/admin/contexts/StudentContext";
 import { useStudentHistory } from "@/components/admin/contexts/StudentHistoryContext";
 import { diffSnapshot, buildSummary, formatHistoryDate } from "@/lib/utils/studentHistoryHelpers";
+import { onlyThai, onlyThaiText, onlyEnglish, onlyEnglishAddress, onlyNumeric, onlyAscii, formatThaiPhone, formatThaiNationalId, formatThaiBankAccount } from "@/lib/utils/inputFilters";
 
 // ── Constants ────────────────────────────────────────────────
-const PREFIXES    = ["นาย", "นางสาว", "นาง"];
-const PREFIXES_EN = ["Mr.", "Miss", "Mrs."];
+// TH ↔ EN คำนำหน้า ผูกกันเป็นชุดเดียว — เลือกฝั่งไหนอีกฝั่งและเพศจะเซ็ตให้อัตโนมัติ
+const PREFIX_OPTIONS = [
+    { th: "นาย",      en: "Mr.",    gender: "ชาย" },
+    { th: "นางสาว",   en: "Miss",   gender: "หญิง" },
+    { th: "นาง",      en: "Mrs.",   gender: "หญิง" },
+    { th: "เด็กชาย",  en: "Master", gender: "ชาย" },
+    { th: "เด็กหญิง", en: "Miss",   gender: "หญิง" },
+];
+const PREFIXES    = PREFIX_OPTIONS.map((p) => p.th);
+const PREFIXES_EN = PREFIX_OPTIONS.map((p) => p.en);
+
+// หา index ของ PREFIX_OPTIONS ที่ตรงกับค่าปัจจุบัน — ใช้ th+en คู่กันเพราะ "Miss"
+// ซ้ำกันได้ทั้งนางสาวและเด็กหญิง (ไม่มีคำ EN แยกที่ใช้กันทั่วไปสำหรับเด็กหญิง)
+function findPrefixIndex(prefix, prefixEn) {
+    const byBoth = PREFIX_OPTIONS.findIndex((o) => o.th === prefix && o.en === prefixEn);
+    if (byBoth !== -1) return byBoth;
+    return PREFIX_OPTIONS.findIndex((o) => o.th === prefix);
+}
 const STATUSES    = ["กำลังศึกษา", "ฝึกงาน", "จบการศึกษา", "พักการเรียน", "พ้นสภาพ"];
 const UNIVERSITIES = [
   "KOSEN-KMUTT", "KOSEN-KMITL", "KOSEN-Chulabhorn",
@@ -63,7 +80,7 @@ const SCHOLARSHIP_COLOR = {
 };
 
 const MAX_ENROLLMENTS = 4;
-const EMPTY_ENROLLMENT = { university: "", studentId: "", univEmail: "", faculty: "", department: "", major: "", year: "", advisor: "", project: "" };
+const EMPTY_ENROLLMENT = { university: "", studentId: "", univEmail: "", faculty: "", department: "", major: "", year: "", advisor: "", project: "", startDate: "", endDate: "" };
 
 const inputCls  = "w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft placeholder:text-muted";
 const selectCls = "w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft";
@@ -80,6 +97,13 @@ function formatDate(dateStr) {
     const d = new Date(dateStr);
     if (isNaN(d)) return dateStr;
     return d.toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" });
+}
+// <input type="date"> ต้องการ format YYYY-MM-DD เป๊ะๆ แต่ API ส่งกลับมาเป็น
+// ISO datetime เต็ม ("2005-05-13T00:00:00.000Z") — ต้องตัดให้เหลือแค่ส่วนวันที่
+// ก่อนใส่ value ไม่งั้น browser จะมองว่าเป็นค่าไม่ถูกต้องแล้วโชว์ว่างเปล่า
+function toDateInputValue(v) {
+    if (!v) return "";
+    return String(v).slice(0, 10);
 }
 function computeAge(dob) {
     if (!dob) return null;
@@ -110,6 +134,8 @@ function migrateStudent(s) {
                 year:        s.year        ?? "",
                 advisor:     s.advisor     ?? "",
                 project:     s.project     ?? "",
+                startDate:   "",
+                endDate:     "",
             }],
         };
     }
@@ -213,32 +239,32 @@ function AddressViewCard({ flag, countryLabel, accentKey, fields }) {
 
 // ── Address edit section ──────────────────────────────────────
 function AddressEditTH({ value, onChange }) {
-    const set = (key) => (e) => onChange({ ...value, [key]: e.target.value });
+    const setT = (key, sanitize) => (e) => onChange({ ...value, [key]: sanitize(e.target.value) });
     return (
         <div className="rounded-xl border border-border p-4 space-y-3">
             <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">🇹🇭 ที่อยู่ในประเทศไทย</p>
             <div className="grid gap-3 sm:grid-cols-2">
                 <EField label="บ้านเลขที่ / ซอย / ถนน">
-                    <input type="text" value={value.houseNo ?? ""} onChange={set("houseNo")}
+                    <input type="text" value={value.houseNo ?? ""} onChange={setT("houseNo", onlyThaiText)}
                         placeholder="12/5 ซ.ลาดพร้าว 71 ถ.ลาดพร้าว" className={inputCls} />
                 </EField>
                 <EField label="แขวง / ตำบล">
-                    <input type="text" value={value.subdistrict ?? ""} onChange={set("subdistrict")}
+                    <input type="text" value={value.subdistrict ?? ""} onChange={setT("subdistrict", onlyThai)}
                         placeholder="แขวงลาดพร้าว" className={inputCls} />
                 </EField>
                 <EField label="เขต / อำเภอ">
-                    <input type="text" value={value.district ?? ""} onChange={set("district")}
+                    <input type="text" value={value.district ?? ""} onChange={setT("district", onlyThai)}
                         placeholder="เขตลาดพร้าว" className={inputCls} />
                 </EField>
                 <EField label="จังหวัด">
-                    <select value={value.province ?? ""} onChange={set("province")} className={selectCls}>
+                    <select value={value.province ?? ""} onChange={(e) => onChange({ ...value, province: e.target.value })} className={selectCls}>
                         <option value="">— เลือกจังหวัด —</option>
                         {THAI_PROVINCES.map((p) => <option key={p}>{p}</option>)}
                     </select>
                 </EField>
                 <EField label="รหัสไปรษณีย์">
-                    <input type="text" value={value.postalCode ?? ""} onChange={set("postalCode")}
-                        placeholder="10230" maxLength={5} className={inputCls} />
+                    <input type="text" value={value.postalCode ?? ""} onChange={setT("postalCode", onlyNumeric)}
+                        placeholder="10230" maxLength={5} className={inputCls} inputMode="numeric" />
                 </EField>
             </div>
         </div>
@@ -246,31 +272,31 @@ function AddressEditTH({ value, onChange }) {
 }
 
 function AddressEditJP({ value, onChange }) {
-    const set = (key) => (e) => onChange({ ...value, [key]: e.target.value });
+    const setT = (key, sanitize) => (e) => onChange({ ...value, [key]: sanitize(e.target.value) });
     return (
         <div className="rounded-xl border border-border p-4 space-y-3">
             <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">🇯🇵 ที่อยู่ในญี่ปุ่น</p>
             <div className="grid gap-3 sm:grid-cols-2">
                 <EField label="รหัสไปรษณีย์">
-                    <input type="text" value={value.postalCode ?? ""} onChange={set("postalCode")}
-                        placeholder="150-0002" className={inputCls} />
+                    <input type="text" value={value.postalCode ?? ""} onChange={setT("postalCode", onlyNumeric)}
+                        placeholder="150-0002" className={inputCls} inputMode="numeric" />
                 </EField>
                 <EField label="จังหวัด">
-                    <select value={value.prefecture ?? ""} onChange={set("prefecture")} className={selectCls}>
+                    <select value={value.prefecture ?? ""} onChange={(e) => onChange({ ...value, prefecture: e.target.value })} className={selectCls}>
                         <option value="">— เลือกจังหวัด —</option>
                         {JP_PREFECTURES.map((p) => <option key={p}>{p}</option>)}
                     </select>
                 </EField>
                 <EField label="เมือง / เขต">
-                    <input type="text" value={value.city ?? ""} onChange={set("city")}
+                    <input type="text" value={value.city ?? ""} onChange={setT("city", onlyEnglishAddress)}
                         placeholder="Shibuya-ku" className={inputCls} />
                 </EField>
                 <EField label="ที่อยู่">
-                    <input type="text" value={value.streetAddress ?? ""} onChange={set("streetAddress")}
+                    <input type="text" value={value.streetAddress ?? ""} onChange={setT("streetAddress", onlyEnglishAddress)}
                         placeholder="4-5-6 Shibuya" className={inputCls} />
                 </EField>
                 <EField label="อาคาร / ห้อง" hint="ถ้ามี">
-                    <input type="text" value={value.building ?? ""} onChange={set("building")}
+                    <input type="text" value={value.building ?? ""} onChange={setT("building", onlyEnglishAddress)}
                         placeholder="Shibuya Tower 201" className={inputCls} />
                 </EField>
             </div>
@@ -317,45 +343,87 @@ function DeleteModal({ name, id, onConfirm, onCancel }) {
     );
 }
 
-// ── Enrollment Card (view) ────────────────────────────────────
+// ── Enrollment Timeline (view) ──────────────────────────────────
+// ไล่เรียงสถาบันการศึกษาตามลำดับที่เรียนมา พร้อมช่วงวันที่เริ่ม-จบของแต่ละสถาบัน
+// endDate ว่าง = สถาบันปัจจุบัน (ยังไม่จบ/ยังไม่ย้ายออก) — ดูคอมเมนต์ schema
 const UNI_ACCENT = [
     "border-l-primary",
     "border-l-sky-500",
     "border-l-violet-500",
 ];
 
-function EnrollmentCard({ enrollment, index }) {
-    const hasAcademic = enrollment.advisor || enrollment.project;
+// แสดงสถาบันล่าสุดไว้บนสุด (เหมือนหน้า alumni ที่โชว์ที่ทำงานล่าสุดไว้บน) แม้ว่า
+// ข้อมูลจริงในฐานข้อมูล/ฟอร์มแก้ไขจะเรียงตาม order จากน้อยไปมาก (เก่า→ใหม่) เหมือนเดิม
+// เลข badge ยังนับตามลำดับเวลาจริง (สถาบันแรก = 1) ไม่ใช่ตามตำแหน่งที่แสดงผล
+function EnrollmentTimeline({ enrollments }) {
+    if (!enrollments.length) return null;
+    const displayed = [...enrollments].reverse();
     return (
-        <div className={`rounded-xl border border-border border-l-4 ${UNI_ACCENT[index] ?? "border-l-border"} bg-surface-muted/30 overflow-hidden`}>
-            {/* Header */}
-            <div className="flex items-center gap-2.5 px-4 py-3 border-b border-border bg-surface-muted/50">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-white">
-                    {index + 1}
-                </span>
-                <p className="text-sm font-bold text-foreground flex-1">
-                    {enrollment.university || <span className="text-muted italic font-normal">ไม่ระบุมหาวิทยาลัย</span>}
-                </p>
-                {enrollment.year && (
-                    <span className="rounded-full bg-surface px-2.5 py-0.5 text-xs font-medium text-muted border border-border">
-                        ปีที่ {enrollment.year}
-                    </span>
-                )}
+        <div className="relative">
+            <div className="absolute left-3 top-0 h-full w-px bg-border" />
+            <div className="space-y-4">
+                {displayed.map((e, i) => (
+                    <EnrollmentCard key={displayed.length - i} enrollment={e} label={displayed.length - i} />
+                ))}
             </div>
+        </div>
+    );
+}
 
-            {/* Fields */}
-            <div className="grid grid-cols-2 gap-x-6 gap-y-3.5 p-4">
-                <Field label="รหัสนักเรียน (สถาบันนี้)" value={enrollment.studentId} mono />
-                <Field label="อีเมล (สถาบัน)"
-                    value={enrollment.univEmail}
-                    href={enrollment.univEmail ? `mailto:${enrollment.univEmail}` : undefined} />
-                <Field label="คณะ"      value={enrollment.faculty} />
-                <Field label="ภาควิชา"  value={enrollment.department} />
-                <Field label="สาขาวิชา" value={enrollment.major} />
-                {!hasAcademic && <div />}
-                {hasAcademic && <SubHeading label="งานวิชาการ" />}
-                {hasAcademic && <Field label="อาจารย์ที่ปรึกษา" value={enrollment.advisor} />}
-                {enrollment.project && <Field label="หัวข้อโปรเจกต์" value={enrollment.project} fullWidth />}
+function EnrollmentCard({ enrollment, label }) {
+    const hasAcademic = enrollment.advisor || enrollment.project;
+    const isCurrent = !enrollment.endDate;
+    const hasDates = enrollment.startDate || enrollment.endDate;
+
+    return (
+        <div className="relative flex gap-3">
+            {/* Timeline dot */}
+            <span className={`relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white ${isCurrent ? "bg-primary ring-4 ring-accent-soft" : "bg-muted"}`}>
+                {label}
+            </span>
+
+            {/* Card */}
+            <div className={`flex-1 rounded-xl border overflow-hidden ${isCurrent ? "border-l-4 border-l-primary border-primary/20 bg-accent-soft/30" : "border-l-4 border-l-border border-border bg-surface-muted/30"}`}>
+                {/* Header */}
+                <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-border bg-surface-muted/50">
+                    <p className="text-sm font-bold text-foreground flex-1">
+                        {enrollment.university || <span className="text-muted italic font-normal">ไม่ระบุมหาวิทยาลัย</span>}
+                    </p>
+                    {isCurrent ? (
+                        <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">● ปัจจุบัน</span>
+                    ) : (
+                        <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-semibold text-gray-500">จบแล้ว</span>
+                    )}
+                    {enrollment.year && (
+                        <span className="rounded-full bg-surface px-2.5 py-0.5 text-xs font-medium text-muted border border-border">
+                            ปีที่ {enrollment.year}
+                        </span>
+                    )}
+                </div>
+
+                {/* Date range */}
+                {hasDates && (
+                    <p className="flex items-center gap-1.5 px-4 pt-3 text-xs text-muted">
+                        📅 {enrollment.startDate ? formatDate(enrollment.startDate) : "ไม่ระบุวันเริ่ม"}
+                        <span>—</span>
+                        {isCurrent ? "ปัจจุบัน" : formatDate(enrollment.endDate)}
+                    </p>
+                )}
+
+                {/* Fields */}
+                <div className="grid grid-cols-2 gap-x-6 gap-y-3.5 p-4">
+                    <Field label="รหัสนักเรียน (สถาบันนี้)" value={enrollment.studentId} mono />
+                    <Field label="อีเมล (สถาบัน)"
+                        value={enrollment.univEmail}
+                        href={enrollment.univEmail ? `mailto:${enrollment.univEmail}` : undefined} />
+                    <Field label="คณะ"      value={enrollment.faculty} />
+                    <Field label="ภาควิชา"  value={enrollment.department} />
+                    <Field label="สาขาวิชา" value={enrollment.major} />
+                    {!hasAcademic && <div />}
+                    {hasAcademic && <SubHeading label="งานวิชาการ" />}
+                    {hasAcademic && <Field label="อาจารย์ที่ปรึกษา" value={enrollment.advisor} />}
+                    {enrollment.project && <Field label="หัวข้อโปรเจกต์" value={enrollment.project} fullWidth />}
+                </div>
             </div>
         </div>
     );
@@ -363,7 +431,8 @@ function EnrollmentCard({ enrollment, index }) {
 
 // ── Enrollment Edit Card ──────────────────────────────────────
 function EnrollmentEditCard({ enrollment, index, total, onChange, onRemove }) {
-    const set = (key) => (e) => onChange({ ...enrollment, [key]: e.target.value });
+    const set  = (key) => (e) => onChange({ ...enrollment, [key]: e.target.value });
+    const setT = (key, sanitize) => (e) => onChange({ ...enrollment, [key]: sanitize(e.target.value) });
     return (
         <div className={`rounded-xl border border-border border-l-4 ${UNI_ACCENT[index] ?? "border-l-border"} overflow-hidden`}>
             {/* Header */}
@@ -374,6 +443,11 @@ function EnrollmentEditCard({ enrollment, index, total, onChange, onRemove }) {
                 <p className="flex-1 text-sm font-semibold text-foreground">
                     {enrollment.university || `สถาบันที่ ${index + 1}`}
                 </p>
+                {enrollment.endDate ? (
+                    <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-semibold text-gray-500">จบแล้ว</span>
+                ) : (
+                    <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">● ปัจจุบัน</span>
+                )}
                 {total > 1 && (
                     <button type="button" onClick={onRemove}
                         className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-xs text-muted hover:border-red-400 hover:text-red-500 transition-colors">
@@ -403,12 +477,22 @@ function EnrollmentEditCard({ enrollment, index, total, onChange, onRemove }) {
                         </datalist>
                     </EField>
                     <EField label="รหัสนักเรียน (สถาบันนี้)">
-                        <input type="text" value={enrollment.studentId} onChange={set("studentId")}
+                        <input type="text" value={enrollment.studentId} onChange={setT("studentId", onlyAscii)}
                             placeholder="64XXXXXXX" className={inputCls} />
                     </EField>
                     <EField label="อีเมล (สถาบัน)" hint="ไม่บังคับ">
-                        <input type="email" value={enrollment.univEmail} onChange={set("univEmail")}
+                        <input type="email" value={enrollment.univEmail} onChange={setT("univEmail", onlyAscii)}
                             placeholder="student@university.ac.th" className={inputCls} />
+                    </EField>
+                </div>
+
+                {/* วันที่เริ่ม/จบ */}
+                <div className="grid gap-4 sm:grid-cols-2">
+                    <EField label="วันที่เริ่มเรียน">
+                        <input type="date" value={toDateInputValue(enrollment.startDate)} onChange={set("startDate")} className={inputCls} />
+                    </EField>
+                    <EField label="วันที่จบ / ย้ายออก" hint="เว้นว่างไว้ถ้ายังเรียนอยู่สถาบันนี้">
+                        <input type="date" value={toDateInputValue(enrollment.endDate)} onChange={set("endDate")} className={inputCls} />
                     </EField>
                 </div>
 
@@ -745,7 +829,8 @@ function StudentDetail({ student, students, updateStudent, deleteStudent, histor
         if (searchParams.get("edit") === "1" && !editing) setEditing(true);
     }, [searchParams]);
 
-    const set = (key) => (e) => setForm(prev => ({ ...prev, [key]: e.target.value }));
+    const set  = (key) => (e) => setForm(prev => ({ ...prev, [key]: e.target.value }));
+    const setT = (key, sanitize) => (e) => setForm(prev => ({ ...prev, [key]: sanitize(e.target.value) }));
 
     const isValid = form.name?.trim() && form.lastname?.trim()
                     && (form.enrollments?.[0]?.university ?? "").trim() && form.tel?.trim() && form.email?.trim();
@@ -758,7 +843,7 @@ function StudentDetail({ student, students, updateStudent, deleteStudent, histor
         if (!isValid) return;
         setSaving(true);
         await new Promise(r => setTimeout(r, 500));
-        const after   = { ...form, university: form.enrollments?.[0]?.university ?? "" };
+        const after   = { ...form };
         const changes = diffSnapshot(student, after);
         if (changes.length > 0) {
             addEvent({ studentId: student.id, type: "update", before: { ...student }, after, changes, summary: buildSummary("update", changes) });
@@ -892,9 +977,7 @@ function StudentDetail({ student, students, updateStudent, deleteStudent, histor
                                                 <p className="text-sm font-semibold text-foreground">{d.prevSchool}</p>
                                             </div>
                                         )}
-                                        {(d.enrollments ?? []).map((e, i) => (
-                                            <EnrollmentCard key={i} enrollment={e} index={i} />
-                                        ))}
+                                        <EnrollmentTimeline enrollments={d.enrollments ?? []} />
                                     </div>
                                 </Section>
                             </div>
@@ -953,28 +1036,40 @@ function StudentDetail({ student, students, updateStudent, deleteStudent, histor
                                     <div className="grid gap-4 sm:grid-cols-3">
                                         <EField label="คำนำหน้า (ไทย)" required>
                                             <select value={form.prefix} onChange={(e) => {
-                                                const i = PREFIXES.indexOf(e.target.value);
-                                                setForm(prev => ({ ...prev, prefix: e.target.value, prefixEn: PREFIXES_EN[i] ?? prev.prefixEn, gender: e.target.value === "นาย" ? "ชาย" : "หญิง" }));
+                                                const opt = PREFIX_OPTIONS.find(o => o.th === e.target.value);
+                                                setForm(prev => ({ ...prev, prefix: e.target.value, prefixEn: opt?.en ?? prev.prefixEn, gender: opt?.gender ?? prev.gender }));
                                             }} className={selectCls}>
                                                 {PREFIXES.map(p => <option key={p}>{p}</option>)}
                                             </select>
                                         </EField>
                                         <EField label="ชื่อ (ไทย)" required>
-                                            <input type="text" value={form.name} onChange={set("name")} placeholder="สมชาย" className={inputCls} />
+                                            <input type="text" value={form.name} onChange={setT("name", onlyThai)} placeholder="สมชาย" className={inputCls} />
                                         </EField>
                                         <EField label="นามสกุล (ไทย)" required>
-                                            <input type="text" value={form.lastname} onChange={set("lastname")} placeholder="ประเสริฐ" className={inputCls} />
+                                            <input type="text" value={form.lastname} onChange={setT("lastname", onlyThai)} placeholder="ประเสริฐ" className={inputCls} />
                                         </EField>
                                     </div>
                                     <div className="grid gap-4 sm:grid-cols-3">
                                         <EField label="คำนำหน้า (EN)">
-                                            <input type="text" value={form.prefixEn ?? ""} onChange={set("prefixEn")} placeholder="Mr." className={inputCls} />
+                                            <select
+                                                value={String(findPrefixIndex(form.prefix, form.prefixEn))}
+                                                onChange={(e) => {
+                                                    const opt = PREFIX_OPTIONS[Number(e.target.value)];
+                                                    if (!opt) return;
+                                                    setForm(prev => ({ ...prev, prefix: opt.th, prefixEn: opt.en, gender: opt.gender }));
+                                                }}
+                                                className={selectCls}
+                                            >
+                                                {PREFIX_OPTIONS.map((o, i) => (
+                                                    <option key={i} value={i}>{o.en}{o.th.startsWith("เด็ก") ? ` (${o.th})` : ""}</option>
+                                                ))}
+                                            </select>
                                         </EField>
                                         <EField label="First Name (EN)">
-                                            <input type="text" value={form.nameEn ?? ""} onChange={set("nameEn")} placeholder="Somchai" className={inputCls} />
+                                            <input type="text" value={form.nameEn ?? ""} onChange={setT("nameEn", onlyEnglish)} placeholder="Somchai" className={inputCls} />
                                         </EField>
                                         <EField label="Last Name (EN)">
-                                            <input type="text" value={form.lastnameEn ?? ""} onChange={set("lastnameEn")} placeholder="Prasert" className={inputCls} />
+                                            <input type="text" value={form.lastnameEn ?? ""} onChange={setT("lastnameEn", onlyEnglish)} placeholder="Prasert" className={inputCls} />
                                         </EField>
                                     </div>
                                     <div className="grid gap-4 sm:grid-cols-3">
@@ -989,15 +1084,15 @@ function StudentDetail({ student, students, updateStudent, deleteStudent, histor
                                             </select>
                                         </EField>
                                         <EField label="วันเกิด">
-                                            <input type="date" value={form.dob ?? ""} onChange={set("dob")} className={inputCls} />
+                                            <input type="date" value={toDateInputValue(form.dob)} onChange={set("dob")} className={inputCls} />
                                         </EField>
                                     </div>
                                     <div className="grid gap-4 sm:grid-cols-3">
                                         <EField label="เลขบัตรประชาชน" hint="13 หลัก">
-                                            <input type="text" value={form.nationalId ?? ""} onChange={set("nationalId")} placeholder="1-2345-67890-12-3" className={inputCls} />
+                                            <input type="text" value={form.nationalId ?? ""} onChange={setT("nationalId", formatThaiNationalId)} placeholder="1-2345-67890-12-3" maxLength={17} className={inputCls} inputMode="numeric" />
                                         </EField>
                                         <EField label="เลข Passport">
-                                            <input type="text" value={form.passport ?? ""} onChange={set("passport")} placeholder="AB1234567" className={inputCls} />
+                                            <input type="text" value={form.passport ?? ""} onChange={setT("passport", onlyAscii)} placeholder="AB1234567" className={inputCls} />
                                         </EField>
                                         <EField label="สถานะเกณฑ์ทหาร" hint="เฉพาะเพศชาย">
                                             <select value={form.militaryStatus ?? "-"} onChange={set("militaryStatus")} className={selectCls}>
@@ -1015,13 +1110,13 @@ function StudentDetail({ student, students, updateStudent, deleteStudent, histor
                                     <div className="space-y-4">
                                         <div className="grid gap-4 sm:grid-cols-2">
                                             <EField label="เบอร์โทรศัพท์" required hint="เช่น 081-234-5678">
-                                                <input type="tel" value={form.tel} onChange={set("tel")} placeholder="081-234-5678" className={inputCls} />
+                                                <input type="tel" value={form.tel} onChange={setT("tel", formatThaiPhone)} placeholder="081-234-5678" maxLength={12} className={inputCls} inputMode="numeric" />
                                             </EField>
                                             <EField label="อีเมล" required>
-                                                <input type="email" value={form.email} onChange={set("email")} placeholder="student@kosen.ac.th" className={inputCls} />
+                                                <input type="email" value={form.email} onChange={setT("email", onlyAscii)} placeholder="student@kosen.ac.th" className={inputCls} />
                                             </EField>
                                             <EField label="LINE ID">
-                                                <input type="text" value={form.lineId ?? ""} onChange={set("lineId")} placeholder="student_line" className={inputCls} />
+                                                <input type="text" value={form.lineId ?? ""} onChange={setT("lineId", onlyAscii)} placeholder="student_line" className={inputCls} />
                                             </EField>
                                             <EField label="ประเทศที่พำนักปัจจุบัน">
                                                 <select value={form.country ?? ""} onChange={set("country")} className={inputCls}>
@@ -1051,37 +1146,45 @@ function StudentDetail({ student, students, updateStudent, deleteStudent, histor
                                 <Section icon="🏫" title="ข้อมูลการศึกษา"
                                     description={`${(form.enrollments ?? []).length} สถาบัน · สูงสุด ${MAX_ENROLLMENTS}`}>
                                     <div className="space-y-4">
-                                        <EField label="โรงเรียนเดิม">
-                                            <input type="text" value={form.prevSchool ?? ""} onChange={set("prevSchool")} placeholder="โรงเรียนมหิดลวิทยานุสรณ์" className={inputCls} />
-                                        </EField>
-                                        <div className="border-t border-border pt-4 space-y-3">
-                                            {(form.enrollments ?? []).map((enr, i) => (
-                                                <EnrollmentEditCard
-                                                    key={i}
-                                                    enrollment={enr}
-                                                    index={i}
-                                                    total={(form.enrollments ?? []).length}
-                                                    onChange={(updated) => setForm(prev => {
-                                                        const arr = [...(prev.enrollments ?? [])];
-                                                        arr[i] = updated;
-                                                        return { ...prev, enrollments: arr };
-                                                    })}
-                                                    onRemove={() => setForm(prev => ({
-                                                        ...prev,
-                                                        enrollments: (prev.enrollments ?? []).filter((_, j) => j !== i),
-                                                    }))}
-                                                />
-                                            ))}
-                                            {(form.enrollments ?? []).length < MAX_ENROLLMENTS && (
-                                                <button type="button"
-                                                    onClick={() => setForm(prev => ({
-                                                        ...prev,
-                                                        enrollments: [...(prev.enrollments ?? []), { ...EMPTY_ENROLLMENT }],
-                                                    }))}
-                                                    className="w-full rounded-xl border-2 border-dashed border-border py-3 text-sm font-medium text-muted hover:border-primary hover:text-primary transition-colors">
-                                                    + เพิ่มสถาบันการศึกษา
-                                                </button>
-                                            )}
+                                        {/* เรียงล่าสุดไว้บนสุด เก่าสุดไว้ล่างสุด (ต่อด้วยโรงเรียนเดิมล่างสุด)
+                                            เหมือนหน้า view detail — แต่ index/total ที่ส่งลง EnrollmentEditCard
+                                            ยังอ้างอิงตำแหน่งจริงใน form.enrollments (ลำดับเวลาจริง) เสมอ */}
+                                        {(form.enrollments ?? []).length < MAX_ENROLLMENTS && (
+                                            <button type="button"
+                                                onClick={() => setForm(prev => ({
+                                                    ...prev,
+                                                    enrollments: [...(prev.enrollments ?? []), { ...EMPTY_ENROLLMENT }],
+                                                }))}
+                                                className="w-full rounded-xl border-2 border-dashed border-border py-3 text-sm font-medium text-muted hover:border-primary hover:text-primary transition-colors">
+                                                + เพิ่มสถาบันการศึกษา
+                                            </button>
+                                        )}
+                                        <div className="space-y-3">
+                                            {(form.enrollments ?? [])
+                                                .map((enr, i) => ({ enr, i }))
+                                                .reverse()
+                                                .map(({ enr, i }) => (
+                                                    <EnrollmentEditCard
+                                                        key={i}
+                                                        enrollment={enr}
+                                                        index={i}
+                                                        total={(form.enrollments ?? []).length}
+                                                        onChange={(updated) => setForm(prev => {
+                                                            const arr = [...(prev.enrollments ?? [])];
+                                                            arr[i] = updated;
+                                                            return { ...prev, enrollments: arr };
+                                                        })}
+                                                        onRemove={() => setForm(prev => ({
+                                                            ...prev,
+                                                            enrollments: (prev.enrollments ?? []).filter((_, j) => j !== i),
+                                                        }))}
+                                                    />
+                                                ))}
+                                        </div>
+                                        <div className="border-t border-border pt-4">
+                                            <EField label="โรงเรียนเดิม">
+                                                <input type="text" value={form.prevSchool ?? ""} onChange={setT("prevSchool", onlyThaiText)} placeholder="โรงเรียนมหิดลวิทยานุสรณ์" className={inputCls} />
+                                            </EField>
                                         </div>
                                     </div>
                                 </Section>
@@ -1091,16 +1194,16 @@ function StudentDetail({ student, students, updateStudent, deleteStudent, histor
                             <Section icon="🏦" title="บัญชีธนาคาร" description="บัญชีรับทุนการศึกษา">
                                 <div className="grid gap-4 sm:grid-cols-3">
                                     <EField label="ธนาคาร">
-                                        <input type="text" value={form.bankName ?? ""} onChange={set("bankName")}
+                                        <input type="text" value={form.bankName ?? ""} onChange={setT("bankName", onlyThaiText)}
                                             placeholder="กสิกรไทย / ไทยพาณิชย์ / กรุงเทพ" className={inputCls} />
                                     </EField>
                                     <EField label="สาขา">
-                                        <input type="text" value={form.bankBranch ?? ""} onChange={set("bankBranch")}
+                                        <input type="text" value={form.bankBranch ?? ""} onChange={setT("bankBranch", onlyThaiText)}
                                             placeholder="สาขาลาดพร้าว" className={inputCls} />
                                     </EField>
                                     <EField label="เลขที่บัญชี">
-                                        <input type="text" value={form.bankAccountNo ?? ""} onChange={set("bankAccountNo")}
-                                            placeholder="000-0-00000-0" className={inputCls} />
+                                        <input type="text" value={form.bankAccountNo ?? ""} onChange={setT("bankAccountNo", formatThaiBankAccount)}
+                                            placeholder="000-0-00000-0" className={inputCls} inputMode="numeric" />
                                     </EField>
                                 </div>
                             </Section>
@@ -1109,10 +1212,10 @@ function StudentDetail({ student, students, updateStudent, deleteStudent, histor
                             <Section icon="✈️" title="การเดินทาง" description="ข้อมูลวันเดินทางไป-กลับ">
                                 <div className="grid gap-4 sm:grid-cols-2">
                                     <EField label="วันเดินทางออกจากไทย">
-                                        <input type="date" value={form.departureDateTH ?? ""} onChange={set("departureDateTH")} className={inputCls} />
+                                        <input type="date" value={toDateInputValue(form.departureDateTH)} onChange={set("departureDateTH")} className={inputCls} />
                                     </EField>
                                     <EField label="วันที่ถึงญี่ปุ่น">
-                                        <input type="date" value={form.arrivalDateJP ?? ""} onChange={set("arrivalDateJP")} className={inputCls} />
+                                        <input type="date" value={toDateInputValue(form.arrivalDateJP)} onChange={set("arrivalDateJP")} className={inputCls} />
                                     </EField>
                                 </div>
                             </Section>
