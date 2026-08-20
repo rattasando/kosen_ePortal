@@ -6,13 +6,16 @@ import Link from "next/link";
 import AdminTable from "@/components/admin/ui/AdminTable";
 import StudentActionButtons from "@/components/admin/ui/StudentActionButtons";
 import { useStudents } from "@/components/admin/contexts/StudentContext";
+import { useStudentHistory } from "@/components/admin/contexts/StudentHistoryContext";
+import { diffSnapshot, buildSummary } from "@/lib/utils/studentHistoryHelpers";
+import { formatThaiNationalId } from "@/lib/utils/inputFilters";
 
 // ── CSV helpers ──────────────────────────────────────────────
 // One row per student; up to 3 enrollments; both TH + JP addresses; banking & travel fields
 const DATE_FIELDS = new Set(["dob", "departureDateTH", "arrivalDateJP"]);
 
 const CSV_HEADERS = [
-  "id", "prefix", "name", "lastname", "prefixEn", "nameEn", "lastnameEn", "nickname",
+  "no.", "prefix", "name", "lastname", "prefixEn", "nameEn", "lastnameEn", "nickname",
   "gender", "dob", "nationalId", "passport", "militaryStatus",
   // Enrollment 1 (primary institution)
   "enroll1_university", "enroll1_studentId", "enroll1_email",
@@ -68,7 +71,7 @@ function studentToFlat(s) {
   const th = s.addresses?.th ?? {};
   const jp = s.addresses?.jp ?? {};
   return {
-    id: s.id, prefix: s.prefix, prefixEn: s.prefixEn, name: s.name, nameEn: s.nameEn,
+    prefix: s.prefix, prefixEn: s.prefixEn, name: s.name, nameEn: s.nameEn,
     lastname: s.lastname, lastnameEn: s.lastnameEn, nickname: s.nickname,
     gender: s.gender, dob: parseDateToISO(s.dob), nationalId: s.nationalId,
     passport: s.passport, militaryStatus: s.militaryStatus,
@@ -93,9 +96,9 @@ function studentToFlat(s) {
   };
 }
 
-function studentToRow(s) {
+function studentToRow(s, index) {
   const flat = studentToFlat(s);
-  return CSV_HEADERS.map((k) => toCSVField(flat[k]));
+  return CSV_HEADERS.map((k) => k === "no." ? String(index + 1) : toCSVField(flat[k]));
 }
 
 // Reconstruct a nested student object from a flat CSV row
@@ -123,7 +126,7 @@ function rowToStudent(row) {
     name: row.name ?? "", nameEn: row.nameEn ?? "",
     lastname: row.lastname ?? "", lastnameEn: row.lastnameEn ?? "",
     nickname: row.nickname ?? "", gender: row.gender ?? "",
-    dob: row.dob ?? "", nationalId: row.nationalId ?? "",
+    dob: row.dob ?? "", nationalId: formatThaiNationalId(row.nationalId ?? ""),
     passport: row.passport ?? "", militaryStatus: row.militaryStatus ?? "",
     enrollments: enrollments.length > 0 ? enrollments : [],
     prevSchool: row.prevSchool ?? "", scholarship: row.scholarship ?? "",
@@ -151,7 +154,7 @@ function rowToStudent(row) {
 }
 
 function exportCSV(students) {
-  const rows = [CSV_HEADERS.join(","), ...students.map((s) => studentToRow(s).join(","))];
+  const rows = [CSV_HEADERS.join(","), ...students.map((s, i) => studentToRow(s, i).join(","))];
   const blob = new Blob(["﻿" + rows.join("\n")], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -191,9 +194,8 @@ function parseCSV(text) {
     .filter((l) => l.trim());
   if (lines.length < 2) return { error: "ไฟล์ว่างหรือไม่มีข้อมูล" };
   const headers = parseCSVLine(lines[0]).map((h) => h.trim());
-  const missing = ["id", "name", "lastname"].filter(
-    (r) => !headers.includes(r),
-  );
+  // nationalId คือ key หลักสำหรับจับคู่และสร้าง record ใหม่ — บังคับเพียงคอลัมน์เดียว
+  const missing = ["nationalId"].filter((r) => !headers.includes(r));
   if (missing.length)
     return { error: `ไม่พบคอลัมน์ที่จำเป็น: ${missing.join(", ")}` };
   const rows = lines
@@ -207,7 +209,7 @@ function parseCSV(text) {
       });
       return obj;
     })
-    .filter((r) => r.id?.trim() && r.name?.trim());
+    .filter((r) => r.nationalId?.trim());
   if (!rows.length) return { error: "ไม่พบข้อมูลนักเรียนที่ถูกต้องในไฟล์" };
   return { rows, headers };
 }
@@ -244,20 +246,24 @@ function normalizeVal(k, v) {
 }
 
 function computeDiff(incoming, existing) {
-  const existingMap = Object.fromEntries((existing ?? []).map((s) => [s.id, s]));
-  const incomingIds = new Set(incoming.map((r) => r.id));
+  const stripDashes = (v) => String(v ?? "").replace(/-/g, "").trim();
+  // จับคู่ด้วย nationalId (strip ขีด) เหมือน handleImport
+  const existingByNationalId = Object.fromEntries(
+    (existing ?? []).filter((s) => s.nationalId).map((s) => [stripDashes(s.nationalId), s])
+  );
+  const incomingNationalIds = new Set(incoming.map((r) => stripDashes(r.nationalId)));
   const results = incoming.map((row) => {
-    const prev = existingMap[row.id];
+    const prev = existingByNationalId[stripDashes(row.nationalId)];
     if (!prev) return { type: "new", row, changes: [] };
     const prevFlat = studentToFlat(prev);
-    const changes = CSV_HEADERS.filter((k) => {
+    const changes = CSV_HEADERS.filter((k) => k !== "no.").filter((k) => {
       const a = normalizeVal(k, prevFlat[k]);
       const b = normalizeVal(k, row[k]);
       return a !== b;
     }).map((k) => ({ field: k, label: FIELD_LABEL_MAP[k] ?? k, before: prevFlat[k] ?? "", after: row[k] ?? "" }));
     return { type: changes.length > 0 ? "update" : "unchanged", row, changes };
   });
-  const deleted = (existing ?? []).filter((s) => !incomingIds.has(s.id));
+  const deleted = (existing ?? []).filter((s) => !incomingNationalIds.has(stripDashes(s.nationalId)));
   return { results, deleted };
 }
 
@@ -363,7 +369,7 @@ function ImportModal({ onClose, onConfirm, existingStudents }) {
               <div className="rounded-lg bg-surface-muted px-4 py-3 text-xs text-muted">
                 <p className="font-semibold text-foreground mb-1">คอลัมน์ที่รองรับ</p>
                 <p className="font-mono leading-relaxed">{CSV_HEADERS.join(", ")}</p>
-                <p className="mt-1">คอลัมน์บังคับ: <span className="font-semibold text-foreground">id, name, lastname</span></p>
+                <p className="mt-1">คอลัมน์บังคับ: <span className="font-semibold text-foreground">nationalId</span> — ใช้จับคู่กับข้อมูลในระบบ และสร้าง record ใหม่ถ้าไม่เจอ</p>
               </div>
             </div>
           ) : (
@@ -406,13 +412,14 @@ function ImportModal({ onClose, onConfirm, existingStudents }) {
               <div className="space-y-2">
                 {diff?.results.map(({ type, row, changes }) => {
                   const cfg = TYPE_CFG[type];
-                  const isOpen = expanded.has(row.id);
+                  const rowKey = row.nationalId || row.name;
+                  const isOpen = expanded.has(rowKey);
                   const hasDetail = type === "new" || type === "update";
                   return (
-                    <div key={row.id} className="rounded-xl border border-border overflow-hidden">
+                    <div key={rowKey} className="rounded-xl border border-border overflow-hidden">
                       <button
                         type="button"
-                        onClick={() => hasDetail && toggleExpand(row.id)}
+                        onClick={() => hasDetail && toggleExpand(rowKey)}
                         className={`w-full flex items-center gap-3 px-4 py-2.5 text-left ${hasDetail ? "hover:bg-surface-muted/50 cursor-pointer" : "cursor-default"}`}
                       >
                         <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold ${cfg.pill}`}>{cfg.label}</span>
@@ -776,31 +783,22 @@ function CopyButton({ value }) {
   );
 }
 
-function ContactButtons({ tel, student, onEmailClick }) {
+function ContactButtons({ tel, student }) {
   return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-center gap-1.5">
-        <a
-          href={`tel:${tel}`}
-          onClick={(e) => e.stopPropagation()}
-          className="text-xs font-medium text-foreground hover:text-emerald-600 transition-colors"
-        >
+    <div className="flex flex-col gap-0.5">
+      {tel ? (
+        <a href={`tel:${tel}`} onClick={(e) => e.stopPropagation()}
+          className="text-xs text-foreground hover:text-emerald-600 transition-colors whitespace-nowrap">
           {tel}
         </a>
-        <CopyButton value={tel} />
-      </div>
-      <div className="flex items-center gap-1.5">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onEmailClick(student);
-          }}
-          className="text-xs font-medium text-muted hover:text-primary transition-colors"
-        >
+      ) : null}
+      {student.email ? (
+        <a href={`mailto:${student.email}`} onClick={(e) => e.stopPropagation()}
+          className="text-xs text-muted hover:text-primary transition-colors truncate" title={student.email}>
           {student.email}
-        </button>
-        <CopyButton value={student.email} />
-      </div>
+        </a>
+      ) : null}
+      {!tel && !student.email && <span className="text-xs text-muted">—</span>}
     </div>
   );
 }
@@ -962,8 +960,9 @@ function saveFilters(data) {
 
 // ── Main ─────────────────────────────────────────────────────
 export default function StudentListClient() {
-  const { students, ready, replaceAll, updateStudent, addStudent } =
+  const { students, ready, replaceAll, updateStudent, addStudent, refetch } =
     useStudents();
+  const { addEvent } = useStudentHistory();
   const router = useRouter();
   const [searchInput, setSearchInput] = useState("");
   const [keywords, setKeywords] = useState(() => loadFilters().keywords ?? []);
@@ -1003,7 +1002,6 @@ export default function StudentListClient() {
     filterCountry,
     sortBy,
   ]);
-  const [emailTarget, setEmailTarget] = useState(null);
   const [showImport, setShowImport] = useState(false);
   const [importDone, setImportDone] = useState(null);
   const [pageSize, setPageSize] = useState(20);
@@ -1112,7 +1110,7 @@ export default function StudentListClient() {
         str(s.address).includes(q) ||
         str(s.nationalId).replace(/-/g, "").includes(q.replace(/-/g, "")) ||
         str(s.passport).includes(q) ||
-        s.tel.replace(/-/g, "").includes(telQ) ||
+        str(s.tel).replace(/-/g, "").includes(telQ) ||
         enrollmentMatch ||
         addressMatch
       );
@@ -1145,6 +1143,12 @@ export default function StudentListClient() {
         matchCountry
       );
     });
+    if (sortBy === "newest")
+      return [...base].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    if (sortBy === "oldest")
+      return [...base].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    if (sortBy === "updated")
+      return [...base].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
     if (sortBy === "th_az")
       return [...base].sort((a, b) =>
         (a.name + a.lastname).localeCompare(b.name + b.lastname, "th"),
@@ -1237,26 +1241,111 @@ export default function StudentListClient() {
 
   const handleImport = async (rows, mode) => {
     const studentObjects = rows.map(rowToStudent);
+    // reload ข้อมูลล่าสุดจาก DB ก่อนเพื่อให้ diff และ match ถูกต้อง
+    const freshStudents = await refetch();
     let result;
 
     if (mode === "replace") {
       const errors = await replaceAll(studentObjects);
       result = { count: studentObjects.length - errors.length, mode: "replace", errors };
     } else {
-      const existingIds = new Set(students.map((s) => s.id));
+      // จับคู่ด้วย nationalId ก่อน (primary) → ถ้าไม่เจอค่อยใช้ id (fallback)
+      // normalize: ลบขีด (-) ออกก่อนเปรียบเทียบ เพราะ DB เก็บแบบมีขีด แต่ CSV อาจไม่มี
+      const stripDashes = (v) => String(v ?? "").replace(/-/g, "").trim();
+      const byNationalId = Object.fromEntries(
+        freshStudents.filter((s) => s.nationalId).map((s) => [stripDashes(s.nationalId), s])
+      );
+      const byId = Object.fromEntries(freshStudents.map((s) => [s.id, s]));
+
+      // หา sequence สูงสุดจาก id ที่มีรูปแบบ STU-NNN เพื่อ auto-generate id ใหม่
+      const STU_RE = /^STU-(\d+)$/i;
+      let nextSeq = freshStudents.reduce((max, s) => {
+        const m = s.id?.match(STU_RE);
+        return m ? Math.max(max, parseInt(m[1], 10)) : max;
+      }, 0);
+      const nextId = () => `STU-${String(++nextSeq).padStart(3, "0")}`;
+
       let added = 0, updated = 0;
       const errors = [];
       for (const stu of studentObjects) {
         try {
-          if (existingIds.has(stu.id)) {
-            await updateStudent(stu.id, stu);
+          const matched = byNationalId[stripDashes(stu.nationalId)] ?? (stu.id ? byId[stu.id] : null);
+          if (matched) {
+            // normalize matched (flat DB) → nested addresses ให้ตรงกับ shape ของ stu (CSV)
+            const normalizedMatched = {
+              ...matched,
+              addresses: {
+                th: {
+                  houseNo:     matched.addrThHouseNo     ?? "",
+                  subdistrict: matched.addrThSubdistrict ?? "",
+                  district:    matched.addrThDistrict    ?? "",
+                  province:    matched.addrThProvince    ?? "",
+                  postalCode:  matched.addrThPostalCode  ?? "",
+                },
+                jp: {
+                  postalCode:    matched.addrJpPostalCode    ?? "",
+                  prefecture:    matched.addrJpPrefecture    ?? "",
+                  city:          matched.addrJpCity          ?? "",
+                  streetAddress: matched.addrJpStreetAddress ?? "",
+                  building:      matched.addrJpBuilding      ?? "",
+                },
+              },
+            };
+            // merge CSV กับ DB: ถ้า field ใน CSV ว่าง ให้คงค่าเดิมจาก DB ไว้ (ไม่ทับด้วย null)
+            const mergedStu = Object.fromEntries(
+              Object.entries(stu).map(([k, v]) => {
+                const isEmpty = v === "" || v === null || v === undefined;
+                return [k, isEmpty ? (matched[k] ?? v) : v];
+              })
+            );
+            // addresses nested ต้อง merge ทีละ field
+            mergedStu.addresses = {
+              th: {
+                houseNo:     stu.addresses?.th?.houseNo     || matched.addrThHouseNo     || "",
+                subdistrict: stu.addresses?.th?.subdistrict || matched.addrThSubdistrict || "",
+                district:    stu.addresses?.th?.district    || matched.addrThDistrict    || "",
+                province:    stu.addresses?.th?.province    || matched.addrThProvince    || "",
+                postalCode:  stu.addresses?.th?.postalCode  || matched.addrThPostalCode  || "",
+              },
+              jp: {
+                postalCode:    stu.addresses?.jp?.postalCode    || matched.addrJpPostalCode    || "",
+                prefecture:    stu.addresses?.jp?.prefecture    || matched.addrJpPrefecture    || "",
+                city:          stu.addresses?.jp?.city          || matched.addrJpCity          || "",
+                streetAddress: stu.addresses?.jp?.streetAddress || matched.addrJpStreetAddress || "",
+                building:      stu.addresses?.jp?.building      || matched.addrJpBuilding      || "",
+              },
+            };
+            // update โดยใช้ id จาก DB เสมอ ไม่ใช้จาก CSV
+            await updateStudent(matched.id, { ...mergedStu, id: matched.id });
+            const changes = diffSnapshot(normalizedMatched, mergedStu);
+            if (changes.length > 0) {
+              addEvent({
+                studentId: matched.id,
+                type: "update",
+                before: normalizedMatched,
+                after: mergedStu,
+                changes,
+                summary: `[Import CSV] ${buildSummary("update", changes)}`,
+              });
+            }
             updated++;
           } else {
-            await addStudent(stu);
+            // add ใหม่ — auto-generate id ถ้าไม่มีใน CSV
+            const newId = stu.id?.trim() || nextId();
+            const newStu = { ...stu, id: newId };
+            await addStudent(newStu);
+            addEvent({
+              studentId: newId,
+              type: "create",
+              before: null,
+              after: newStu,
+              changes: [],
+              summary: "[Import CSV] สร้างข้อมูลนักเรียนใหม่",
+            });
             added++;
           }
         } catch (err) {
-          errors.push({ id: stu.id, message: err.message });
+          errors.push({ id: stu.nationalId ?? stu.id, message: err.message });
         }
       }
       result = { added, updated, mode: "merge", errors };
@@ -1282,12 +1371,6 @@ export default function StudentListClient() {
 
   return (
     <div className="space-y-6 p-6">
-      {emailTarget && (
-        <EmailModal
-          student={emailTarget}
-          onClose={() => setEmailTarget(null)}
-        />
-      )}
       {showImport && (
         <ImportModal
           onClose={() => setShowImport(false)}
@@ -1580,6 +1663,9 @@ export default function StudentListClient() {
             className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft"
           >
             <option value="default">ค่าเริ่มต้น</option>
+            <option value="newest">เพิ่มล่าสุดก่อน</option>
+            <option value="oldest">เพิ่มเก่าสุดก่อน</option>
+            <option value="updated">แก้ไขล่าสุดก่อน</option>
             <option value="th_az">ก–ฮ (ชื่อไทย)</option>
             <option value="th_za">ฮ–ก (ชื่อไทย)</option>
             <option value="en_az">A–Z (English name)</option>
@@ -1720,7 +1806,7 @@ export default function StudentListClient() {
             >
               ⇅{" "}
               {
-                { th_az: "ก–ฮ", th_za: "ฮ–ก", en_az: "A–Z", en_za: "Z–A" }[
+                { newest: "เพิ่มล่าสุด", oldest: "เพิ่มเก่าสุด", updated: "แก้ไขล่าสุด", th_az: "ก–ฮ", th_za: "ฮ–ก", en_az: "A–Z", en_za: "Z–A" }[
                   sortBy
                 ]
               }
@@ -1799,7 +1885,7 @@ export default function StudentListClient() {
       {paginated.length > 0 ? (
         <AdminTable
           onRowClick={(i) => router.push(`/admin/students/${paginated[i].id}`)}
-          onCellClick={(i, j) => { if (j === 0) toggleSelect(paginated[i].id); }}
+          onCellClick={(e, i, j) => { if (j === 0) { e.stopPropagation(); toggleSelect(paginated[i].id); } }}
           columns={[
             {
               label: (
@@ -1813,13 +1899,15 @@ export default function StudentListClient() {
                 />
               ),
               align: "center",
+              width: "44px",
             },
-            "ชื่อ-นามสกุล",
-            "มหาวิทยาลัย / คณะ",
-            "ปี / สาขา",
-            { label: "ติดต่อ", align: "center" },
-            { label: "สถานะ", align: "center" },
-            { label: "Actions", align: "center" },
+            { label: "ชื่อ-นามสกุล", width: "17%" },
+            { label: "มหาวิทยาลัย / คณะ", width: "17%" },
+            { label: "ปี / สาขา", width: "10%" },
+            { label: <span className="whitespace-nowrap">อาศัยอยู่ที่</span>, align: "center", width: "10%" },
+            { label: "ติดต่อ", width: "18%" },
+            { label: "สถานะ", align: "center", width: "110px" },
+            { label: "Actions", align: "center", width: "115px" },
           ]}
           rows={paginated.map((s) => {
             const pe = getLatestEnrollment(s);
@@ -1833,18 +1921,18 @@ export default function StudentListClient() {
                 className="h-4 w-4 cursor-pointer rounded accent-primary"
               />,
               <div key="name" className="min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Link
-                    href={`/admin/students/${s.id}`}
-                    className="font-medium text-sm text-foreground hover:text-primary hover:underline transition-colors"
+                <div className="flex items-center gap-2 flex-nowrap overflow-hidden">
+                  <span
+                    className="font-medium text-sm text-foreground truncate"
+                    title={`${s.prefix}${s.name} ${s.lastname}`}
                   >
                     <HighlightText
                       text={`${s.prefix}${s.name} ${s.lastname}`}
                       terms={activeTerms}
                     />
-                  </Link>
+                  </span>
                   {s.scholarship && (
-                    <span className="inline-flex items-center rounded-full bg-violet-50 border border-violet-200 px-2 py-0.5 text-[10px] font-semibold text-violet-700 whitespace-nowrap">
+                    <span className="inline-flex items-center rounded-full bg-violet-50 border border-violet-200 px-2 py-0.5 text-[10px] font-semibold text-violet-700 whitespace-nowrap shrink-0">
                       {s.scholarship}
                     </span>
                   )}
@@ -1881,11 +1969,11 @@ export default function StudentListClient() {
                   )}
               </div>,
               <div key="uni" className="min-w-0">
-                <p className="text-sm font-medium text-foreground whitespace-nowrap">
+                <p className="text-sm font-medium text-foreground truncate" title={pe.university}>
                   <HighlightText text={pe.university} terms={activeTerms} />
                 </p>
                 {pe.faculty && (
-                  <p className="text-xs text-muted">
+                  <p className="text-xs text-muted truncate" title={pe.faculty}>
                     <HighlightText text={pe.faculty} terms={activeTerms} />
                   </p>
                 )}
@@ -1905,12 +1993,16 @@ export default function StudentListClient() {
                   </p>
                 )}
               </div>,
-              <ContactButtons
-                key="contact"
-                tel={s.tel}
-                student={s}
-                onEmailClick={setEmailTarget}
-              />,
+              <div key="country" className="text-center text-sm">
+                {s.country ? (
+                  <span className="whitespace-nowrap">
+                    {s.country === "ญี่ปุ่น" ? "🇯🇵" : s.country === "ไทย" ? "🇹🇭" : "🌏"} {s.country}
+                  </span>
+                ) : (
+                  <span className="text-muted">—</span>
+                )}
+              </div>,
+              <ContactButtons key="contact" tel={s.tel} student={s} />,
               <StatusBadge key="status" status={s.status} />,
               <div key="actions" onClick={(e) => e.stopPropagation()}>
                 <StudentActionButtons

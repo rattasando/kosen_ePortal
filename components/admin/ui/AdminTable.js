@@ -6,7 +6,12 @@ export default function AdminTable({ columns, rows, onRowClick, onCellClick }) {
   return (
     <div className="card overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
+        <table className="w-full table-fixed text-left text-sm">
+          <colgroup>
+            {cols.map((col, i) =>
+              col.width ? <col key={i} style={{ width: col.width }} /> : <col key={i} />
+            )}
+          </colgroup>
           <thead>
             <tr className="border-b border-border bg-surface-muted">
               {cols.map((col, i) => (
@@ -29,8 +34,8 @@ export default function AdminTable({ columns, rows, onRowClick, onCellClick }) {
                 {row.map((cell, j) => (
                   <td
                     key={j}
-                    onClick={onCellClick ? (e) => { e.stopPropagation(); onCellClick(i, j); } : undefined}
-                    className={`px-4 py-3 text-foreground ${cols[j]?.align === "center" ? "text-center" : ""} ${onCellClick ? "cursor-pointer" : ""}`}
+                    onClick={onCellClick ? (e) => onCellClick(e, i, j) : undefined}
+                    className={`px-4 py-3 text-foreground ${cols[j]?.align === "center" ? "text-center" : ""}`}
                   >
                     {cell}
                   </td>

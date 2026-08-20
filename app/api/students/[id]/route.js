@@ -32,7 +32,19 @@ export async function PUT(request, { params }) {
   try {
     const { id } = await params;
     const body = await request.json();
-    const { enrollments } = body;
+    const { enrollments, updatedAt: clientUpdatedAt } = body;
+
+    // Optimistic locking — ป้องกัน 2 คนแก้ข้อมูลเดียวกันพร้อมกัน
+    // ถ้า client ส่ง updatedAt มาด้วย ให้เช็คก่อนว่า record ไม่ได้ถูกแก้ไปแล้วตั้งแต่เปิดหน้า
+    if (clientUpdatedAt) {
+      const current = await prisma.student.findUnique({ where: { id }, select: { updatedAt: true } });
+      if (current && current.updatedAt.toISOString() !== new Date(clientUpdatedAt).toISOString()) {
+        return NextResponse.json(
+          { error: "ข้อมูลนี้ถูกแก้ไขโดยผู้ใช้อื่นไปแล้ว กรุณารีโหลดหน้าและลองใหม่อีกครั้ง" },
+          { status: 409 }
+        );
+      }
+    }
 
     const data = Object.fromEntries(
       STUDENT_FIELDS.filter((k) => k in body).map((k) => [k, body[k]])

@@ -8,6 +8,7 @@ import { useStudents } from "@/components/admin/contexts/StudentContext";
 import { useStudentHistory } from "@/components/admin/contexts/StudentHistoryContext";
 import { diffSnapshot, buildSummary, formatHistoryDate } from "@/lib/utils/studentHistoryHelpers";
 import { onlyThai, onlyThaiText, onlyEnglish, onlyEnglishAddress, onlyNumeric, onlyAscii, formatThaiPhone, formatThaiNationalId, formatThaiBankAccount } from "@/lib/utils/inputFilters";
+import { DISTRICTS_BY_PROVINCE, SUBDISTRICTS_BY_DISTRICT } from "@/lib/data/thaiGeo";
 
 // ── Constants ────────────────────────────────────────────────
 // TH ↔ EN คำนำหน้า ผูกกันเป็นชุดเดียว — เลือกฝั่งไหนอีกฝั่งและเพศจะเซ็ตให้อัตโนมัติ
@@ -84,6 +85,9 @@ const EMPTY_ENROLLMENT = { university: "", studentId: "", univEmail: "", faculty
 
 const inputCls  = "w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft placeholder:text-muted";
 const selectCls = "w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft";
+// read-only display — ใช้เมื่อ editing=false
+const roInputCls  = "w-full rounded-xl border border-transparent bg-surface-muted/50 px-3 py-2 text-sm font-medium text-foreground outline-none cursor-default select-text";
+const roSelectCls = "w-full rounded-xl border border-transparent bg-surface-muted/50 px-3 py-2 text-sm font-medium text-foreground outline-none cursor-default";
 
 // ── Helpers ──────────────────────────────────────────────────
 function formatDob(dob) {
@@ -140,16 +144,37 @@ function migrateStudent(s) {
         };
     }
 
-    // Addresses
+    // Normalize travel date field names: DB ส่ง departureDateTh (lowercase) แต่ UI ใช้ TH (uppercase)
+    // เก็บทั้งคู่ไว้กัน conflict — handleSave จะ normalize กลับก่อนส่ง API
+    if (out.departureDateTh !== undefined && out.departureDateTH === undefined) {
+        out = { ...out, departureDateTH: out.departureDateTh };
+    }
+    if (out.arrivalDateJp !== undefined && out.arrivalDateJP === undefined) {
+        out = { ...out, arrivalDateJP: out.arrivalDateJp };
+    }
+
+    // Addresses — map flat DB fields (addrThHouseNo etc.) → nested UI structure
+    // ไม่เขียนทับถ้ามี addresses อยู่แล้ว (กัน re-migrate ซ้ำ)
     if (!s.addresses) {
-        const th = { ...EMPTY_ADDRESS_TH };
-        const jp = { ...EMPTY_ADDRESS_JP };
-        if (s.country === "ญี่ปุ่น" && s.address) {
-            jp.streetAddress = s.address;
-        } else if (s.address) {
-            th.houseNo = s.address;
-        }
-        out = { ...out, addresses: { th, jp } };
+        out = {
+            ...out,
+            addresses: {
+                th: {
+                    houseNo:     s.addrThHouseNo     ?? "",
+                    subdistrict: s.addrThSubdistrict ?? "",
+                    district:    s.addrThDistrict    ?? "",
+                    province:    s.addrThProvince    ?? "",
+                    postalCode:  s.addrThPostalCode  ?? "",
+                },
+                jp: {
+                    postalCode:    s.addrJpPostalCode    ?? "",
+                    prefecture:    s.addrJpPrefecture    ?? "",
+                    city:          s.addrJpCity          ?? "",
+                    streetAddress: s.addrJpStreetAddress ?? "",
+                    building:      s.addrJpBuilding      ?? "",
+                },
+            },
+        };
     }
 
     return out;
@@ -238,66 +263,90 @@ function AddressViewCard({ flag, countryLabel, accentKey, fields }) {
 }
 
 // ── Address edit section ──────────────────────────────────────
-function AddressEditTH({ value, onChange }) {
+function AddressEditTH({ value, onChange, editing }) {
+    const iCls = editing ? inputCls : roInputCls;
+    const sCls = editing ? selectCls : roSelectCls;
     const setT = (key, sanitize) => (e) => onChange({ ...value, [key]: sanitize(e.target.value) });
+
+    const districtList   = value.province ? (DISTRICTS_BY_PROVINCE[value.province]            ?? []) : [];
+    const subdistrictList = value.district ? (SUBDISTRICTS_BY_DISTRICT[value.district]         ?? []) : [];
+
     return (
         <div className="rounded-xl border border-border p-4 space-y-3">
             <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">🇹🇭 ที่อยู่ในประเทศไทย</p>
             <div className="grid gap-3 sm:grid-cols-2">
                 <EField label="บ้านเลขที่ / ซอย / ถนน">
-                    <input type="text" value={value.houseNo ?? ""} onChange={setT("houseNo", onlyThaiText)}
-                        placeholder="12/5 ซ.ลาดพร้าว 71 ถ.ลาดพร้าว" className={inputCls} />
-                </EField>
-                <EField label="แขวง / ตำบล">
-                    <input type="text" value={value.subdistrict ?? ""} onChange={setT("subdistrict", onlyThai)}
-                        placeholder="แขวงลาดพร้าว" className={inputCls} />
-                </EField>
-                <EField label="เขต / อำเภอ">
-                    <input type="text" value={value.district ?? ""} onChange={setT("district", onlyThai)}
-                        placeholder="เขตลาดพร้าว" className={inputCls} />
+                    <input type="text" value={value.houseNo ?? ""} onChange={setT("houseNo", onlyThaiText)} readOnly={!editing}
+                        className={iCls} />
                 </EField>
                 <EField label="จังหวัด">
-                    <select value={value.province ?? ""} onChange={(e) => onChange({ ...value, province: e.target.value })} className={selectCls}>
+                    <select value={value.province ?? ""} disabled={!editing} className={sCls}
+                        onChange={(e) => onChange({ ...value, province: e.target.value, district: "", subdistrict: "" })}>
                         <option value="">— เลือกจังหวัด —</option>
                         {THAI_PROVINCES.map((p) => <option key={p}>{p}</option>)}
                     </select>
                 </EField>
-                <EField label="รหัสไปรษณีย์">
-                    <input type="text" value={value.postalCode ?? ""} onChange={setT("postalCode", onlyNumeric)}
-                        placeholder="10230" maxLength={5} className={inputCls} inputMode="numeric" />
+                <EField label="เขต / อำเภอ">
+                    <input type="text" list="th-district-list" value={value.district ?? ""}
+                        onChange={(e) => onChange({ ...value, district: e.target.value, subdistrict: "" })}
+                        readOnly={!editing} className={iCls} />
+                    {editing && districtList.length > 0 && (
+                        <datalist id="th-district-list">
+                            {districtList.map((d) => <option key={d} value={d} />)}
+                        </datalist>
+                    )}
+                </EField>
+                <EField label="แขวง / ตำบล">
+                    {editing && subdistrictList.length > 0 ? (
+                        <select value={value.subdistrict ?? ""} className={sCls}
+                            onChange={(e) => onChange({ ...value, subdistrict: e.target.value })}>
+                            <option value="">— เลือกแขวง / ตำบล —</option>
+                            {subdistrictList.map((s) => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                    ) : (
+                        <input type="text" value={value.subdistrict ?? ""}
+                            onChange={setT("subdistrict", onlyThai)}
+                            readOnly={!editing} className={iCls} />
+                    )}
+                </EField>
+                <EField label="รหัสไปรษณีย์" hint={editing ? "5 หลัก" : undefined}>
+                    <input type="text" value={value.postalCode ?? ""} onChange={setT("postalCode", onlyNumeric)} readOnly={!editing}
+                        maxLength={5} className={iCls} inputMode="numeric" />
                 </EField>
             </div>
         </div>
     );
 }
 
-function AddressEditJP({ value, onChange }) {
+function AddressEditJP({ value, onChange, editing }) {
+    const iCls = editing ? inputCls : roInputCls;
+    const sCls = editing ? selectCls : roSelectCls;
     const setT = (key, sanitize) => (e) => onChange({ ...value, [key]: sanitize(e.target.value) });
     return (
         <div className="rounded-xl border border-border p-4 space-y-3">
             <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">🇯🇵 ที่อยู่ในญี่ปุ่น</p>
             <div className="grid gap-3 sm:grid-cols-2">
-                <EField label="รหัสไปรษณีย์">
-                    <input type="text" value={value.postalCode ?? ""} onChange={setT("postalCode", onlyNumeric)}
-                        placeholder="150-0002" className={inputCls} inputMode="numeric" />
+                <EField label="รหัสไปรษณีย์" hint={editing ? "เช่น 150-0002" : undefined}>
+                    <input type="text" value={value.postalCode ?? ""} onChange={setT("postalCode", onlyNumeric)} readOnly={!editing}
+                        className={iCls} inputMode="numeric" />
                 </EField>
                 <EField label="จังหวัด">
-                    <select value={value.prefecture ?? ""} onChange={(e) => onChange({ ...value, prefecture: e.target.value })} className={selectCls}>
+                    <select value={value.prefecture ?? ""} onChange={(e) => onChange({ ...value, prefecture: e.target.value })} disabled={!editing} className={sCls}>
                         <option value="">— เลือกจังหวัด —</option>
                         {JP_PREFECTURES.map((p) => <option key={p}>{p}</option>)}
                     </select>
                 </EField>
-                <EField label="เมือง / เขต">
-                    <input type="text" value={value.city ?? ""} onChange={setT("city", onlyEnglishAddress)}
-                        placeholder="Shibuya-ku" className={inputCls} />
+                <EField label="เมือง / เขต" hint={editing ? "ภาษาอังกฤษ" : undefined}>
+                    <input type="text" value={value.city ?? ""} onChange={setT("city", onlyEnglishAddress)} readOnly={!editing}
+                        className={iCls} />
                 </EField>
-                <EField label="ที่อยู่">
-                    <input type="text" value={value.streetAddress ?? ""} onChange={setT("streetAddress", onlyEnglishAddress)}
-                        placeholder="4-5-6 Shibuya" className={inputCls} />
+                <EField label="ที่อยู่" hint={editing ? "ภาษาอังกฤษ" : undefined}>
+                    <input type="text" value={value.streetAddress ?? ""} onChange={setT("streetAddress", onlyEnglishAddress)} readOnly={!editing}
+                        className={iCls} />
                 </EField>
-                <EField label="อาคาร / ห้อง" hint="ถ้ามี">
-                    <input type="text" value={value.building ?? ""} onChange={setT("building", onlyEnglishAddress)}
-                        placeholder="Shibuya Tower 201" className={inputCls} />
+                <EField label="อาคาร / ห้อง" hint={editing ? "ถ้ามี" : undefined}>
+                    <input type="text" value={value.building ?? ""} onChange={setT("building", onlyEnglishAddress)} readOnly={!editing}
+                        className={iCls} />
                 </EField>
             </div>
         </div>
@@ -430,7 +479,9 @@ function EnrollmentCard({ enrollment, label }) {
 }
 
 // ── Enrollment Edit Card ──────────────────────────────────────
-function EnrollmentEditCard({ enrollment, index, total, onChange, onRemove }) {
+function EnrollmentEditCard({ enrollment, index, total, onChange, onRemove, editing }) {
+    const iCls = editing ? inputCls : roInputCls;
+    const sCls = editing ? selectCls : roSelectCls;
     const set  = (key) => (e) => onChange({ ...enrollment, [key]: e.target.value });
     const setT = (key, sanitize) => (e) => onChange({ ...enrollment, [key]: sanitize(e.target.value) });
     return (
@@ -448,7 +499,7 @@ function EnrollmentEditCard({ enrollment, index, total, onChange, onRemove }) {
                 ) : (
                     <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">● ปัจจุบัน</span>
                 )}
-                {total > 1 && (
+                {editing && total > 1 && (
                     <button type="button" onClick={onRemove}
                         className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-xs text-muted hover:border-red-400 hover:text-red-500 transition-colors">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
@@ -463,73 +514,73 @@ function EnrollmentEditCard({ enrollment, index, total, onChange, onRemove }) {
             <div className="space-y-4 p-4">
                 {/* University + studentId + email */}
                 <div className="grid gap-4 sm:grid-cols-3">
-                    <EField label="มหาวิทยาลัย" required={index === 0}>
+                    <EField label="มหาวิทยาลัย" required={editing && index === 0}>
                         <input
                             type="text"
-                            list={`uni-list-${index}`}
+                            list={editing ? `uni-list-${index}` : undefined}
                             value={enrollment.university}
                             onChange={set("university")}
-                            placeholder="ชื่อมหาวิทยาลัย..."
-                            className={inputCls}
+                            readOnly={!editing}
+                            className={iCls}
                         />
-                        <datalist id={`uni-list-${index}`}>
+                        {editing && <datalist id={`uni-list-${index}`}>
                             {UNIVERSITIES.map(u => <option key={u} value={u} />)}
-                        </datalist>
+                        </datalist>}
                     </EField>
                     <EField label="รหัสนักเรียน (สถาบันนี้)">
-                        <input type="text" value={enrollment.studentId} onChange={setT("studentId", onlyAscii)}
-                            placeholder="64XXXXXXX" className={inputCls} />
+                        <input type="text" value={enrollment.studentId} onChange={setT("studentId", onlyAscii)} readOnly={!editing}
+                            className={iCls} />
                     </EField>
-                    <EField label="อีเมล (สถาบัน)" hint="ไม่บังคับ">
-                        <input type="email" value={enrollment.univEmail} onChange={setT("univEmail", onlyAscii)}
-                            placeholder="student@university.ac.th" className={inputCls} />
+                    <EField label="อีเมล (สถาบัน)" hint={editing ? "ไม่บังคับ" : undefined}>
+                        <input type="email" value={enrollment.univEmail} onChange={setT("univEmail", onlyAscii)} readOnly={!editing}
+                            className={iCls} />
                     </EField>
                 </div>
 
                 {/* วันที่เริ่ม/จบ */}
                 <div className="grid gap-4 sm:grid-cols-2">
                     <EField label="วันที่เริ่มเรียน">
-                        <input type="date" value={toDateInputValue(enrollment.startDate)} onChange={set("startDate")} className={inputCls} />
+                        <input type="date" value={toDateInputValue(enrollment.startDate)} onChange={set("startDate")} readOnly={!editing} className={iCls} />
                     </EField>
-                    <EField label="วันที่จบ / ย้ายออก" hint="เว้นว่างไว้ถ้ายังเรียนอยู่สถาบันนี้">
-                        <input type="date" value={toDateInputValue(enrollment.endDate)} onChange={set("endDate")} className={inputCls} />
+                    <EField label="วันที่จบ / ย้ายออก" hint={editing ? "เว้นว่างไว้ถ้ายังเรียนอยู่สถาบันนี้" : undefined}>
+                        <input type="date" value={toDateInputValue(enrollment.endDate)} onChange={set("endDate")} readOnly={!editing} className={iCls} />
                     </EField>
                 </div>
 
                 {/* Faculty + dept + major */}
                 <div className="grid gap-4 sm:grid-cols-3">
                     <EField label="คณะ">
-                        <input type="text" value={enrollment.faculty} onChange={set("faculty")}
-                            placeholder="วิศวกรรมศาสตร์" className={inputCls} />
+                        <input type="text" value={enrollment.faculty} onChange={set("faculty")} readOnly={!editing}
+                            className={iCls} />
                     </EField>
                     <EField label="ภาควิชา">
-                        <input type="text" value={enrollment.department} onChange={set("department")}
-                            placeholder="ภาควิชา..." className={inputCls} />
+                        <input type="text" value={enrollment.department} onChange={set("department")} readOnly={!editing}
+                            className={iCls} />
                     </EField>
                     <EField label="สาขาวิชา">
-                        <input type="text" value={enrollment.major} onChange={set("major")}
-                            placeholder="สาขาวิชา..." className={inputCls} />
+                        <input type="text" value={enrollment.major} onChange={set("major")} readOnly={!editing}
+                            className={iCls} />
                     </EField>
                 </div>
 
                 {/* Year + advisor */}
                 <div className="grid gap-4 sm:grid-cols-2">
                     <EField label="ชั้นปี">
-                        <select value={enrollment.year} onChange={set("year")} className={selectCls}>
+                        <select value={enrollment.year} onChange={set("year")} disabled={!editing} className={sCls}>
                             <option value="">-- เลือกชั้นปี --</option>
                             {[1, 2, 3, 4, 5].map(y => <option key={y} value={String(y)}>ปีที่ {y}</option>)}
                         </select>
                     </EField>
                     <EField label="อาจารย์ที่ปรึกษา">
-                        <input type="text" value={enrollment.advisor} onChange={set("advisor")}
-                            placeholder="รศ.ดร.ชื่อ นามสกุล" className={inputCls} />
+                        <input type="text" value={enrollment.advisor} onChange={set("advisor")} readOnly={!editing}
+                            className={iCls} />
                     </EField>
                 </div>
 
                 {/* Project */}
-                <EField label="หัวข้อโปรเจกต์ / วิทยานิพนธ์" hint="กรอกเมื่อนักเรียนเริ่มทำโปรเจกต์ (ปี 3 ขึ้นไป)">
-                    <textarea value={enrollment.project} onChange={set("project")} rows={2}
-                        placeholder="ระบุหัวข้อโปรเจกต์..." className={inputCls + " resize-none"} />
+                <EField label="หัวข้อโปรเจกต์ / วิทยานิพนธ์">
+                    <textarea value={enrollment.project} onChange={set("project")} readOnly={!editing} rows={2}
+                        className={iCls + " resize-none"} />
                 </EField>
             </div>
         </div>
@@ -537,14 +588,14 @@ function EnrollmentEditCard({ enrollment, index, total, onChange, onRemove }) {
 }
 
 // ── Profile Hero Card ─────────────────────────────────────────
-function ProfileHeroCard({ d, onEdit, onDelete }) {
+function ProfileHeroCard({ d, editing }) {
     const statusCfg = STATUS_CONFIG[d.status] ?? { color: "bg-gray-100 text-gray-500 border-gray-200", dot: "bg-gray-400" };
     const initials  = (d.name ?? "?").charAt(0);
 
     return (
         <div className="card p-0 overflow-hidden">
-            {/* Accent strip */}
-            <div className="h-1.5 w-full bg-gradient-to-r from-primary via-blue-400 to-indigo-400" />
+            {/* Accent strip — amber เมื่ออยู่ใน edit mode */}
+            <div className={`h-1.5 w-full bg-gradient-to-r ${editing ? "from-amber-400 via-primary to-indigo-400" : "from-primary via-blue-400 to-indigo-400"}`} />
 
             <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:gap-6">
                 {/* Avatar */}
@@ -587,29 +638,6 @@ function ProfileHeroCard({ d, onEdit, onDelete }) {
                         ))}
                     </div>
                 </div>
-
-                {/* ID + Actions */}
-                <div className="flex shrink-0 flex-col items-end gap-3">
-                    <span className="font-mono text-xs font-semibold text-muted bg-surface-muted rounded-lg px-2.5 py-1.5 border border-border">
-                        {d.id}
-                    </span>
-                    <div className="flex gap-2">
-                        <button onClick={onEdit}
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3.5 py-2 text-sm font-medium text-foreground hover:border-primary hover:text-primary transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                            </svg>
-                            แก้ไข
-                        </button>
-                        <button onClick={onDelete}
-                            className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3.5 py-2 text-sm font-medium text-foreground hover:border-red-400 hover:text-red-500 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                            </svg>
-                            ลบ
-                        </button>
-                    </div>
-                </div>
             </div>
         </div>
     );
@@ -634,7 +662,6 @@ function EditHeroCard({ form, setForm, student, isValid, saving, onCancel }) {
                 <div className="flex-1 min-w-0 space-y-3">
                     {/* Live preview name */}
                     <div>
-                        <p className="text-[11px] font-medium uppercase tracking-wide text-muted mb-1">ชื่อที่แสดง (live)</p>
                         <p className="text-lg font-extrabold text-foreground leading-tight">
                             {form.prefix}{form.name || <span className="text-muted font-normal italic">ชื่อ</span>}{" "}
                             {form.lastname || <span className="text-muted font-normal italic">นามสกุล</span>}
@@ -656,20 +683,13 @@ function EditHeroCard({ form, setForm, student, isValid, saving, onCancel }) {
                         )}
                     </div>
 
-                    {/* Inline: UUID (read-only) · Status · Scholarship */}
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                        <div>
-                            <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-muted">UUID ระบบ</label>
-                            <div className="flex items-center gap-2 rounded-xl border border-border bg-surface-muted px-3 py-2">
-                                <span className="flex-1 truncate font-mono text-xs text-muted">{form.id}</span>
-                                <span className="shrink-0 rounded border border-border bg-surface px-1.5 py-0.5 text-[10px] text-muted">read-only</span>
-                            </div>
-                        </div>
+                    {/* Inline: Status · Scholarship */}
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <div>
                             <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-muted">
                                 สถานะ <span className="text-red-500">*</span>
                             </label>
-                            <select value={form.status} onChange={set("status")} className={selectCls}>
+                            <select value={form.status ?? ""} onChange={set("status")} className={selectCls}>
                                 {STATUSES.map(s => <option key={s}>{s}</option>)}
                             </select>
                             <div className="mt-1.5 flex items-center gap-1.5">
@@ -823,6 +843,7 @@ function StudentDetail({ student, students, updateStudent, deleteStudent, histor
     const [editing, setEditing]     = useState(() => searchParams.get("edit") === "1");
     const [form, setForm]           = useState(() => ({ ...student }));
     const [saving, setSaving]       = useState(false);
+    const [saveError, setSaveError] = useState(null);
     const [showDelete, setShowDelete] = useState(false);
 
     useEffect(() => {
@@ -832,8 +853,13 @@ function StudentDetail({ student, students, updateStudent, deleteStudent, histor
     const set  = (key) => (e) => setForm(prev => ({ ...prev, [key]: e.target.value }));
     const setT = (key, sanitize) => (e) => setForm(prev => ({ ...prev, [key]: sanitize(e.target.value) }));
 
-    const isValid = form.name?.trim() && form.lastname?.trim()
-                    && (form.enrollments?.[0]?.university ?? "").trim() && form.tel?.trim() && form.email?.trim();
+    // class ของ input/select ขึ้นกับ mode — read-only เมื่อดูข้อมูล, editable เมื่อแก้ไข
+    const iCls = editing ? inputCls : roInputCls;
+    const sCls = editing ? selectCls : roSelectCls;
+
+    // การแก้ไขข้อมูลที่มีอยู่แล้ว — บังคับเฉพาะ name + lastname เท่านั้น
+    // (ไม่บังคับ tel/email/university เพราะนักเรียนเก่าอาจยังไม่มีข้อมูลครบ)
+    const isValid = form.name?.trim() && form.lastname?.trim();
 
     const handleEdit   = () => { setForm({ ...student }); setEditing(true); };
     const handleCancel = () => { setForm({ ...student }); setEditing(false); };
@@ -842,15 +868,44 @@ function StudentDetail({ student, students, updateStudent, deleteStudent, histor
         e.preventDefault();
         if (!isValid) return;
         setSaving(true);
-        await new Promise(r => setTimeout(r, 500));
-        const after   = { ...form };
-        const changes = diffSnapshot(student, after);
-        if (changes.length > 0) {
-            addEvent({ studentId: student.id, type: "update", before: { ...student }, after, changes, summary: buildSummary("update", changes) });
+        setSaveError(null);
+        try {
+            const after = { ...form };
+            const changes = diffSnapshot(student, after);
+
+            // Flatten nested addresses → flat API fields (addrThHouseNo etc.)
+            // และ normalize ชื่อ field วันเดินทาง (TH→Th, JP→Jp) ให้ตรงกับ STUDENT_FIELDS whitelist
+            const payload = {
+                ...after,
+                addrThHouseNo:       after.addresses?.th?.houseNo     || null,
+                addrThSubdistrict:   after.addresses?.th?.subdistrict || null,
+                addrThDistrict:      after.addresses?.th?.district    || null,
+                addrThProvince:      after.addresses?.th?.province    || null,
+                addrThPostalCode:    after.addresses?.th?.postalCode  || null,
+                addrJpPostalCode:    after.addresses?.jp?.postalCode    || null,
+                addrJpPrefecture:    after.addresses?.jp?.prefecture    || null,
+                addrJpCity:          after.addresses?.jp?.city          || null,
+                addrJpStreetAddress: after.addresses?.jp?.streetAddress || null,
+                addrJpBuilding:      after.addresses?.jp?.building      || null,
+                // ฟอร์มเก็บ departureDateTH/arrivalDateJP แต่ API ใช้ Th/Jp (lowercase)
+                departureDateTh: after.departureDateTH ?? after.departureDateTh ?? null,
+                arrivalDateJp:   after.arrivalDateJP   ?? after.arrivalDateJp   ?? null,
+                // ส่ง updatedAt ที่โหลดมาตอนเปิดหน้า ให้ API เช็ค conflict
+                updatedAt: student.updatedAt,
+            };
+
+            await updateStudent(student.id, payload);
+
+            if (changes.length > 0) {
+                addEvent({ studentId: student.id, type: "update", before: { ...student }, after, changes, summary: buildSummary("update", changes) });
+            }
+            setEditing(false);
+        } catch (err) {
+            console.error("handleSave:", err);
+            setSaveError(err.message);
+        } finally {
+            setSaving(false);
         }
-        updateStudent(student.id, after);
-        setSaving(false);
-        setEditing(false);
     };
 
     const handleDelete = () => {
@@ -866,12 +921,17 @@ function StudentDetail({ student, students, updateStudent, deleteStudent, histor
         <>
             <AdminTopBar
                 title={editing ? `แก้ไขข้อมูล — ${d.prefix}${d.name} ${d.lastname}` : `${d.prefix}${d.name} ${d.lastname}`}
-                description={`${d.id} · ${d.enrollments?.[0]?.university ?? d.university ?? ""}`}
+                description={d.enrollments?.[0]?.university ?? d.university ?? ""}
             />
 
-            <div className="p-6 space-y-5">
-
-                {/* Back */}
+            {/* Sticky action bar */}
+            {saveError && (
+                <div className="sticky top-0 z-30 flex items-center justify-between gap-3 border-b border-red-200 bg-red-50 px-6 py-2.5 text-sm text-red-700">
+                    <span>⚠️ {saveError}</span>
+                    <button onClick={() => setSaveError(null)} className="shrink-0 rounded-lg px-2.5 py-1 text-xs font-medium hover:bg-red-100 transition-colors">ปิด ×</button>
+                </div>
+            )}
+            <div className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-surface/95 px-6 py-2.5 backdrop-blur">
                 <Link href="/admin/students/list"
                     className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-foreground transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -880,173 +940,84 @@ function StudentDetail({ student, students, updateStudent, deleteStudent, histor
                     กลับรายการ
                 </Link>
 
-                <form onSubmit={handleSave} className="space-y-5">
+                {editing ? (
+                    <div className="flex gap-2">
+                        <button type="button" onClick={handleCancel}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3.5 py-1.5 text-sm font-medium text-muted hover:text-foreground transition-colors">
+                            ยกเลิก
+                        </button>
+                        <button form="student-form" type="submit" disabled={!isValid || saving}
+                            className="inline-flex items-center gap-1.5 rounded-xl btn-primary disabled:opacity-40 disabled:cursor-not-allowed text-sm px-3.5 py-1.5">
+                            {saving ? <><Spinner />กำลังบันทึก...</> : <>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                                บันทึก
+                            </>}
+                        </button>
+                    </div>
+                ) : (
+                    <div className="flex gap-2">
+                        <button onClick={handleEdit}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3.5 py-1.5 text-sm font-medium text-foreground hover:border-primary hover:text-primary transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                            </svg>
+                            แก้ไข
+                        </button>
+                        <button onClick={() => setShowDelete(true)}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3.5 py-1.5 text-sm font-medium text-foreground hover:border-red-400 hover:text-red-500 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                            ลบ
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            <div className="p-6 space-y-5">
+
+                <form id="student-form" onSubmit={handleSave} className="space-y-5">
+
+                    {/* Hero card — แสดงเสมอ ทั้ง view/edit mode, d สลับระหว่าง student/form อัตโนมัติ */}
+                    <ProfileHeroCard d={d} editing={editing} />
 
                     {/* ════════════════════════════════
-                        VIEW MODE
+                        SECTIONS (view + edit unified)
                     ════════════════════════════════ */}
-                    {!editing && (
-                        <>
-                            {/* Hero card */}
-                            <ProfileHeroCard d={d} onEdit={handleEdit} onDelete={() => setShowDelete(true)} />
-
-                            {/* Row 1 — ข้อมูลส่วนตัว (full width, 2-col grid inside) */}
-                            <Section icon="👤" title="ข้อมูลส่วนตัว">
-                                <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                                    <Field label="ชื่อ-นามสกุล (ไทย)"
-                                        value={`${d.prefix}${d.name} ${d.lastname}${d.nickname ? ` (${d.nickname})` : ""}`} />
-                                    {(d.nameEn || d.lastnameEn) && (
-                                        <Field label="Name (EN)"
-                                            value={[d.prefixEn, d.nameEn, d.lastnameEn].filter(Boolean).join(" ")} />
-                                    )}
-                                    <Field label="เพศ" value={d.gender} />
-                                    <Field label="ทุนการศึกษา" value={d.scholarship} />
-                                    {d.dob && (
-                                        <Field label="วันเกิด">
-                                            <p className="text-sm font-semibold text-foreground">
-                                                {formatDob(d.dob)}
-                                                {computeAge(d.dob) !== null && (
-                                                    <span className="ml-2 text-xs font-normal text-muted">({computeAge(d.dob)} ปี)</span>
-                                                )}
-                                            </p>
-                                        </Field>
-                                    )}
-                                    <Field label="เลขบัตรประชาชน" value={d.nationalId} mono />
-                                    <Field label="เลข Passport"   value={d.passport}   mono />
-                                    {d.gender === "ชาย" && d.militaryStatus && d.militaryStatus !== "-" && (
-                                        <Field label="สถานะเกณฑ์ทหาร" value={d.militaryStatus} />
-                                    )}
-                                </div>
-                            </Section>
-
-                            {/* Row 2 — ติดต่อ | การศึกษา */}
-                            <div className="grid gap-5 xl:grid-cols-2">
-
-                                {/* ที่อยู่และการติดต่อ */}
-                                <Section icon="📍" title="ที่อยู่และการติดต่อ">
-                                    <div className="space-y-4">
-                                        <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                                            <Field label="เบอร์โทรศัพท์" value={d.tel} href={d.tel ? `tel:${d.tel}` : undefined} />
-                                            <Field label="อีเมล" value={d.email} href={d.email ? `mailto:${d.email}` : undefined} />
-                                            <Field label="LINE ID" value={d.lineId} />
-                                            <Field
-                                                label="ประเทศที่พำนักปัจจุบัน"
-                                                value={
-                                                    d.country === "ไทย" ? "🇹🇭 ไทย" :
-                                                    d.country === "ญี่ปุ่น" ? "🇯🇵 ญี่ปุ่น" :
-                                                    "ไม่ระบุ"
-                                                }
-                                            />
-                                        </div>
-                                        <div className="space-y-3">
-                                            <AddressViewCard flag="🇹🇭" countryLabel="ที่อยู่ในประเทศไทย" accentKey="th" fields={[
-                                                { label: "บ้านเลขที่ / ซอย / ถนน", value: d.addresses?.th?.houseNo, fullWidth: true },
-                                                { label: "แขวง / ตำบล",            value: d.addresses?.th?.subdistrict },
-                                                { label: "เขต / อำเภอ",             value: d.addresses?.th?.district },
-                                                { label: "จังหวัด",                value: d.addresses?.th?.province },
-                                                { label: "รหัสไปรษณีย์",          value: d.addresses?.th?.postalCode },
-                                            ]} />
-                                            <AddressViewCard flag="🇯🇵" countryLabel="ที่อยู่ในญี่ปุ่น" accentKey="jp" fields={[
-                                                { label: "รหัสไปรษณีย์",   value: d.addresses?.jp?.postalCode },
-                                                { label: "จังหวัด",         value: d.addresses?.jp?.prefecture },
-                                                { label: "เมือง / เขต",    value: d.addresses?.jp?.city },
-                                                { label: "ที่อยู่",         value: d.addresses?.jp?.streetAddress },
-                                                { label: "อาคาร / ห้อง",   value: d.addresses?.jp?.building },
-                                            ]} />
-                                            {!d.addresses && d.address && (
-                                                <div className="rounded-xl border border-border border-l-4 border-l-border bg-surface-muted/30 overflow-hidden">
-                                                    <div className="px-4 py-3 border-b border-border bg-surface-muted/50">
-                                                        <p className="text-sm font-bold text-foreground">ที่อยู่</p>
-                                                    </div>
-                                                    <div className="p-4">
-                                                        <p className="text-sm text-foreground">{d.address}</p>
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </Section>
-
-                                {/* ข้อมูลการศึกษา */}
-                                <Section icon="🏫" title="ข้อมูลการศึกษา"
-                                    description={`${(d.enrollments ?? []).filter(e => e.university).length} สถาบัน`}>
-                                    <div className="space-y-3">
-                                        {d.prevSchool && (
-                                            <div className="rounded-xl border border-border bg-surface-muted/30 px-4 py-3">
-                                                <p className="text-[11px] font-medium uppercase tracking-wide text-muted mb-1">โรงเรียนเดิม</p>
-                                                <p className="text-sm font-semibold text-foreground">{d.prevSchool}</p>
-                                            </div>
-                                        )}
-                                        <EnrollmentTimeline enrollments={d.enrollments ?? []} />
-                                    </div>
-                                </Section>
-                            </div>
-
-                            {/* บัญชีธนาคาร */}
-                            {(d.bankName || d.bankBranch || d.bankAccountNo) && (
-                                <Section icon="🏦" title="บัญชีธนาคาร" description="บัญชีรับทุนการศึกษา">
-                                    <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                                        <Field label="ธนาคาร"      value={d.bankName} />
-                                        <Field label="สาขา"        value={d.bankBranch} />
-                                        <Field label="เลขที่บัญชี" value={d.bankAccountNo} mono fullWidth />
-                                    </div>
-                                </Section>
-                            )}
-
-                            {/* การเดินทาง */}
-                            {(d.departureDateTH || d.arrivalDateJP) && (
-                                <Section icon="✈️" title="การเดินทาง" description="ข้อมูลวันเดินทางไป-กลับ">
-                                    <div className="grid grid-cols-2 gap-x-8 gap-y-4">
-                                        <Field label="วันเดินทางออกจากไทย" value={formatDate(d.departureDateTH)} />
-                                        <Field label="วันที่ถึงญี่ปุ่น"     value={formatDate(d.arrivalDateJP)} />
-                                    </div>
-                                </Section>
-                            )}
-
-                            {/* หมายเหตุ */}
-                            {d.note && (
-                                <Section icon="📝" title="หมายเหตุ">
-                                    <p className="text-sm text-foreground leading-relaxed">{d.note}</p>
-                                </Section>
-                            )}
-
-                            {/* ประวัติการแก้ไข */}
-                            <HistorySection history={history} />
-                        </>
-                    )}
-
-                    {/* ════════════════════════════════
-                        EDIT MODE
-                    ════════════════════════════════ */}
-                    {editing && (
-                        <>
-                            {/* Edit hero card — mirrors ProfileHeroCard */}
-                            <EditHeroCard
-                                form={form}
-                                setForm={setForm}
-                                student={student}
-                                isValid={isValid}
-                                saving={saving}
-                                onCancel={handleCancel}
-                            />
-
-                            {/* ข้อมูลส่วนตัว — full width, mirrors view mode */}
+                    <>
+                            {/* ข้อมูลส่วนตัว */}
                             <Section icon="👤" title="ข้อมูลส่วนตัว">
                                 <div className="space-y-4">
+                                    {/* สถานะ + ทุนการศึกษา */}
+                                    <div className="grid gap-4 sm:grid-cols-2">
+                                        <EField label="สถานะ" required={editing}>
+                                            <select value={form.status} onChange={set("status")} disabled={!editing} className={sCls}>
+                                                {STATUSES.map(s => <option key={s}>{s}</option>)}
+                                            </select>
+                                        </EField>
+                                        <EField label="ทุนการศึกษา">
+                                            <select value={form.scholarship ?? ""} onChange={set("scholarship")} disabled={!editing} className={sCls}>
+                                                <option value="">-- ไม่ระบุ --</option>
+                                                {SCHOLARSHIPS.map(s => <option key={s}>{s}</option>)}
+                                            </select>
+                                        </EField>
+                                    </div>
                                     <div className="grid gap-4 sm:grid-cols-3">
-                                        <EField label="คำนำหน้า (ไทย)" required>
-                                            <select value={form.prefix} onChange={(e) => {
+                                        <EField label="คำนำหน้า (ไทย)" required={editing}>
+                                            <select value={form.prefix ?? ""} onChange={(e) => {
                                                 const opt = PREFIX_OPTIONS.find(o => o.th === e.target.value);
                                                 setForm(prev => ({ ...prev, prefix: e.target.value, prefixEn: opt?.en ?? prev.prefixEn, gender: opt?.gender ?? prev.gender }));
-                                            }} className={selectCls}>
+                                            }} disabled={!editing} className={sCls}>
                                                 {PREFIXES.map(p => <option key={p}>{p}</option>)}
                                             </select>
                                         </EField>
-                                        <EField label="ชื่อ (ไทย)" required>
-                                            <input type="text" value={form.name} onChange={setT("name", onlyThai)} placeholder="สมชาย" className={inputCls} />
+                                        <EField label="ชื่อ (ไทย)" required={editing}>
+                                            <input type="text" value={form.name ?? ""} onChange={setT("name", onlyThai)} readOnly={!editing} className={iCls} />
                                         </EField>
-                                        <EField label="นามสกุล (ไทย)" required>
-                                            <input type="text" value={form.lastname} onChange={setT("lastname", onlyThai)} placeholder="ประเสริฐ" className={inputCls} />
+                                        <EField label="นามสกุล (ไทย)" required={editing}>
+                                            <input type="text" value={form.lastname ?? ""} onChange={setT("lastname", onlyThai)} readOnly={!editing} className={iCls} />
                                         </EField>
                                     </div>
                                     <div className="grid gap-4 sm:grid-cols-3">
@@ -1058,7 +1029,8 @@ function StudentDetail({ student, students, updateStudent, deleteStudent, histor
                                                     if (!opt) return;
                                                     setForm(prev => ({ ...prev, prefix: opt.th, prefixEn: opt.en, gender: opt.gender }));
                                                 }}
-                                                className={selectCls}
+                                                disabled={!editing}
+                                                className={sCls}
                                             >
                                                 {PREFIX_OPTIONS.map((o, i) => (
                                                     <option key={i} value={i}>{o.en}{o.th.startsWith("เด็ก") ? ` (${o.th})` : ""}</option>
@@ -1066,36 +1038,36 @@ function StudentDetail({ student, students, updateStudent, deleteStudent, histor
                                             </select>
                                         </EField>
                                         <EField label="First Name (EN)">
-                                            <input type="text" value={form.nameEn ?? ""} onChange={setT("nameEn", onlyEnglish)} placeholder="Somchai" className={inputCls} />
+                                            <input type="text" value={form.nameEn ?? ""} onChange={setT("nameEn", onlyEnglish)} readOnly={!editing} className={iCls} />
                                         </EField>
                                         <EField label="Last Name (EN)">
-                                            <input type="text" value={form.lastnameEn ?? ""} onChange={setT("lastnameEn", onlyEnglish)} placeholder="Prasert" className={inputCls} />
+                                            <input type="text" value={form.lastnameEn ?? ""} onChange={setT("lastnameEn", onlyEnglish)} readOnly={!editing} className={iCls} />
                                         </EField>
                                     </div>
                                     <div className="grid gap-4 sm:grid-cols-3">
                                         <EField label="ชื่อเล่น">
-                                            <input type="text" value={form.nickname ?? ""} onChange={set("nickname")} placeholder="ชาย" className={inputCls} />
+                                            <input type="text" value={form.nickname ?? ""} onChange={set("nickname")} readOnly={!editing} className={iCls} />
                                         </EField>
                                         <EField label="เพศ">
-                                            <select value={form.gender ?? ""} onChange={set("gender")} className={selectCls}>
+                                            <select value={form.gender ?? ""} onChange={set("gender")} disabled={!editing} className={sCls}>
                                                 <option value="">-- เลือก --</option>
                                                 <option value="ชาย">ชาย</option>
                                                 <option value="หญิง">หญิง</option>
                                             </select>
                                         </EField>
                                         <EField label="วันเกิด">
-                                            <input type="date" value={toDateInputValue(form.dob)} onChange={set("dob")} className={inputCls} />
+                                            <input type="date" value={toDateInputValue(form.dob)} onChange={set("dob")} readOnly={!editing} className={iCls} />
                                         </EField>
                                     </div>
                                     <div className="grid gap-4 sm:grid-cols-3">
-                                        <EField label="เลขบัตรประชาชน" hint="13 หลัก">
-                                            <input type="text" value={form.nationalId ?? ""} onChange={setT("nationalId", formatThaiNationalId)} placeholder="1-2345-67890-12-3" maxLength={17} className={inputCls} inputMode="numeric" />
+                                        <EField label="เลขบัตรประชาชน" hint={editing ? "13 หลัก" : undefined}>
+                                            <input type="text" value={form.nationalId ?? ""} onChange={setT("nationalId", formatThaiNationalId)} readOnly={!editing} maxLength={17} className={iCls} inputMode="numeric" />
                                         </EField>
                                         <EField label="เลข Passport">
-                                            <input type="text" value={form.passport ?? ""} onChange={setT("passport", onlyAscii)} placeholder="AB1234567" className={inputCls} />
+                                            <input type="text" value={form.passport ?? ""} onChange={setT("passport", onlyAscii)} readOnly={!editing} className={iCls} />
                                         </EField>
-                                        <EField label="สถานะเกณฑ์ทหาร" hint="เฉพาะเพศชาย">
-                                            <select value={form.militaryStatus ?? "-"} onChange={set("militaryStatus")} className={selectCls}>
+                                        <EField label="สถานะเกณฑ์ทหาร" hint={editing ? "เฉพาะเพศชาย" : undefined}>
+                                            <select value={form.militaryStatus ?? "-"} onChange={set("militaryStatus")} disabled={!editing} className={sCls}>
                                                 {MILITARY_STATUSES.map(m => <option key={m}>{m}</option>)}
                                             </select>
                                         </EField>
@@ -1103,23 +1075,23 @@ function StudentDetail({ student, students, updateStudent, deleteStudent, histor
                                 </div>
                             </Section>
 
-                            {/* ที่อยู่ | การศึกษา — 2-col mirrors view mode */}
+                            {/* ที่อยู่ | การศึกษา */}
                             <div className="grid gap-5 xl:grid-cols-2">
 
                                 <Section icon="📍" title="ที่อยู่และการติดต่อ">
                                     <div className="space-y-4">
                                         <div className="grid gap-4 sm:grid-cols-2">
-                                            <EField label="เบอร์โทรศัพท์" required hint="เช่น 081-234-5678">
-                                                <input type="tel" value={form.tel} onChange={setT("tel", formatThaiPhone)} placeholder="081-234-5678" maxLength={12} className={inputCls} inputMode="numeric" />
+                                            <EField label="เบอร์โทรศัพท์" required={editing} hint={editing ? "เช่น 081-234-5678" : undefined}>
+                                                <input type="tel" value={form.tel ?? ""} onChange={setT("tel", formatThaiPhone)} readOnly={!editing} maxLength={12} className={iCls} inputMode="numeric" />
                                             </EField>
-                                            <EField label="อีเมล" required>
-                                                <input type="email" value={form.email} onChange={setT("email", onlyAscii)} placeholder="student@kosen.ac.th" className={inputCls} />
+                                            <EField label="อีเมล" required={editing}>
+                                                <input type="email" value={form.email ?? ""} onChange={setT("email", onlyAscii)} readOnly={!editing} className={iCls} />
                                             </EField>
                                             <EField label="LINE ID">
-                                                <input type="text" value={form.lineId ?? ""} onChange={setT("lineId", onlyAscii)} placeholder="student_line" className={inputCls} />
+                                                <input type="text" value={form.lineId ?? ""} onChange={setT("lineId", onlyAscii)} readOnly={!editing} className={iCls} />
                                             </EField>
                                             <EField label="ประเทศที่พำนักปัจจุบัน">
-                                                <select value={form.country ?? ""} onChange={set("country")} className={inputCls}>
+                                                <select value={form.country ?? ""} onChange={set("country")} disabled={!editing} className={sCls}>
                                                     <option value="">ไม่ระบุ</option>
                                                     <option value="ไทย">🇹🇭 ไทย</option>
                                                     <option value="ญี่ปุ่น">🇯🇵 ญี่ปุ่น</option>
@@ -1128,6 +1100,7 @@ function StudentDetail({ student, students, updateStudent, deleteStudent, histor
                                         </div>
                                         <AddressEditTH
                                             value={form.addresses?.th ?? EMPTY_ADDRESS_TH}
+                                            editing={editing}
                                             onChange={(updated) => setForm(prev => ({
                                                 ...prev,
                                                 addresses: { ...(prev.addresses ?? { th: EMPTY_ADDRESS_TH, jp: EMPTY_ADDRESS_JP }), th: updated },
@@ -1135,6 +1108,7 @@ function StudentDetail({ student, students, updateStudent, deleteStudent, histor
                                         />
                                         <AddressEditJP
                                             value={form.addresses?.jp ?? EMPTY_ADDRESS_JP}
+                                            editing={editing}
                                             onChange={(updated) => setForm(prev => ({
                                                 ...prev,
                                                 addresses: { ...(prev.addresses ?? { th: EMPTY_ADDRESS_TH, jp: EMPTY_ADDRESS_JP }), jp: updated },
@@ -1144,12 +1118,9 @@ function StudentDetail({ student, students, updateStudent, deleteStudent, histor
                                 </Section>
 
                                 <Section icon="🏫" title="ข้อมูลการศึกษา"
-                                    description={`${(form.enrollments ?? []).length} สถาบัน · สูงสุด ${MAX_ENROLLMENTS}`}>
+                                    description={`${(form.enrollments ?? []).length} สถาบัน${editing ? ` · สูงสุด ${MAX_ENROLLMENTS}` : ""}`}>
                                     <div className="space-y-4">
-                                        {/* เรียงล่าสุดไว้บนสุด เก่าสุดไว้ล่างสุด (ต่อด้วยโรงเรียนเดิมล่างสุด)
-                                            เหมือนหน้า view detail — แต่ index/total ที่ส่งลง EnrollmentEditCard
-                                            ยังอ้างอิงตำแหน่งจริงใน form.enrollments (ลำดับเวลาจริง) เสมอ */}
-                                        {(form.enrollments ?? []).length < MAX_ENROLLMENTS && (
+                                        {editing && (form.enrollments ?? []).length < MAX_ENROLLMENTS && (
                                             <button type="button"
                                                 onClick={() => setForm(prev => ({
                                                     ...prev,
@@ -1168,6 +1139,7 @@ function StudentDetail({ student, students, updateStudent, deleteStudent, histor
                                                         key={i}
                                                         enrollment={enr}
                                                         index={i}
+                                                        editing={editing}
                                                         total={(form.enrollments ?? []).length}
                                                         onChange={(updated) => setForm(prev => {
                                                             const arr = [...(prev.enrollments ?? [])];
@@ -1183,7 +1155,7 @@ function StudentDetail({ student, students, updateStudent, deleteStudent, histor
                                         </div>
                                         <div className="border-t border-border pt-4">
                                             <EField label="โรงเรียนเดิม">
-                                                <input type="text" value={form.prevSchool ?? ""} onChange={setT("prevSchool", onlyThaiText)} placeholder="โรงเรียนมหิดลวิทยานุสรณ์" className={inputCls} />
+                                                <input type="text" value={form.prevSchool ?? ""} onChange={setT("prevSchool", onlyThaiText)} readOnly={!editing} className={iCls} />
                                             </EField>
                                         </div>
                                     </div>
@@ -1194,16 +1166,16 @@ function StudentDetail({ student, students, updateStudent, deleteStudent, histor
                             <Section icon="🏦" title="บัญชีธนาคาร" description="บัญชีรับทุนการศึกษา">
                                 <div className="grid gap-4 sm:grid-cols-3">
                                     <EField label="ธนาคาร">
-                                        <input type="text" value={form.bankName ?? ""} onChange={setT("bankName", onlyThaiText)}
-                                            placeholder="กสิกรไทย / ไทยพาณิชย์ / กรุงเทพ" className={inputCls} />
+                                        <input type="text" value={form.bankName ?? ""} onChange={setT("bankName", onlyThaiText)} readOnly={!editing}
+                                            className={iCls} />
                                     </EField>
                                     <EField label="สาขา">
-                                        <input type="text" value={form.bankBranch ?? ""} onChange={setT("bankBranch", onlyThaiText)}
-                                            placeholder="สาขาลาดพร้าว" className={inputCls} />
+                                        <input type="text" value={form.bankBranch ?? ""} onChange={setT("bankBranch", onlyThaiText)} readOnly={!editing}
+                                            className={iCls} />
                                     </EField>
-                                    <EField label="เลขที่บัญชี">
-                                        <input type="text" value={form.bankAccountNo ?? ""} onChange={setT("bankAccountNo", formatThaiBankAccount)}
-                                            placeholder="000-0-00000-0" className={inputCls} inputMode="numeric" />
+                                    <EField label="เลขที่บัญชี" hint={editing ? "10 หลัก เช่น 000-0-00000-0" : undefined}>
+                                        <input type="text" value={form.bankAccountNo ?? ""} onChange={setT("bankAccountNo", formatThaiBankAccount)} readOnly={!editing}
+                                            maxLength={13} className={iCls} inputMode="numeric" />
                                     </EField>
                                 </div>
                             </Section>
@@ -1212,42 +1184,24 @@ function StudentDetail({ student, students, updateStudent, deleteStudent, histor
                             <Section icon="✈️" title="การเดินทาง" description="ข้อมูลวันเดินทางไป-กลับ">
                                 <div className="grid gap-4 sm:grid-cols-2">
                                     <EField label="วันเดินทางออกจากไทย">
-                                        <input type="date" value={toDateInputValue(form.departureDateTH)} onChange={set("departureDateTH")} className={inputCls} />
+                                        <input type="date" value={toDateInputValue(form.departureDateTH)} onChange={set("departureDateTH")} readOnly={!editing} className={iCls} />
                                     </EField>
                                     <EField label="วันที่ถึงญี่ปุ่น">
-                                        <input type="date" value={toDateInputValue(form.arrivalDateJP)} onChange={set("arrivalDateJP")} className={inputCls} />
+                                        <input type="date" value={toDateInputValue(form.arrivalDateJP)} onChange={set("arrivalDateJP")} readOnly={!editing} className={iCls} />
                                     </EField>
                                 </div>
                             </Section>
 
                             {/* หมายเหตุ */}
-                            <Section icon="📝" title="หมายเหตุ" description="ข้อมูลเพิ่มเติม (ไม่บังคับ)">
-                                <textarea value={form.note ?? ""} onChange={set("note")} rows={3}
-                                    placeholder="บันทึกเพิ่มเติม..."
-                                    className={inputCls + " resize-none"} />
+                            <Section icon="📝" title="หมายเหตุ" description={editing ? "ข้อมูลเพิ่มเติม (ไม่บังคับ)" : undefined}>
+                                <textarea value={form.note ?? ""} onChange={set("note")} readOnly={!editing} rows={3}
+                                    className={iCls + " resize-none"} />
                             </Section>
 
-                            {/* Bottom save bar */}
-                            <div className="flex items-center justify-between rounded-2xl border border-border bg-surface px-5 py-4">
-                                <p className="text-xs text-muted"><span className="text-red-500">*</span> จำเป็นต้องกรอก</p>
-                                <div className="flex gap-2">
-                                    <button type="button" onClick={handleCancel}
-                                        className="rounded-xl border border-border px-5 py-2 text-sm font-medium text-muted hover:text-foreground transition-colors">
-                                        ยกเลิก
-                                    </button>
-                                    <button type="submit" disabled={!isValid || saving}
-                                        className="btn-primary inline-flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
-                                        {saving ? <><Spinner />กำลังบันทึก...</> : <>
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                            </svg>
-                                            บันทึกการแก้ไข
-                                        </>}
-                                    </button>
-                                </div>
-                            </div>
-                        </>
-                    )}
+
+                            {/* ประวัติการแก้ไข — แสดงเสมอ */}
+                            <HistorySection history={history} />
+                    </>
 
                 </form>
             </div>

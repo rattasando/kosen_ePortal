@@ -96,6 +96,8 @@ function DetailView({ alumni, updateAlumni, student }) {
         prefix: alumni.prefix,
         name: alumni.name,
         lastname: alumni.lastname,
+        nameEn: alumni.nameEn ?? "",
+        lastnameEn: alumni.lastnameEn ?? "",
         nickname: alumni.nickname ?? "",
         major: alumni.major,
         university: alumni.university,
@@ -165,6 +167,8 @@ function DetailView({ alumni, updateAlumni, student }) {
       prefix: student.prefix || f.prefix,
       name: student.name || f.name,
       lastname: student.lastname || f.lastname,
+      nameEn: student.nameEn || f.nameEn,
+      lastnameEn: student.lastnameEn || f.lastnameEn,
       nickname: student.nickname || f.nickname,
       contact: student.email || f.contact,
       phone: student.tel || f.phone,
@@ -181,41 +185,57 @@ function DetailView({ alumni, updateAlumni, student }) {
         <div className="space-y-5">
 
           {/* Profile card */}
-          <div className="card p-5">
-            <div className="mb-4 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xl font-extrabold text-primary">
-                  {alumni.nickname ? alumni.nickname.charAt(0) : alumni.name.charAt(0)}
-                </div>
-                <div>
-                  <p className="font-bold text-foreground">
+          <div className="card p-0 overflow-hidden">
+            {/* Gradient strip */}
+            <div className={`h-1.5 w-full bg-gradient-to-r ${editCard === "profile" ? "from-amber-400 via-primary to-indigo-400" : "from-primary via-blue-400 to-indigo-400"}`} />
+
+            {/* Header — always visible */}
+            <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start sm:gap-5">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-accent-soft text-2xl font-extrabold text-primary ring-4 ring-accent-soft">
+                {(alumni.nickname || alumni.name).charAt(0)}
+              </div>
+              <div className="flex-1 min-w-0 space-y-1.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-lg font-extrabold text-foreground leading-tight">
                     {alumni.prefix}{alumni.name} {alumni.lastname}
-                    {alumni.nickname && <span className="ml-1.5 font-normal text-sm text-muted">({alumni.nickname})</span>}
-                  </p>
-                  <p className="text-xs text-muted">{alumni.id}</p>
-                  {alumni.studentId && (
-                    <Link href={`/admin/students/${alumni.studentId}`}
-                      className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-0.5">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
-                        <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
-                      </svg>
-                      ดูข้อมูลนักเรียน ({alumni.studentId})
-                    </Link>
+                  </h2>
+                  {alumni.nickname && (
+                    <span className="rounded-full bg-surface-muted px-2 py-0.5 text-xs text-muted">"{alumni.nickname}"</span>
                   )}
-                  <div className="mt-1">
-                    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${badge} border-current/20`}>
-                      <span className={`h-1.5 w-1.5 rounded-full ${bar}`} />
-                      {alumni.scholarshipStatus}
+                </div>
+                <p className="text-xs text-muted font-mono">{alumni.id}</p>
+                {alumni.studentId && (
+                  <Link href={`/admin/students/${alumni.studentId}`}
+                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
+                      <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
+                    </svg>
+                    ดูข้อมูลนักเรียน ({alumni.studentId})
+                  </Link>
+                )}
+                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                  <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-medium ${badge} border-current/20`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${bar}`} />
+                    {alumni.scholarshipStatus}
+                  </span>
+                  {alumni.university && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-muted px-2.5 py-0.5 text-xs text-muted">
+                      🏫 {alumni.university}
                     </span>
-                  </div>
+                  )}
+                  {alumni.major && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-muted px-2.5 py-0.5 text-xs text-muted">
+                      📚 {alumni.major}
+                    </span>
+                  )}
                 </div>
               </div>
               {editCard !== "profile" && <EditBtn onClick={() => startEdit("profile")} />}
             </div>
 
             {editCard === "profile" ? (
-              <div className="space-y-4 border-t border-border pt-4">
+              <div className="space-y-4 border-t border-border px-5 pb-5 pt-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-semibold text-muted">แก้ไขข้อมูลส่วนตัว</span>
                   <CardActions onSave={saveProfile} onCancel={cancelEdit} />
@@ -247,6 +267,16 @@ function DetailView({ alumni, updateAlumni, student }) {
                   <label className={labelCls}>นามสกุล</label>
                   <input value={profileForm.lastname} onChange={(e) => setP("lastname", e.target.value)} className={inputCls} placeholder="นามสกุล" />
                 </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className={labelCls}>First name (EN)</label>
+                    <input value={profileForm.nameEn} onChange={(e) => setP("nameEn", e.target.value)} className={inputCls} placeholder="First name" />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Last name (EN)</label>
+                    <input value={profileForm.lastnameEn} onChange={(e) => setP("lastnameEn", e.target.value)} className={inputCls} placeholder="Last name" />
+                  </div>
+                </div>
                 <div>
                   <label className={labelCls}>ชื่อเล่น</label>
                   <input value={profileForm.nickname} onChange={(e) => setP("nickname", e.target.value)} className={inputCls} placeholder="ชื่อเล่น" />
@@ -273,19 +303,29 @@ function DetailView({ alumni, updateAlumni, student }) {
                 </div>
               </div>
             ) : (
-              <div className="space-y-2 border-t border-border pt-4 text-sm">
-                {[
-                  ["สาขา", alumni.major],
-                  ["มหาวิทยาลัย", alumni.university],
-                  ["ปีที่จบ", alumni.graduatedYear],
-                  ["อีเมล", alumni.contact],
-                  ["โทรศัพท์", alumni.phone],
-                ].map(([k, v]) => (
-                  <div key={k} className="flex justify-between">
-                    <span className="text-muted">{k}</span>
-                    <span className="font-medium text-foreground text-right max-w-[60%]">{v}</span>
-                  </div>
-                ))}
+              <div className="border-t border-border px-5 pb-5 pt-4">
+                <div className="grid grid-cols-2 gap-x-6 gap-y-3.5">
+                  {[
+                    { label: "ปีที่จบ (พ.ศ.)", value: alumni.graduatedYear },
+                    { label: "สาขา", value: alumni.major },
+                    { label: "มหาวิทยาลัย", value: alumni.university },
+                    { label: "รหัสนักเรียน", value: alumni.studentId },
+                    { label: "ชื่อ-นามสกุล (EN)", value: [alumni.nameEn, alumni.lastnameEn].filter(Boolean).join(" ") || null },
+                    { label: "ชื่อเล่น", value: alumni.nickname },
+                    { label: "อีเมล", value: alumni.contact, email: true },
+                    { label: "โทรศัพท์", value: alumni.phone, tel: true },
+                  ].filter(f => f.value).map(({ label, value, email, tel }) => (
+                    <div key={label}>
+                      <p className="mb-0.5 text-[11px] font-medium uppercase tracking-wide text-muted">{label}</p>
+                      {email
+                        ? <a href={`mailto:${value}`} className="text-sm font-semibold text-primary hover:underline break-all">{value}</a>
+                        : tel
+                        ? <a href={`tel:${value}`} className="text-sm font-semibold text-foreground hover:text-emerald-600 transition-colors">{value}</a>
+                        : <p className="text-sm font-semibold text-foreground">{value}</p>
+                      }
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -557,9 +597,13 @@ export default function AlumniDetailPage() {
         description={`${alumni.id} · จบการศึกษา ${alumni.graduatedYear} · ${alumni.major}`}
       />
 
-      <div className="px-6 pt-4">
-        <Link href="/admin/students/alumni" className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-primary transition-colors">
-          ← กลับรายการศิษย์เก่า
+      <div className="sticky top-0 z-20 flex items-center border-b border-border bg-surface/95 px-6 py-2.5 backdrop-blur">
+        <Link href="/admin/students/alumni"
+          className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-foreground transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
+          </svg>
+          กลับรายการ
         </Link>
       </div>
 

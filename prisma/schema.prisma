@@ -231,6 +231,8 @@ model Alumni {
   prefix            String?   @db.VarChar(20)
   name              String    @db.VarChar(100)
   lastname          String    @db.VarChar(100)
+  nameEn            String?   @map("name_en") @db.VarChar(100)
+  lastnameEn        String?   @map("lastname_en") @db.VarChar(100)
   nickname          String?   @db.VarChar(50)
   graduatedYear     Int?      @map("graduated_year")
   major             String?   @db.VarChar(100)

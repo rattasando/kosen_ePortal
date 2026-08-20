@@ -306,25 +306,30 @@ async function seedAlumni() {
     else if (rest.scholarshipYears === 3) scholarshipTypeId = "SCH002";
     else if (rest.scholarshipYears === 5) scholarshipTypeId = "SCH003";
 
+    const alumniData = {
+      studentId: rest.studentId ?? null,
+      prefix: rest.prefix ?? null,
+      name: rest.name,
+      lastname: rest.lastname,
+      nameEn: (rest as any).nameEn ?? null,
+      lastnameEn: (rest as any).lastnameEn ?? null,
+      nickname: rest.nickname ?? null,
+      graduatedYear: rest.graduatedYear ?? null,
+      major: rest.major ?? null,
+      university: rest.university ?? null,
+      scholarshipTypeId,
+      scholarshipYears: rest.scholarshipYears ?? null,
+      scholarshipStatus: rest.scholarshipStatus ?? null,
+      contact: rest.contact ?? null,
+      phone: rest.phone ?? null,
+      remark: rest.remark ?? null,
+    };
     await prisma.alumni.upsert({
       where: { id: a.id },
-      update: {},
+      update: alumniData,
       create: {
         id: a.id,
-        studentId: rest.studentId ?? null,
-        prefix: rest.prefix ?? null,
-        name: rest.name,
-        lastname: rest.lastname,
-        nickname: rest.nickname ?? null,
-        graduatedYear: rest.graduatedYear ?? null,
-        major: rest.major ?? null,
-        university: rest.university ?? null,
-        scholarshipTypeId,
-        scholarshipYears: rest.scholarshipYears ?? null,
-        scholarshipStatus: rest.scholarshipStatus ?? null,
-        contact: rest.contact ?? null,
-        phone: rest.phone ?? null,
-        remark: rest.remark ?? null,
+        ...alumniData,
         employmentHistory: employmentHistory?.length
           ? { create: employmentHistory }
           : undefined,

@@ -4,13 +4,14 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AdminTopBar from "@/components/admin/ui/AdminTopBar";
+import AdminTable from "@/components/admin/ui/AdminTable";
 import { SCHOLARSHIP_STATUS_COLOR, calcDisplayedYears } from "@/lib/data/alumniData";
 import { useAlumni } from "@/components/admin/contexts/AlumniContext";
 
 // ── CSV ──────────────────────────────────────────────────────────────────────
 
 const CSV_HEADERS = [
-  "id", "studentId", "prefix", "name", "lastname", "nickname",
+  "id", "studentId", "prefix", "name", "lastname", "nameEn", "lastnameEn", "nickname",
   "graduatedYear", "major", "university",
   "scholarshipYears", "scholarshipStatus",
   "contact", "phone", "remark",
@@ -19,7 +20,7 @@ const CSV_HEADERS = [
 ];
 
 const IMPORT_HEADERS = [
-  "id", "studentId", "prefix", "name", "lastname", "nickname",
+  "id", "studentId", "prefix", "name", "lastname", "nameEn", "lastnameEn", "nickname",
   "graduatedYear", "major", "university",
   "scholarshipYears", "scholarshipStatus",
   "contact", "phone", "remark",
@@ -27,7 +28,7 @@ const IMPORT_HEADERS = [
 
 const FIELD_LABEL = {
   id: "รหัส", studentId: "รหัสนักเรียน", prefix: "คำนำหน้า", name: "ชื่อ",
-  lastname: "นามสกุล", nickname: "ชื่อเล่น", graduatedYear: "ปีที่จบ",
+  lastname: "นามสกุล", nameEn: "First name (EN)", lastnameEn: "Last name (EN)", nickname: "ชื่อเล่น", graduatedYear: "ปีที่จบ",
   major: "สาขา", university: "มหาวิทยาลัย", scholarshipYears: "ปีทุน",
   scholarshipStatus: "สถานะทุน", contact: "อีเมล", phone: "โทรศัพท์", remark: "หมายเหตุ",
   currentCompany: "ที่ทำงานปัจจุบัน", currentPosition: "ตำแหน่ง", currentStart: "เริ่มงาน",
@@ -355,7 +356,64 @@ function StatCard({ label, value, sub, color }) {
   );
 }
 
+const PAGE_SIZE_OPTIONS = [20, 25, 30, 50];
+
+function Pagination({ page, totalPages, onPage }) {
+  if (totalPages <= 1) return null;
+  const btnBase = "flex h-8 w-8 items-center justify-center rounded-lg text-sm font-medium transition-colors";
+  const pages = [];
+  const delta = 2;
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || (i >= page - delta && i <= page + delta)) pages.push(i);
+    else if (pages[pages.length - 1] !== "…") pages.push("…");
+  }
+  return (
+    <div className="flex items-center gap-1">
+      <button disabled={page === 1} onClick={() => onPage(page - 1)}
+        className={`${btnBase} border border-border text-muted hover:border-primary hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed`}>‹</button>
+      {pages.map((p, i) =>
+        p === "…"
+          ? <span key={`e${i}`} className="px-1 text-sm text-muted">…</span>
+          : <button key={p} onClick={() => onPage(p)}
+              className={`${btnBase} ${p === page ? "bg-primary text-white" : "border border-border text-muted hover:border-primary hover:text-primary"}`}>{p}</button>
+      )}
+      <button disabled={page === totalPages} onClick={() => onPage(page + 1)}
+        className={`${btnBase} border border-border text-muted hover:border-primary hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed`}>›</button>
+    </div>
+  );
+}
+
+function StatusBadge({ status }) {
+  const cfg = SCHOLARSHIP_STATUS_COLOR[status] ?? { badge: "bg-gray-100 text-gray-600", bar: "bg-gray-400" };
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${cfg.badge} border-current/20 whitespace-nowrap`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${cfg.bar}`} />
+      {status}
+    </span>
+  );
+}
+
 const STATUSES = ["ทั้งหมด", "กำลังทำงาน", "ครบตามสัญญา", "ได้รับยกเว้น"];
+
+// ── Filter persistence (sessionStorage) ─────────────────────────────────────
+const FILTER_KEY = "alumni-list-filters";
+function loadFilters() {
+  if (typeof window === "undefined") return {};
+  try { return JSON.parse(sessionStorage.getItem(FILTER_KEY)) ?? {}; } catch { return {}; }
+}
+function saveFilters(data) {
+  try { sessionStorage.setItem(FILTER_KEY, JSON.stringify(data)); } catch { /* ignore */ }
+}
+
+const SORT_LABEL = {
+  newest: "เพิ่มล่าสุดก่อน",
+  oldest: "เพิ่มเก่าสุดก่อน",
+  updated: "แก้ไขล่าสุดก่อน",
+  th_az: "ก–ฮ (ชื่อไทย)",
+  th_za: "ฮ–ก (ชื่อไทย)",
+  year_desc: "ปีที่จบล่าสุด",
+  year_asc: "ปีที่จบเก่าสุด",
+};
 
 const CLOSE_SVG = (
   <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
@@ -392,15 +450,22 @@ export default function AlumniPage() {
   const YEARS = useMemo(() => ["ทั้งหมด", ...Array.from(new Set(ALUMNI.map((a) => a.graduatedYear))).sort((a, b) => b - a).map(String)], [ALUMNI]);
 
   const [searchInput, setSearchInput] = useState("");
-  const [keywords, setKeywords] = useState([]);
-  const [filterUni, setFilterUni] = useState("ทั้งหมด");
-  const [filterStatus, setFilterStatus] = useState("ทั้งหมด");
-  const [filterYear, setFilterYear] = useState("ทั้งหมด");
-  const [sortBy, setSortBy] = useState("default");
+  const [keywords, setKeywords] = useState(() => loadFilters().keywords ?? []);
+  const [filterUni, setFilterUni] = useState(() => loadFilters().filterUni ?? "ทั้งหมด");
+  const [filterStatus, setFilterStatus] = useState(() => loadFilters().filterStatus ?? "ทั้งหมด");
+  const [filterYear, setFilterYear] = useState(() => loadFilters().filterYear ?? "ทั้งหมด");
+  const [sortBy, setSortBy] = useState(() => loadFilters().sortBy ?? "default");
+
+  useEffect(() => {
+    saveFilters({ keywords, filterUni, filterStatus, filterYear, sortBy });
+  }, [keywords, filterUni, filterStatus, filterYear, sortBy]);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [showImport, setShowImport] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportMenuRef = useRef(null);
+  const [pageSize, setPageSize] = useState(20);
+  const [page, setPage] = useState(1);
+  const [selectedIds, setSelectedIds] = useState(new Set());
 
   useEffect(() => {
     if (!showExportMenu) return;
@@ -425,6 +490,7 @@ export default function AlumniPage() {
     setFilterStatus("ทั้งหมด");
     setFilterYear("ทั้งหมด");
     setSortBy("default");
+    setPage(1);
   };
 
   const hasActiveFilter =
@@ -441,12 +507,46 @@ export default function AlumniPage() {
       const matchYear = filterYear === "ทั้งหมด" || String(a.graduatedYear) === filterYear;
       return matchLive && matchKeywords && matchUni && matchStatus && matchYear;
     });
-    if (sortBy === "az") return [...base].sort((a, b) => (a.name + a.lastname).localeCompare(b.name + b.lastname, "th"));
-    if (sortBy === "za") return [...base].sort((a, b) => (b.name + b.lastname).localeCompare(a.name + a.lastname, "th"));
+    if (sortBy === "newest") return [...base].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    if (sortBy === "oldest") return [...base].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    if (sortBy === "updated") return [...base].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+    if (sortBy === "th_az") return [...base].sort((a, b) => (a.name + a.lastname).localeCompare(b.name + b.lastname, "th"));
+    if (sortBy === "th_za") return [...base].sort((a, b) => (b.name + b.lastname).localeCompare(a.name + a.lastname, "th"));
     if (sortBy === "year_asc") return [...base].sort((a, b) => a.graduatedYear - b.graduatedYear);
     if (sortBy === "year_desc") return [...base].sort((a, b) => b.graduatedYear - a.graduatedYear);
     return base;
   }, [ALUMNI, searchInput, keywords, filterUni, filterStatus, filterYear, sortBy]);
+
+  // Reset to page 1 when filters change
+  useEffect(() => { setPage(1); }, [searchInput, keywords, filterUni, filterStatus, filterYear, sortBy]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const paginated = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const rangeStart = filtered.length === 0 ? 0 : (safePage - 1) * pageSize + 1;
+  const rangeEnd = Math.min(safePage * pageSize, filtered.length);
+
+  const pageIds = paginated.map((a) => a.id);
+  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
+  const somePageSelected = pageIds.some((id) => selectedIds.has(id)) && !allPageSelected;
+
+  const toggleSelect = (id) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  const toggleSelectPage = () =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allPageSelected) pageIds.forEach((id) => next.delete(id));
+      else pageIds.forEach((id) => next.add(id));
+      return next;
+    });
+
+  const clearSelection = () => setSelectedIds(new Set());
+  const selectedAlumni = ALUMNI.filter((a) => selectedIds.has(a.id));
 
   const handleImportConfirm = (rows, mode) => {
     if (mode === "replace") {
@@ -626,11 +726,14 @@ export default function AlumniPage() {
             </select>
             <span className="h-5 w-px bg-border shrink-0" />
             <span className="text-xs font-medium text-muted shrink-0">เรียง:</span>
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}
+            <select value={sortBy} onChange={(e) => { setSortBy(e.target.value); setPage(1); }}
               className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft">
               <option value="default">ค่าเริ่มต้น</option>
-              <option value="az">ก–ฮ (ชื่อ)</option>
-              <option value="za">ฮ–ก (ชื่อ)</option>
+              <option value="newest">เพิ่มล่าสุดก่อน</option>
+              <option value="oldest">เพิ่มเก่าสุดก่อน</option>
+              <option value="updated">แก้ไขล่าสุดก่อน</option>
+              <option value="th_az">ก–ฮ (ชื่อไทย)</option>
+              <option value="th_za">ฮ–ก (ชื่อไทย)</option>
               <option value="year_desc">ปีที่จบล่าสุด</option>
               <option value="year_asc">ปีที่จบเก่าสุด</option>
             </select>
@@ -659,9 +762,9 @@ export default function AlumniPage() {
                 </button>
               )}
               {sortBy !== "default" && (
-                <button onClick={() => setSortBy("default")}
+                <button onClick={() => { setSortBy("default"); setPage(1); }}
                   className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent-soft px-3 py-1 text-xs font-medium text-primary hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors">
-                  ⇅ {{ az: "ก–ฮ", za: "ฮ–ก", year_desc: "ปีล่าสุด", year_asc: "ปีเก่าสุด" }[sortBy]} {CLOSE_SVG}
+                  ⇅ {SORT_LABEL[sortBy] ?? sortBy} {CLOSE_SVG}
                 </button>
               )}
               {keywords.map((kw) => (
@@ -683,109 +786,195 @@ export default function AlumniPage() {
           )}
         </div>
 
+        {/* ── Selection bar ── */}
+        {selectedIds.size > 0 && (
+          <div className="flex items-center gap-3 rounded-xl border border-primary/30 bg-accent-soft px-4 py-2.5">
+            <span className="text-sm font-medium text-primary">เลือกแล้ว {selectedIds.size} รายการ</span>
+            <div className="ml-auto flex items-center gap-2">
+              <button
+                onClick={() => { exportCSV(selectedAlumni, "alumni_selected.csv"); }}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white hover:bg-primary/90 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                </svg>
+                ส่งออกที่เลือก
+              </button>
+              <button
+                onClick={clearSelection}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+                ยกเลิกการเลือก
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* ── Table ── */}
-        <div className="overflow-hidden rounded-xl border border-border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-surface-muted">
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted">ชื่อ-นามสกุล</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted">สาขา</th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-muted">มหาวิทยาลัย</th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-muted">ปีที่จบ</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted">ติดต่อ</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-muted">ที่ทำงานปัจจุบัน</th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-muted">ปีทำงาน / ปีทุน</th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-muted">สถานะ</th>
-                <th className="px-4 py-3 text-center text-xs font-semibold text-muted"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.length === 0 ? (
-                <tr><td colSpan={9} className="py-12 text-center text-sm text-muted">ไม่พบข้อมูลที่ตรงกับเงื่อนไข</td></tr>
-              ) : filtered.map((a, i) => {
-                const current = a.employmentHistory.find((e) => !e.endDate);
-                const workedYears = calcDisplayedYears(a);
-                const pct = Math.min(100, Math.round(workedYears / a.scholarshipYears * 100));
-                return (
-                  <tr key={a.id}
-                    className={`border-b border-border last:border-0 hover:bg-accent-soft/30 transition-colors ${i % 2 !== 0 ? "bg-surface-muted/30" : ""}`}>
-                    <td className="px-4 py-3">
-                      <p className="font-semibold text-foreground whitespace-nowrap">
-                        {a.prefix}{a.name} {a.lastname}
-                        {a.nickname && <span className="ml-1.5 font-normal text-muted text-xs">({a.nickname})</span>}
-                      </p>
-                    </td>
-                    <td className="px-4 py-3 text-muted">{a.major}</td>
-                    <td className="px-4 py-3 text-center">
-                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">{a.university}</span>
-                    </td>
-                    <td className="px-4 py-3 text-center text-muted">{a.graduatedYear}</td>
-                    <td className="px-4 py-3">
-                      <div className="space-y-0.5">
-                        {a.contact && <p className="text-xs text-muted truncate max-w-[160px]">{a.contact}</p>}
-                        {a.phone && <p className="text-xs text-muted">{a.phone}</p>}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      {current ? (
-                        <div>
-                          <p className="font-medium text-foreground truncate max-w-[180px]">{current.company}</p>
-                          <p className="text-xs text-muted">{current.position}</p>
-                        </div>
-                      ) : "—"}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <div className="flex flex-col items-center gap-1">
-                        <span className="text-xs font-bold text-foreground">{workedYears} / {a.scholarshipYears} ปี</span>
-                        <div className="h-1.5 w-16 overflow-hidden rounded-full bg-surface-muted">
-                          <div className={`h-1.5 rounded-full ${SCHOLARSHIP_STATUS_COLOR[a.scholarshipStatus]?.bar}`} style={{ width: `${pct}%` }} />
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${SCHOLARSHIP_STATUS_COLOR[a.scholarshipStatus]?.badge} border-current/20`}>
-                        <span className={`h-1.5 w-1.5 rounded-full ${SCHOLARSHIP_STATUS_COLOR[a.scholarshipStatus]?.bar}`} />
-                        {a.scholarshipStatus}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-center gap-1">
-                        <Link
-                          href={`/admin/students/alumni/${a.id}`}
-                          title="ดูข้อมูล"
-                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-border text-muted hover:border-primary hover:text-primary transition-colors"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                            <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-                          </svg>
-                        </Link>
-                        <Link
-                          href={`/admin/students/alumni/${a.id}?edit=1`}
-                          title="แก้ไข"
-                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-border text-muted hover:border-amber-500 hover:text-amber-500 transition-colors"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                          </svg>
-                        </Link>
-                        <button
-                          onClick={() => setDeleteTarget(a)}
-                          title="ลบ"
-                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-border text-muted hover:border-red-500 hover:text-red-500 transition-colors"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        {paginated.length > 0 ? (
+          <AdminTable
+            onRowClick={(i) => router.push(`/admin/students/alumni/${paginated[i].id}`)}
+            onCellClick={(e, i, j) => { if (j === 0) { e.stopPropagation(); toggleSelect(paginated[i].id); } }}
+            columns={[
+              {
+                label: (
+                  <input
+                    type="checkbox"
+                    checked={allPageSelected}
+                    ref={(el) => { if (el) el.indeterminate = somePageSelected; }}
+                    onChange={toggleSelectPage}
+                    onClick={(e) => e.stopPropagation()}
+                    className="h-4 w-4 cursor-pointer rounded accent-primary"
+                  />
+                ),
+                align: "center",
+                width: "44px",
+              },
+              { label: "ชื่อ-นามสกุล", width: "16%" },
+              { label: "สาขา / มหาวิทยาลัย", width: "12%" },
+              { label: "ปีที่จบ", align: "center", width: "7%" },
+              { label: "ติดต่อ", width: "12%" },
+              { label: "ที่ทำงานปัจจุบัน", width: "16%" },
+              { label: <span className="whitespace-nowrap">ปี / สัญญา</span>, align: "center", width: "10%" },
+              { label: "สถานะ", align: "center", width: "130px" },
+              { label: "Actions", align: "center", width: "115px" },
+            ]}
+            rows={paginated.map((a) => {
+              const current = (a.employmentHistory ?? []).find((e) => !e.endDate);
+              const workedYears = calcDisplayedYears(a);
+              const pct = Math.min(100, Math.round(workedYears / a.scholarshipYears * 100));
+              return [
+                /* Checkbox */
+                <input
+                  key="cb"
+                  type="checkbox"
+                  checked={selectedIds.has(a.id)}
+                  onChange={() => toggleSelect(a.id)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="h-4 w-4 cursor-pointer rounded accent-primary"
+                />,
+                /* ชื่อ */
+                <div key="name" className="min-w-0">
+                  <p className="font-semibold text-sm text-foreground truncate" title={`${a.prefix}${a.name} ${a.lastname}`}>
+                    {a.prefix}{a.name} {a.lastname}
+                  </p>
+                  {(a.nameEn || a.lastnameEn) && (
+                    <p className="text-xs text-muted/80 truncate">
+                      {[a.nameEn, a.lastnameEn].filter(Boolean).join(" ")}
+                    </p>
+                  )}
+                  {a.nickname && (
+                    <p className="text-xs text-muted truncate">ชื่อเล่น: {a.nickname}</p>
+                  )}
+                </div>,
+                /* สาขา / มหาลัย */
+                <div key="univ" className="min-w-0">
+                  <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary truncate max-w-full">
+                    {a.university}
+                  </span>
+                  {a.major && (
+                    <p className="mt-0.5 text-xs text-muted truncate" title={a.major}>{a.major}</p>
+                  )}
+                </div>,
+                /* ปีที่จบ */
+                <span key="year" className="text-sm text-muted">{a.graduatedYear}</span>,
+                /* ติดต่อ */
+                <div key="contact" className="min-w-0 flex flex-col gap-0.5">
+                  {a.contact
+                    ? <a href={`mailto:${a.contact}`} onClick={(e) => e.stopPropagation()}
+                        className="text-xs text-muted hover:text-primary transition-colors truncate" title={a.contact}>{a.contact}</a>
+                    : null}
+                  {a.phone
+                    ? <a href={`tel:${a.phone}`} onClick={(e) => e.stopPropagation()}
+                        className="text-xs text-foreground hover:text-emerald-600 transition-colors whitespace-nowrap">{a.phone}</a>
+                    : null}
+                  {!a.contact && !a.phone && <span className="text-xs text-muted">—</span>}
+                </div>,
+                /* ที่ทำงานปัจจุบัน */
+                current ? (
+                  <div key="job" className="min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate" title={current.company}>{current.company}</p>
+                    <p className="text-xs text-muted truncate">{current.position}</p>
+                  </div>
+                ) : <span key="job" className="text-sm text-muted">—</span>,
+                /* ปี / สัญญา */
+                <div key="progress" className="flex flex-col items-center gap-1">
+                  <span className="text-xs font-bold text-foreground whitespace-nowrap">{workedYears} / {a.scholarshipYears} ปี</span>
+                  <div className="h-1.5 w-14 overflow-hidden rounded-full bg-surface-muted">
+                    <div className={`h-1.5 rounded-full ${SCHOLARSHIP_STATUS_COLOR[a.scholarshipStatus]?.bar ?? "bg-gray-400"}`} style={{ width: `${pct}%` }} />
+                  </div>
+                </div>,
+                /* สถานะ */
+                <StatusBadge key="status" status={a.scholarshipStatus} />,
+                /* Actions */
+                <div key="actions" className="flex items-center justify-center gap-1" onClick={(e) => e.stopPropagation()}>
+                  <Link
+                    href={`/admin/students/alumni/${a.id}`}
+                    title="ดูข้อมูล"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-border text-muted hover:border-primary hover:text-primary transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                      <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                    </svg>
+                  </Link>
+                  <Link
+                    href={`/admin/students/alumni/${a.id}?edit=1`}
+                    title="แก้ไข"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-border text-muted hover:border-amber-500 hover:text-amber-500 transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                      <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                    </svg>
+                  </Link>
+                  <button
+                    onClick={() => setDeleteTarget(a)}
+                    title="ลบ"
+                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-border text-muted hover:border-red-500 hover:text-red-500 transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </div>,
+              ];
+            })}
+          />
+        ) : (
+          <div className="rounded-xl border border-border bg-surface py-16 text-center">
+            <p className="text-2xl mb-2">🔍</p>
+            <p className="text-sm font-medium text-foreground">ไม่พบข้อมูลศิษย์เก่า</p>
+            <p className="text-xs text-muted mt-1">ลองเปลี่ยนคำค้นหาหรือตัวกรอง</p>
+            <button onClick={clearFilters} className="mt-4 text-sm font-medium text-primary hover:underline">
+              ล้างตัวกรองทั้งหมด
+            </button>
+          </div>
+        )}
+
+        {/* ── Pagination footer ── */}
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <p className="text-xs text-muted">
+            {filtered.length === 0
+              ? "ไม่พบรายการ"
+              : <>แสดง <span className="font-semibold text-foreground">{rangeStart}–{rangeEnd}</span> จาก <span className="font-semibold text-foreground">{filtered.length}</span> รายการ</>
+            }
+          </p>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 text-xs text-muted">
+              <span>แสดง</span>
+              <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+                className="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft">
+                {PAGE_SIZE_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
+              </select>
+              <span>รายการต่อหน้า</span>
+            </div>
+            <Pagination page={safePage} totalPages={totalPages} onPage={setPage} />
+          </div>
         </div>
+
       </div>
 
       {deleteTarget && (

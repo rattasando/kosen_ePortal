@@ -28,6 +28,8 @@ export default function AddAlumniPage() {
   const [prefix, setPrefix] = useState("นาย");
   const [name, setName] = useState("");
   const [lastname, setLastname] = useState("");
+  const [nameEn, setNameEn] = useState("");
+  const [lastnameEn, setLastnameEn] = useState("");
   const [nickname, setNickname] = useState("");
   const [studentId, setStudentId] = useState("");
   const [graduatedYear, setGraduatedYear] = useState("");
@@ -63,6 +65,8 @@ export default function AddAlumniPage() {
       prefix,
       name: name.trim(),
       lastname: lastname.trim(),
+      nameEn: nameEn.trim() || undefined,
+      lastnameEn: lastnameEn.trim() || undefined,
       nickname: nickname.trim() || undefined,
       graduatedYear: parseInt(graduatedYear, 10),
       major: major.trim(),
@@ -80,7 +84,7 @@ export default function AddAlumniPage() {
 
   const handleReset = () => {
     setSaved(false);
-    setPrefix("นาย"); setName(""); setLastname(""); setNickname(""); setStudentId("");
+    setPrefix("นาย"); setName(""); setLastname(""); setNameEn(""); setLastnameEn(""); setNickname(""); setStudentId("");
     setGraduatedYear(""); setMajor(""); setUniversity(""); setScholarshipYears("5");
     setScholarshipStatus("กำลังทำงาน"); setContact(""); setPhone("");
     setJobs([{ ...EMPTY_JOB }]);
@@ -157,6 +161,16 @@ export default function AddAlumniPage() {
                 <div>
                   <label className={labelCls}>ชื่อเล่น</label>
                   <input type="text" value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="ชาย" className={inputCls} />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={labelCls}>First name (EN)</label>
+                  <input type="text" value={nameEn} onChange={(e) => setNameEn(e.target.value)} placeholder="Somchai" className={inputCls} />
+                </div>
+                <div>
+                  <label className={labelCls}>Last name (EN)</label>
+                  <input type="text" value={lastnameEn} onChange={(e) => setLastnameEn(e.target.value)} placeholder="Prasert" className={inputCls} />
                 </div>
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">

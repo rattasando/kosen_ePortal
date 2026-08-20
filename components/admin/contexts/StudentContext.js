@@ -15,6 +15,12 @@ export function StudentProvider({ children }) {
   const [students, setStudents] = useState([]);
   const [ready, setReady] = useState(false);
 
+  const refetch = useCallback(async () => {
+    const fresh = await fetch("/api/students").then((r) => r.json());
+    setStudents(fresh);
+    return fresh;
+  }, []);
+
   useEffect(() => {
     fetch("/api/students")
       .then((r) => r.json())
@@ -82,7 +88,7 @@ export function StudentProvider({ children }) {
   }, [students]);
 
   return (
-    <StudentContext.Provider value={{ students, ready, addStudent, updateStudent, deleteStudent, getStudent, replaceAll }}>
+    <StudentContext.Provider value={{ students, ready, addStudent, updateStudent, deleteStudent, getStudent, replaceAll, refetch }}>
       {children}
     </StudentContext.Provider>
   );
