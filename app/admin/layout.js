@@ -4,6 +4,7 @@ import AdminGuard from "@/components/admin/ui/AdminGuard";
 import { LanguageProvider } from "@/components/admin/contexts/LanguageContext";
 import { StudentProvider } from "@/components/admin/contexts/StudentContext";
 import { StudentHistoryProvider } from "@/components/admin/contexts/StudentHistoryContext";
+import { AlumniHistoryProvider } from "@/components/admin/contexts/AlumniHistoryContext";
 import { CompanyProvider } from "@/components/admin/contexts/CompanyContext";
 import { JobProvider } from "@/components/admin/contexts/JobContext";
 import { MappingProvider } from "@/components/admin/contexts/MappingContext";
@@ -25,6 +26,7 @@ export default function AdminLayout({ children }) {
     <AdminGuard>
       <LanguageProvider>
       <StudentHistoryProvider>
+      <AlumniHistoryProvider>
       <StudentProvider>
       <AlumniProvider>
       <CompanyProvider>
@@ -64,6 +66,7 @@ export default function AdminLayout({ children }) {
       </CompanyProvider>
       </AlumniProvider>
       </StudentProvider>
+      </AlumniHistoryProvider>
       </StudentHistoryProvider>
       </LanguageProvider>
     </AdminGuard>

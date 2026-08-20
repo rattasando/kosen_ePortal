@@ -165,7 +165,9 @@ npx prisma generate  # regenerate client หลังแก้ schema
 ## Alumni (`/admin/students/alumni`)
 
 ### Schema
-`Alumni` model มี field: `id`, `studentId`, `prefix`, `name`, `lastname`, `nameEn`, `lastnameEn`, `nickname`, `graduatedYear`, `major`, `university`, `scholarshipTypeId`, `scholarshipYears`, `scholarshipStatus`, `contact`, `phone`, `remark`, `createdAt`, `updatedAt` + relation `employmentHistory`
+`Alumni` model มี field: `id`, `studentId`, `prefix`, `name`, `lastname`, `nameEn`, `lastnameEn`, `nickname`, `graduatedYear`, `major`, `university`, `scholarshipTypeId`, `scholarshipYears`, `scholarshipStatus`, `contact`, `phone`, `remark`, `createdAt`, `updatedAt` + relations `employmentHistory`, `history`
+
+`AlumniHistory` model: `id`, `alumniId`, `oldData`, `newData`, `actionType`, `changedBy`, `changedAt` — เก็บ event ทุก save บน detail page
 
 ### List page (`alumni/page.js`)
 - ใช้ `AdminTable` + pagination + checkbox multi-select (เหมือน student list)
@@ -180,6 +182,19 @@ npx prisma generate  # regenerate client หลังแก้ schema
 - Profile card: gradient strip + rounded-2xl avatar + nickname pill + inline badges
 - Per-card editing: แต่ละ card มีปุ่ม Edit/Save/Cancel ของตัวเอง (ต่างจาก student ที่ edit ทั้งหน้า)
 - ปุ่ม "ดึงข้อมูลจาก student" — ดึง `name`, `lastname`, `nameEn`, `lastnameEn`, `nickname`, `contact`, `phone` จาก student ที่ link ไว้
+- **ประวัติการแก้ไข**: card ด้านล่างสุดแสดง history events (collapsible) — กดที่แต่ละ event ดู field diff ได้
+  - `startEdit(card)` จะ capture `beforeSnapshot` ทุกครั้ง
+  - `saveProfile/saveScholarship/saveHistory/saveRemark` เป็น async — call `updateAlumni` แล้ว `diffAlumniSnapshot` แล้ว `addEvent`
+  - ใช้ `useAlumniHistory()` จาก `AlumniHistoryContext`
+
+### Alumni History
+- Context: `components/admin/contexts/AlumniHistoryContext.js` — `AlumniHistoryProvider`, `useAlumniHistory()`
+- API: `GET/POST/DELETE /api/alumni-history` — เหมือน `/api/student-history` แต่ใช้ `prisma.alumniHistory`
+- Helpers: `lib/utils/alumniHistoryHelpers.js`
+  - `diffAlumniSnapshot(before, after)` — flatten diff (รวม employmentHistory diff ทีละ field + count)
+  - `buildAlumniSummary(type, changes)` — สร้าง summary string
+  - `formatHistoryDate(isoString)` — แปลง ISO → ภาษาไทย
+- Provider ถูก wrap ใน `app/admin/layout.js` ระหว่าง `StudentHistoryProvider` และ `StudentProvider`
 
 ### seed.ts — alumni upsert
 `update` block ต้องมีทุก field เหมือน `create` (ยกเว้น `id` และ `employmentHistory`) เพื่อให้ re-seed อัปเดต record ที่มีอยู่แล้วได้ — ห้ามใช้ `update: {}` เปล่า

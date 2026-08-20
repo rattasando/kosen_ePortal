@@ -8,6 +8,8 @@ import AdminTopBar from "@/components/admin/ui/AdminTopBar";
 import { SCHOLARSHIP_STATUS_COLOR, calcDisplayedYears } from "@/lib/data/alumniData";
 import { useAlumni } from "@/components/admin/contexts/AlumniContext";
 import { useStudents } from "@/components/admin/contexts/StudentContext";
+import { useAlumniHistory } from "@/components/admin/contexts/AlumniHistoryContext";
+import { diffAlumniSnapshot, buildAlumniSummary, formatHistoryDate } from "@/lib/utils/alumniHistoryHelpers";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -73,7 +75,7 @@ function CardActions({ onSave, onCancel }) {
 
 // ── Detail View ───────────────────────────────────────────────────────────────
 
-function DetailView({ alumni, updateAlumni, student }) {
+function DetailView({ alumni, updateAlumni, student, addEvent, historyEvents }) {
   const workedYears = calcDisplayedYears(alumni);
   const pct = Math.min(100, Math.round((workedYears / alumni.scholarshipYears) * 100));
   const remaining = Math.max(0, alumni.scholarshipYears - workedYears);
@@ -90,9 +92,23 @@ function DetailView({ alumni, updateAlumni, student }) {
   const [remarkForm, setRemarkForm] = useState("");
   const [pulled, setPulled] = useState(false);
 
+  // snapshot captured at startEdit — used to compute diff on save
+  const [beforeSnapshot, setBeforeSnapshot] = useState(null);
+
+  // history section UI state
+  const [showHistory, setShowHistory] = useState(false);
+  const [expandedEvents, setExpandedEvents] = useState(new Set());
+
+  const toggleEventExpand = (id) =>
+    setExpandedEvents((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
   const startEdit = (card) => {
     if (card === "profile") {
-      setProfileForm({
+      const form = {
         prefix: alumni.prefix,
         name: alumni.name,
         lastname: alumni.lastname,
@@ -104,21 +120,28 @@ function DetailView({ alumni, updateAlumni, student }) {
         graduatedYear: String(alumni.graduatedYear),
         contact: alumni.contact,
         phone: alumni.phone,
-      });
+      };
+      setProfileForm(form);
+      setBeforeSnapshot({ ...form });
     } else if (card === "scholarship") {
-      setScholarshipForm({
+      const form = {
         scholarshipYears: String(alumni.scholarshipYears),
         scholarshipStatus: alumni.scholarshipStatus,
-      });
+      };
+      setScholarshipForm(form);
+      setBeforeSnapshot({ ...form });
     } else if (card === "history") {
-      setHistoryForm(alumni.employmentHistory.map((j) => ({ ...j })));
+      const jobs = alumni.employmentHistory.map((j) => ({ ...j }));
+      setHistoryForm(jobs);
+      setBeforeSnapshot({ employmentHistory: alumni.employmentHistory.map((j) => ({ ...j })) });
     } else if (card === "remark") {
       setRemarkForm(alumni.remark ?? "");
+      setBeforeSnapshot({ remark: alumni.remark ?? "" });
     }
     setEditCard(card);
   };
 
-  const cancelEdit = () => { setEditCard(null); setLastAddedIdx(null); };
+  const cancelEdit = () => { setEditCard(null); setLastAddedIdx(null); setBeforeSnapshot(null); };
 
   const setP = (key, val) => setProfileForm((f) => ({ ...f, [key]: val }));
   const setSch = (key, val) => setScholarshipForm((f) => ({ ...f, [key]: val }));
@@ -133,31 +156,78 @@ function DetailView({ alumni, updateAlumni, student }) {
   };
   const removeJob = (idx) => setHistoryForm((f) => f.filter((_, i) => i !== idx));
 
-  const saveProfile = () => {
-    updateAlumni(alumni.id, {
+  const saveProfile = async () => {
+    const after = {
       ...profileForm,
       graduatedYear: parseInt(profileForm.graduatedYear) || alumni.graduatedYear,
+    };
+    await updateAlumni(alumni.id, after);
+    const changes = diffAlumniSnapshot(beforeSnapshot, after);
+    await addEvent({
+      alumniId: alumni.id,
+      type: "update",
+      before: beforeSnapshot,
+      after,
+      changes,
+      summary: buildAlumniSummary("update", changes),
     });
     setEditCard(null);
+    setBeforeSnapshot(null);
   };
 
-  const saveScholarship = () => {
-    updateAlumni(alumni.id, {
+  const saveScholarship = async () => {
+    const after = {
       scholarshipYears: parseInt(scholarshipForm.scholarshipYears) || alumni.scholarshipYears,
       scholarshipStatus: scholarshipForm.scholarshipStatus,
+    };
+    await updateAlumni(alumni.id, after);
+    const changes = diffAlumniSnapshot(beforeSnapshot, {
+      scholarshipYears: String(after.scholarshipYears),
+      scholarshipStatus: after.scholarshipStatus,
+    });
+    await addEvent({
+      alumniId: alumni.id,
+      type: "update",
+      before: beforeSnapshot,
+      after: { scholarshipYears: String(after.scholarshipYears), scholarshipStatus: after.scholarshipStatus },
+      changes,
+      summary: buildAlumniSummary("update", changes),
     });
     setEditCard(null);
+    setBeforeSnapshot(null);
   };
 
-  const saveHistory = () => {
-    updateAlumni(alumni.id, { employmentHistory: historyForm });
+  const saveHistory = async () => {
+    await updateAlumni(alumni.id, { employmentHistory: historyForm });
+    const after = { employmentHistory: historyForm };
+    const changes = diffAlumniSnapshot(beforeSnapshot, after);
+    await addEvent({
+      alumniId: alumni.id,
+      type: "update",
+      before: beforeSnapshot,
+      after,
+      changes,
+      summary: buildAlumniSummary("update", changes),
+    });
     setEditCard(null);
     setLastAddedIdx(null);
+    setBeforeSnapshot(null);
   };
 
-  const saveRemark = () => {
-    updateAlumni(alumni.id, { remark: remarkForm });
+  const saveRemark = async () => {
+    await updateAlumni(alumni.id, { remark: remarkForm });
+    const after = { remark: remarkForm };
+    const changes = diffAlumniSnapshot(beforeSnapshot, after);
+    await addEvent({
+      alumniId: alumni.id,
+      type: "update",
+      before: beforeSnapshot,
+      after,
+      changes,
+      summary: buildAlumniSummary("update", changes),
+    });
     setEditCard(null);
+    setBeforeSnapshot(null);
   };
 
   const handlePull = () => {
@@ -570,6 +640,99 @@ function DetailView({ alumni, updateAlumni, student }) {
         )}
       </div>
 
+      {/* ── History card (full width) ── */}
+      <div className="card p-5">
+        <button
+          onClick={() => setShowHistory((v) => !v)}
+          className="flex w-full items-center justify-between"
+        >
+          <div className="flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-muted" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+            </svg>
+            <h2 className="font-semibold text-foreground">ประวัติการแก้ไขข้อมูล</h2>
+            {historyEvents.length > 0 && (
+              <span className="rounded-full bg-surface-muted px-2 py-0.5 text-xs text-muted font-medium">
+                {historyEvents.length} รายการ
+              </span>
+            )}
+          </div>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className={`h-4 w-4 text-muted transition-transform duration-200 ${showHistory ? "rotate-180" : ""}`}
+            viewBox="0 0 20 20" fill="currentColor"
+          >
+            <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+          </svg>
+        </button>
+
+        {showHistory && (
+          <div className="mt-4 space-y-3 border-t border-border pt-4">
+            {historyEvents.length === 0 ? (
+              <p className="py-6 text-center text-sm text-muted">ยังไม่มีประวัติการแก้ไข</p>
+            ) : (
+              historyEvents.map((event) => {
+                const isExpanded = expandedEvents.has(event.id);
+                const typeLabel = event.type === "create" ? "สร้าง" : event.type === "delete" ? "ลบ" : "แก้ไข";
+                const typeColor = event.type === "create" ? "bg-emerald-100 text-emerald-700" : event.type === "delete" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700";
+                const hasChanges = event.changes && event.changes.length > 0;
+                return (
+                  <div key={event.id} className="rounded-xl border border-border bg-surface-muted/40 overflow-hidden">
+                    <button
+                      onClick={() => hasChanges && toggleEventExpand(event.id)}
+                      className={`flex w-full items-start justify-between gap-3 px-4 py-3 text-left ${hasChanges ? "hover:bg-surface-muted/70 transition-colors" : ""}`}
+                    >
+                      <div className="flex flex-1 items-start gap-3 min-w-0">
+                        <span className={`mt-0.5 shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${typeColor}`}>
+                          {typeLabel}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-foreground leading-snug">{event.summary || "บันทึกข้อมูล"}</p>
+                          <p className="mt-0.5 text-xs text-muted">
+                            {formatHistoryDate(event.at)} · โดย {event.by}
+                          </p>
+                        </div>
+                      </div>
+                      {hasChanges && (
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className={`mt-0.5 h-4 w-4 shrink-0 text-muted transition-transform duration-150 ${isExpanded ? "rotate-180" : ""}`}
+                          viewBox="0 0 20 20" fill="currentColor"
+                        >
+                          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </button>
+                    {isExpanded && hasChanges && (
+                      <div className="border-t border-border px-4 pb-3 pt-2">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="text-muted">
+                              <th className="pb-1 text-left font-semibold w-1/3">ฟิลด์</th>
+                              <th className="pb-1 text-left font-semibold w-1/3">ก่อน</th>
+                              <th className="pb-1 text-left font-semibold w-1/3">หลัง</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-border">
+                            {event.changes.map((c, i) => (
+                              <tr key={i} className="align-top">
+                                <td className="py-1.5 pr-3 font-medium text-foreground">{c.label}</td>
+                                <td className="py-1.5 pr-3 text-red-600 line-through">{c.before}</td>
+                                <td className="py-1.5 text-emerald-700 font-medium">{c.after}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+      </div>
+
     </div>
   );
 }
@@ -582,6 +745,7 @@ export default function AlumniDetailPage() {
 
   const { getAlumni, updateAlumni, ready } = useAlumni();
   const { getStudent } = useStudents();
+  const { addEvent, getAlumniHistory, ready: historyReady } = useAlumniHistory();
 
   if (!ready) return <div className="flex items-center justify-center py-24 text-muted text-sm">กำลังโหลดข้อมูล...</div>;
 
@@ -589,6 +753,7 @@ export default function AlumniDetailPage() {
   if (!alumni) notFound();
 
   const linkedStudent = alumni.studentId ? getStudent(alumni.studentId) : null;
+  const historyEvents = historyReady ? getAlumniHistory(id) : [];
 
   return (
     <>
@@ -607,7 +772,13 @@ export default function AlumniDetailPage() {
         </Link>
       </div>
 
-      <DetailView alumni={alumni} updateAlumni={(_, data) => updateAlumni(id, data)} student={linkedStudent} />
+      <DetailView
+        alumni={alumni}
+        updateAlumni={(_, data) => updateAlumni(id, data)}
+        student={linkedStudent}
+        addEvent={addEvent}
+        historyEvents={historyEvents}
+      />
     </>
   );
 }

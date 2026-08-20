@@ -249,6 +249,7 @@ model Alumni {
   student         Student?         @relation(fields: [studentId], references: [id])
   scholarshipType ScholarshipType? @relation(fields: [scholarshipTypeId], references: [id])
   employmentHistory AlumniEmploymentHistory[]
+  history         AlumniHistory[]
 
   @@map("alumni")
 }
@@ -266,6 +267,20 @@ model AlumniEmploymentHistory {
   alumni Alumni @relation(fields: [alumniId], references: [id], onDelete: Cascade)
 
   @@map("alumni_employment_history")
+}
+
+model AlumniHistory {
+  id         Int           @id @default(autoincrement())
+  alumniId   String        @map("alumni_id") @db.VarChar(20)
+  oldData    Json?         @map("old_data")
+  newData    Json?         @map("new_data")
+  actionType HistoryAction @map("action_type")
+  changedBy  String?       @map("changed_by") @db.VarChar(20)
+  changedAt  DateTime      @default(now()) @map("changed_at")
+
+  alumni Alumni @relation(fields: [alumniId], references: [id], onDelete: Cascade)
+
+  @@map("alumni_history")
 }
 
 model Company {
