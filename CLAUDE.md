@@ -162,7 +162,64 @@ npx prisma generate  # regenerate client หลังแก้ schema
 - `studentEnrollments.js` — `prepEnrollments()` ใช้ร่วมกันทั้ง POST/PUT: บังคับ `order` ตามตำแหน่งใน array + แปลง `startDate`/`endDate` เป็น Date object
 - `studentHistoryHelpers.js` — `diffSnapshot()` เทียบ before/after เพื่อ log ประวัติแก้ไขนักเรียน — **ระวัง**: `before`/`after` ต้องมี shape ตรงกันเป๊ะ ไม่งั้นเกิด diff ปลอม (ดู Known Bugs Fixed)
 
+## Alumni (`/admin/students/alumni`)
+
+### Schema
+`Alumni` model มี field: `id`, `studentId`, `prefix`, `name`, `lastname`, `nameEn`, `lastnameEn`, `nickname`, `graduatedYear`, `major`, `university`, `scholarshipTypeId`, `scholarshipYears`, `scholarshipStatus`, `contact`, `phone`, `remark`, `createdAt`, `updatedAt` + relation `employmentHistory`
+
+### List page (`alumni/page.js`)
+- ใช้ `AdminTable` + pagination + checkbox multi-select (เหมือน student list)
+- กดแถวทั้งหมดเพื่อดูรายละเอียด (`onRowClick`) ยกเว้น checkbox column 0 ที่ใช้ `onCellClick`
+- Selection bar แสดงเมื่อเลือก ≥ 1 รายการ: count + export CSV + ยกเลิก
+- Name cell แสดง 3 บรรทัด: ชื่อไทย → ชื่ออังกฤษ (ถ้ามี) → `ชื่อเล่น: X` (ถ้ามี)
+- Filter persistence ผ่าน `sessionStorage` (key: `alumni-list-filters`)
+- Sort options: `newest/oldest/updated/th_az/th_za/year_desc/year_asc`
+
+### Detail page (`alumni/[id]/page.js`)
+- Sticky back bar ด้านบน (เหมือน student) — `sticky top-0 z-20 bg-surface/95 backdrop-blur`
+- Profile card: gradient strip + rounded-2xl avatar + nickname pill + inline badges
+- Per-card editing: แต่ละ card มีปุ่ม Edit/Save/Cancel ของตัวเอง (ต่างจาก student ที่ edit ทั้งหน้า)
+- ปุ่ม "ดึงข้อมูลจาก student" — ดึง `name`, `lastname`, `nameEn`, `lastnameEn`, `nickname`, `contact`, `phone` จาก student ที่ link ไว้
+
+### seed.ts — alumni upsert
+`update` block ต้องมีทุก field เหมือน `create` (ยกเว้น `id` และ `employmentHistory`) เพื่อให้ re-seed อัปเดต record ที่มีอยู่แล้วได้ — ห้ามใช้ `update: {}` เปล่า
+
+## AdminTable (`components/admin/ui/AdminTable.js`)
+
+### `onCellClick` API
+signature: `(e, i, j)` — event, row index, col index  
+**caller ต้องจัดการ `e.stopPropagation()` เอง** — AdminTable ไม่ auto-stop  
+ใช้เพื่อแยก checkbox column (j === 0) ออกจาก row click:
+```js
+onCellClick={(e, i, j) => {
+  if (j === 0) { e.stopPropagation(); toggleSelect(paginated[i].id); }
+}}
+```
+
+### Checkbox multi-select pattern
+```js
+// Header checkbox
+<input
+  type="checkbox"
+  checked={allPageSelected}
+  ref={(el) => { if (el) el.indeterminate = somePageSelected; }}
+  onChange={toggleSelectPage}
+  onClick={(e) => e.stopPropagation()}
+/>
+// Row checkbox — ใส่เป็น cell แรกใน rows array
+<input
+  type="checkbox"
+  checked={selectedIds.has(item.id)}
+  onChange={() => toggleSelect(item.id)}
+  onClick={(e) => e.stopPropagation()}
+/>
+```
+
 ## UI Conventions
+- **Sticky back bar** ใน detail pages: `<div className="sticky top-0 z-20 flex items-center border-b border-border bg-surface/95 px-6 py-2.5 backdrop-blur">` — มีทั้งใน student และ alumni detail
+- **Action buttons**: ขนาด `h-8 w-8` icon `h-4 w-4` — ใช้ทั้ง student (`StudentActionButtons.js`) และ alumni list Actions column width `115px`
+- **Filter persistence**: ใช้ `sessionStorage` เก็บ filter state ผ่าน `loadFilters()`/`saveFilters()` — student ใช้ key `student-list-filters`, alumni ใช้ key `alumni-list-filters`
+- **Sort options มาตรฐาน**: `newest` (createdAt desc), `oldest` (createdAt asc), `updated` (updatedAt desc), `th_az`/`th_za` (ชื่อไทย), เพิ่มเติมตามบริบท เช่น `year_desc`/`year_asc` สำหรับ alumni
 - **Timeline/ประวัติเรียงตามเวลา** (student enrollments, alumni employment history): แสดง **ล่าสุดอยู่บนสุด เก่าสุดอยู่ล่างสุด** เสมอ — ข้อมูลจริงใน state/DB ยังเก็บเรียงเก่า→ใหม่ตาม `order` เหมือนเดิม แค่ reverse ตอน render เท่านั้น ตัวเลข badge ให้นับตามลำดับเวลาจริง ไม่ใช่ตำแหน่งที่แสดงผล:
   ```js
   const displayed = [...items].reverse();
