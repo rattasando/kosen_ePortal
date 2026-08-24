@@ -18,6 +18,7 @@ import { DEFAULT_FAQS } from "../lib/data/faqData.js";
 import { DEFAULT_DOCUMENTS } from "../lib/data/documentsData.js";
 import { DEFAULT_COMPANIES } from "../lib/data/companyData.js";
 import { DEFAULT_JOBS } from "../lib/data/jobData.js";
+import { DEFAULT_MAPPINGS } from "../lib/data/mappingData.js";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
@@ -547,6 +548,29 @@ async function seedJobs() {
 }
 
 // ─────────────────────────────────────────────────────────────
+// seedMappings
+// ─────────────────────────────────────────────────────────────
+async function seedMappings() {
+  console.log("Seeding mappings...");
+  await prisma.jobApplication.deleteMany();
+  let count = 0;
+  for (const m of DEFAULT_MAPPINGS as any[]) {
+    await prisma.jobApplication.create({
+      data: {
+        id:          m.id,
+        studentId:   m.studentId,
+        jobId:       m.jobId,
+        status:      m.status ?? "สมัครแล้ว",
+        appliedDate: m.appliedDate ? new Date(m.appliedDate) : null,
+        note:        m.note ?? null,
+      },
+    });
+    count++;
+  }
+  console.log(`  → ${count} mappings`);
+}
+
+// ─────────────────────────────────────────────────────────────
 // Main
 // ─────────────────────────────────────────────────────────────
 async function main() {
@@ -563,6 +587,7 @@ async function main() {
   await seedDocuments();
   await seedCompanies();
   await seedJobs();
+  await seedMappings();
   console.log("\n✅ Seed complete!");
 }
 
