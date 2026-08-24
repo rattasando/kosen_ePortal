@@ -2,6 +2,8 @@
 
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import AdminTable from "@/components/admin/ui/AdminTable";
 import { useMappings } from "./contexts/MappingContext";
 import { useStudents } from "./contexts/StudentContext";
 import { useJobs } from "./contexts/JobContext";
@@ -23,6 +25,12 @@ const STATUS_CONFIG = {
   สมัครแล้ว:          { color: "bg-blue-100 text-blue-700 border-blue-200",          dot: "bg-blue-500" },
   ผ่านการคัดเลือก:    { color: "bg-emerald-100 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
   ไม่ผ่านการคัดเลือก: { color: "bg-red-100 text-red-700 border-red-200",             dot: "bg-red-500" },
+};
+
+const UNIV_BADGE = {
+  "KOSEN-KMUTT":       "bg-blue-50 text-blue-700 border-blue-200",
+  "KOSEN-KMITL":       "bg-violet-50 text-violet-700 border-violet-200",
+  "KOSEN-Chulabhorn":  "bg-rose-50 text-rose-700 border-rose-200",
 };
 
 const INTERNSHIP_STATUSES = ["อยู่ในระหว่างฝึกงาน", "เสร็จสิ้น", "ยกเลิก"];
@@ -1048,9 +1056,26 @@ function XIcon() {
   );
 }
 
+// ── Empty State ───────────────────────────────────────────────
+function EmptyState({ hasFilter, onClear, t }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <p className="text-3xl mb-3">🔗</p>
+      <p className="text-sm font-semibold text-foreground">{t("mapping.empty")}</p>
+      <p className="text-xs text-muted mt-1">{t("common.noResult")}</p>
+      {hasFilter && (
+        <button onClick={onClear} className="mt-4 text-sm font-medium text-primary hover:underline">
+          {t("common.clearFilter")}
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ── Main Component ────────────────────────────────────────────
 export default function MappingListClient() {
   const { t } = useLanguage();
+  const router = useRouter();
   const { mappings, ready, addMapping, updateMapping, deleteMapping, replaceAll } = useMappings();
   const { students }    = useStudents();
   const { jobs }        = useJobs();
@@ -1071,6 +1096,15 @@ export default function MappingListClient() {
   const [importDone, setImportDone]     = useState(null);
   const [editTarget, setEditTarget]     = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [selectedIds, setSelectedIds]   = useState(new Set());
+
+  const toggleSelect = useCallback((id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
 
   const switchTab = (tab) => {
     setActiveTab(tab);
@@ -1198,6 +1232,29 @@ export default function MappingListClient() {
   const rangeStart = filtered.length === 0 ? 0 : (safePage - 1) * pageSize + 1;
   const rangeEnd   = Math.min(safePage * pageSize, filtered.length);
 
+  const allPageSelected  = paginated.length > 0 && paginated.every(m => selectedIds.has(m.id));
+  const somePageSelected = paginated.some(m => selectedIds.has(m.id));
+
+  const toggleSelectPage = useCallback(() => {
+    setSelectedIds(prev => {
+      const allSelected = paginated.every(m => prev.has(m.id));
+      const next = new Set(prev);
+      if (allSelected) paginated.forEach(m => next.delete(m.id));
+      else             paginated.forEach(m => next.add(m.id));
+      return next;
+    });
+  }, [paginated]);
+
+  const exportSelectedCSV = useCallback(() => {
+    const selected = filtered.filter(m => selectedIds.has(m.id));
+    exportCSV(selected, students, jobs);
+  }, [filtered, selectedIds, students, jobs]);
+
+  const bulkDelete = useCallback(() => {
+    selectedIds.forEach(id => deleteMapping(id));
+    setSelectedIds(new Set());
+  }, [selectedIds, deleteMapping]);
+
   const tabScoped = useMemo(() => {
     if (activeTab === "ฝึกงาน")  return joined.filter(m => m.job?.type === "ฝึกงาน");
     if (activeTab === "งานประจำ") return joined.filter(m => m.job?.type === "งานประจำ");
@@ -1217,8 +1274,143 @@ export default function MappingListClient() {
 
   if (!ready) return <div className="flex items-center justify-center py-24 text-sm text-muted">{t("common.loading")}</div>;
 
+  // ── Table columns ──────────────────────────────────────────
+  const columns = [
+    { label: (
+        <input type="checkbox" checked={allPageSelected}
+          ref={el => { if (el) el.indeterminate = somePageSelected && !allPageSelected; }}
+          onChange={toggleSelectPage} onClick={e => e.stopPropagation()}
+          className="h-4 w-4 rounded border-border accent-primary cursor-pointer" />
+      ), width: "44px", align: "center" },
+    { label: t("mapping.col.student"),    width: "180px" },
+    { label: t("mapping.col.job"),        width: "200px" },
+    { label: "ประเภท / สาขา",            width: "140px" },
+    { label: t("mapping.col.appliedDate"), width: "110px" },
+    { label: t("mapping.col.status"), align: "center", width: "170px" },
+    { label: t("mapping.col.actions"), align: "center", width: "115px" },
+  ];
+
+  // ── Table rows ─────────────────────────────────────────────
+  const tableRows = paginated.map((m) => {
+    const s        = m.student;
+    const j        = m.job;
+    const sCfg     = STATUS_CONFIG[m.status] ?? STATUS_CONFIG["สมัครแล้ว"];
+    const internCfg = (j?.type === "ฝึกงาน" && m.internship) ? INTERNSHIP_BADGE_CONFIG[m.internship.status] : null;
+    const isSelected = selectedIds.has(m.id);
+
+    return [
+      // 0: Checkbox
+      <input key="cb" type="checkbox" checked={isSelected} onChange={() => toggleSelect(m.id)}
+        onClick={e => e.stopPropagation()}
+        className="h-4 w-4 rounded border-border accent-primary cursor-pointer" />,
+
+      // 1: นักเรียน
+      <div key="student" className="min-w-0">
+        {s ? (() => {
+          const enroll = s.enrollments?.find(e => !e.endDate) ?? s.enrollments?.[s.enrollments.length - 1];
+          return (
+            <>
+              <p className="text-[10px] font-mono text-muted/60 mb-0.5">{s.id}</p>
+              <Link href={`/admin/students/${s.id}`} onClick={e => e.stopPropagation()}
+                className="text-xs font-semibold text-foreground hover:text-primary hover:underline transition-colors line-clamp-1">
+                <HighlightText text={`${s.prefix}${s.name} ${s.lastname}`} terms={activeTerms} />
+              </Link>
+              {enroll?.university && (
+                <p className="mt-0.5">
+                  <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${UNIV_BADGE[enroll.university] ?? "bg-gray-100 text-gray-600 border-gray-200"}`}>
+                    <HighlightText text={enroll.university} terms={activeTerms} />
+                  </span>
+                </p>
+              )}
+              {(enroll?.major || enroll?.year) && (
+                <p className="mt-0.5 text-[10px] text-muted/70 truncate">
+                  {[enroll.major, enroll.year ? `ปี ${enroll.year}` : null].filter(Boolean).join(" · ")}
+                </p>
+              )}
+            </>
+          );
+        })() : (
+          <span className="text-xs text-muted font-mono">{m.studentId}</span>
+        )}
+      </div>,
+
+      // 2: ตำแหน่งงาน
+      <div key="job" className="min-w-0">
+        {j ? (
+          <>
+            <p className="text-[10px] font-mono text-muted/60 mb-0.5">{j.id}</p>
+            <Link href={`/admin/marketplace/job-positions/${j.id}`} onClick={e => e.stopPropagation()}
+              className="text-xs font-semibold text-foreground hover:text-primary hover:underline transition-colors line-clamp-1">
+              <HighlightText text={j.title} terms={activeTerms} />
+            </Link>
+            <p className="text-[11px] text-muted truncate">
+              <HighlightText text={j.companyName} terms={activeTerms} />
+            </p>
+          </>
+        ) : (
+          <span className="text-xs text-muted font-mono">{m.jobId}</span>
+        )}
+      </div>,
+
+      // 3: ประเภท / สาขา
+      <div key="type" className="min-w-0">
+        {j ? (
+          <>
+            <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${TYPE_BADGE[j.type] ?? "bg-gray-100 text-gray-600 border-gray-200"}`}>
+              {j.type}
+            </span>
+            {j.field && <p className="mt-0.5 text-[11px] text-muted line-clamp-2">{j.field}</p>}
+          </>
+        ) : <span className="text-xs text-muted/50">—</span>}
+      </div>,
+
+      // 4: วันที่สมัคร
+      <p key="date" className="text-xs text-foreground whitespace-nowrap">{formatDate(m.appliedDate)}</p>,
+
+      // 5: สถานะ + internship + note
+      <div key="status">
+        <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${sCfg.color}`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${sCfg.dot}`} />
+          {m.status}
+        </span>
+        {internCfg && (
+          <p className="mt-1">
+            <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${internCfg.color}`}>
+              <span className={`h-1 w-1 rounded-full ${internCfg.dot}`} />{internCfg.label}
+            </span>
+          </p>
+        )}
+        {m.note && <p className="mt-0.5 text-[10px] text-muted line-clamp-1" title={m.note}>{m.note}</p>}
+      </div>,
+
+      // 6: Actions
+      <div key="actions" className="flex items-center justify-center gap-1">
+        <Link href={`/admin/marketplace/applications/${m.id}`} title="ดูข้อมูล"
+          onClick={e => e.stopPropagation()}
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted hover:border-primary hover:text-primary transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+            <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+          </svg>
+        </Link>
+        <button onClick={e => { e.stopPropagation(); setEditTarget(m); }} title="แก้ไขสถานะ"
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted hover:border-amber-500 hover:text-amber-500 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+          </svg>
+        </button>
+        <button onClick={e => { e.stopPropagation(); setDeleteTarget(m); }} title="ลบ"
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted hover:border-red-500 hover:text-red-500 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+          </svg>
+        </button>
+      </div>,
+    ];
+  });
+
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
 
       {/* Modals */}
       {showAdd    && <AddMappingModal students={students} jobs={jobs} mappings={mappings} activeTab={activeTab} onClose={() => setShowAdd(false)} onConfirm={handleAdd} />}
@@ -1415,112 +1607,50 @@ export default function MappingListClient() {
         </div>
       )}
 
-      {/* ── Table ── */}
-      <div className="overflow-hidden rounded-xl border border-border">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border bg-surface-muted">
-                <th className="px-3 py-3 text-left text-xs font-semibold text-muted whitespace-nowrap">{t("mapping.col.student")}</th>
-                <th className="px-3 py-3 text-left text-xs font-semibold text-muted whitespace-nowrap">{t("mapping.col.job")}</th>
-                <th className="px-3 py-3 text-left text-xs font-semibold text-muted whitespace-nowrap">{t("common.jobType")} / {t("common.field")}</th>
-                <th className="px-3 py-3 text-left text-xs font-semibold text-muted whitespace-nowrap">{t("mapping.col.appliedDate")}</th>
-                <th className="px-3 py-3 text-center text-xs font-semibold text-muted whitespace-nowrap">{t("mapping.col.status")}</th>
-                <th className="px-3 py-3 text-center text-xs font-semibold text-muted whitespace-nowrap">{t("mapping.col.actions")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginated.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-4 py-16 text-center">
-                    <p className="text-2xl mb-2">🔗</p>
-                    <p className="text-sm font-medium text-foreground">{t("mapping.empty")}</p>
-                    <p className="text-xs text-muted mt-1">{t("common.noResult")}</p>
-                    {hasActiveFilter && (
-                      <button onClick={clearFilters} className="mt-4 text-sm font-medium text-primary hover:underline">{t("common.clearFilter")}</button>
-                    )}
-                  </td>
-                </tr>
-              ) : paginated.map((m, i) => {
-                const s        = m.student;
-                const j        = m.job;
-                const sCfg     = STATUS_CONFIG[m.status] ?? STATUS_CONFIG["สมัครแล้ว"];
-                const internCfg = (m.job?.type === "ฝึกงาน" && m.internship) ? INTERNSHIP_BADGE_CONFIG[m.internship.status] : null;
-                return (
-                  <tr key={m.id} className={`border-b border-border last:border-0 hover:bg-surface-muted/40 transition-colors ${i % 2 !== 0 ? "bg-surface-muted/20" : ""}`}>
-                    <td className="px-3 py-3">
-                      {s ? (
-                        <>
-                          <Link href={`/admin/students/${s.id}`}
-                            className="text-xs font-semibold text-foreground hover:text-primary hover:underline transition-colors">
-                            <HighlightText text={`${s.prefix}${s.name} ${s.lastname}`} terms={activeTerms} />
-                          </Link>
-                          <p className="text-[11px] text-muted"><HighlightText text={s.university} terms={activeTerms} /></p>
-                          {s.major && <p className="text-[10px] text-muted/70">{s.major}</p>}
-                        </>
-                      ) : (
-                        <span className="text-xs text-muted font-mono">{m.studentId}</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-3 max-w-[220px]">
-                      {j ? (
-                        <>
-                          <Link href={`/admin/marketplace/job-positions/${j.id}`}
-                            className="text-xs font-semibold text-foreground hover:text-primary hover:underline transition-colors line-clamp-1">
-                            <HighlightText text={j.title} terms={activeTerms} />
-                          </Link>
-                          <p className="text-[11px] text-muted line-clamp-1"><HighlightText text={j.companyName} terms={activeTerms} /></p>
-                        </>
-                      ) : (
-                        <span className="text-xs text-muted font-mono">{m.jobId}</span>
-                      )}
-                    </td>
-                    <td className="px-3 py-3 whitespace-nowrap">
-                      {j && (
-                        <>
-                          <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${TYPE_BADGE[j.type] ?? "bg-gray-100 text-gray-600 border-gray-200"}`}>{j.type}</span>
-                          <p className="mt-0.5 text-[10px] text-muted line-clamp-1 max-w-[120px]">{j.field}</p>
-                        </>
-                      )}
-                    </td>
-                    <td className="px-3 py-3 whitespace-nowrap text-xs text-foreground">{formatDate(m.appliedDate)}</td>
-                    <td className="px-3 py-3 text-center whitespace-nowrap">
-                      <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${sCfg.color}`}>
-                        <span className={`h-1.5 w-1.5 rounded-full ${sCfg.dot}`} />
-                        {m.status}{internCfg && <span className="opacity-70">({internCfg.label})</span>}
-                      </span>
-                      {m.note && <p className="mt-0.5 text-[10px] text-muted max-w-[140px] line-clamp-1 mx-auto" title={m.note}>{m.note}</p>}
-                    </td>
-                    <td className="px-3 py-3">
-                      <div className="flex items-center justify-center gap-1">
-                        <Link href={`/admin/marketplace/applications/${m.id}`} title="ดูข้อมูล"
-                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-border text-muted hover:border-primary hover:text-primary transition-colors">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                            <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-                          </svg>
-                        </Link>
-                        <button onClick={() => setEditTarget(m)} title="แก้ไขสถานะ"
-                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-border text-muted hover:border-amber-500 hover:text-amber-500 transition-colors">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                          </svg>
-                        </button>
-                        <button onClick={() => setDeleteTarget(m)} title="ลบ"
-                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-border text-muted hover:border-red-500 hover:text-red-500 transition-colors">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+      {/* ── Selection bar ── */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-primary/30 bg-accent-soft px-4 py-2.5">
+          <span className="text-sm font-semibold text-primary">เลือกแล้ว {selectedIds.size} รายการ</span>
+          <div className="flex items-center gap-2">
+            <button onClick={exportSelectedCSV}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-medium text-foreground hover:border-primary hover:text-primary transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
+              </svg>
+              ส่งออก CSV
+            </button>
+            <button onClick={() => {
+              if (confirm(`ยืนยันการลบ ${selectedIds.size} รายการ?`)) bulkDelete();
+            }}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100 transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              ลบที่เลือก
+            </button>
+            <button onClick={() => setSelectedIds(new Set())}
+              className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted hover:text-foreground transition-colors">
+              ยกเลิก
+            </button>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* ── Table ── */}
+      {paginated.length === 0 ? (
+        <div className="card">
+          <EmptyState hasFilter={hasActiveFilter} onClear={clearFilters} t={t} />
+        </div>
+      ) : (
+        <AdminTable
+          columns={columns}
+          rows={tableRows}
+          onRowClick={(i) => router.push(`/admin/marketplace/applications/${paginated[i].id}`)}
+          onCellClick={(e, i, j) => {
+            if (j === 0 || j === 6) e.stopPropagation();
+          }}
+        />
+      )}
 
       {/* ── Footer ── */}
       <div className="flex flex-wrap items-center justify-between gap-4">

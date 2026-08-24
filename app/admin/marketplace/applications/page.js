@@ -5,10 +5,12 @@ export default function StudentMappingPage() {
   return (
     <>
       <AdminTopBar
-        title="Applications"
+        title="ใบสมัครงาน"
         description="จัดการใบสมัครและการจับคู่นักเรียนกับตำแหน่งงาน"
       />
-      <MappingListClient />
+      <div className="p-6">
+        <MappingListClient />
+      </div>
     </>
   );
 }
