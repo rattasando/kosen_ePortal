@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useUsers } from "./contexts/UserContext";
+import { formatDateTime } from "@/lib/utils/newsUtils";
 import StatCard from "./ui/StatCard";
 
 // ── Constants ─────────────────────────────────────────────────
@@ -466,8 +467,8 @@ function UserDetail({ user, onClose, onEdit, onDelete, onSavePassword }) {
               ["📞", "โทรศัพท์",        user.tel || "—"],
               ["🏢", "ฝ่าย/แผนก",      user.department],
               ["🏫", "สังกัด",          user.university],
-              ["📅", "สร้างเมื่อ",      user.createdAt],
-              ["🕐", "เข้าใช้ล่าสุด",  user.lastLogin || "ยังไม่เคย"],
+              ["📅", "สร้างเมื่อ",      formatDateTime(user.createdAt)],
+              ["🕐", "เข้าใช้ล่าสุด",  user.lastLogin ? formatDateTime(user.lastLogin) : "ยังไม่เคย"],
             ].map(([icon, label, value]) => (
               <div key={label} className="flex items-start gap-2">
                 <span className="w-5 shrink-0">{icon}</span>

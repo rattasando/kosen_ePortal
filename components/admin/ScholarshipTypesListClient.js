@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useScholarshipTypes } from "./contexts/ScholarshipTypesContext";
+import { formatDateTime } from "@/lib/utils/newsUtils";
 
 // ── Constants ──────────────────────────────────────────────────
 const BADGE_OPTIONS = [
@@ -355,8 +356,8 @@ function ScholarshipDetail({ item, onClose, onEdit, onDelete }) {
           <div className="space-y-2.5 rounded-xl border border-border p-4">
             {row("จำนวนทุน", item.count ? `${item.count} ทุน` : "—")}
             {row("ลำดับแสดงผล", item.order ?? "—")}
-            {row("สร้างเมื่อ", item.createdAt)}
-            {row("แก้ไขล่าสุด", item.updatedAt)}
+            {row("สร้างเมื่อ", formatDateTime(item.createdAt))}
+            {row("แก้ไขล่าสุด", formatDateTime(item.updatedAt))}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
