@@ -985,6 +985,9 @@ export default function StudentListClient() {
   const [filterScholarship, setFilterScholarship] = useState(
     () => loadFilters().filterScholarship ?? "ทั้งหมด",
   );
+  const [filterSelfFunded, setFilterSelfFunded] = useState(
+    () => loadFilters().filterSelfFunded ?? false,
+  );
   const [filterCountry, setFilterCountry] = useState(
     () => loadFilters().filterCountry ?? "ทั้งหมด",
   );
@@ -997,6 +1000,7 @@ export default function StudentListClient() {
       filterUniversity,
       filterYear,
       filterScholarship,
+      filterSelfFunded,
       filterCountry,
       sortBy,
     });
@@ -1006,6 +1010,7 @@ export default function StudentListClient() {
     filterUniversity,
     filterYear,
     filterScholarship,
+    filterSelfFunded,
     filterCountry,
     sortBy,
   ]);
@@ -1137,6 +1142,7 @@ export default function StudentListClient() {
         filterYear === "ทั้งหมด" || getLatestEnrollment(s).year === filterYear;
       const matchScholarship =
         filterScholarship === "ทั้งหมด" || s.scholarship === filterScholarship;
+      const matchSelfFunded = !filterSelfFunded || s.selfFunded === true;
       const studentCountry = s.country === "ญี่ปุ่น" ? "ญี่ปุ่น" : "ไทย";
       const matchCountry =
         filterCountry === "ทั้งหมด" || studentCountry === filterCountry;
@@ -1147,6 +1153,7 @@ export default function StudentListClient() {
         matchUniversity &&
         matchYear &&
         matchScholarship &&
+        matchSelfFunded &&
         matchCountry
       );
     });
@@ -1187,6 +1194,7 @@ export default function StudentListClient() {
     filterUniversity,
     filterYear,
     filterScholarship,
+    filterSelfFunded,
     filterCountry,
     sortBy,
   ]);
@@ -1198,6 +1206,7 @@ export default function StudentListClient() {
     setFilterUniversity("ทั้งหมด");
     setFilterYear("ทั้งหมด");
     setFilterScholarship("ทั้งหมด");
+    setFilterSelfFunded(false);
     setFilterCountry("ทั้งหมด");
     setSortBy("default");
     setPage(1);
@@ -1209,6 +1218,7 @@ export default function StudentListClient() {
     filterUniversity !== "ทั้งหมด" ||
     filterYear !== "ทั้งหมด" ||
     filterScholarship !== "ทั้งหมด" ||
+    filterSelfFunded ||
     filterCountry !== "ทั้งหมด" ||
     sortBy !== "default";
 
@@ -1641,6 +1651,17 @@ export default function StudentListClient() {
               </option>
             ))}
           </select>
+          <button
+            type="button"
+            onClick={() => { setFilterSelfFunded((v) => !v); setPage(1); }}
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+              filterSelfFunded
+                ? "border-amber-300 bg-amber-50 text-amber-700"
+                : "border-border bg-surface text-foreground hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700"
+            }`}
+          >
+            💰 จ่ายเอง
+          </button>
           <select
             value={filterCountry}
             onChange={(e) => {
@@ -1775,6 +1796,17 @@ export default function StudentListClient() {
                   d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
                   clipRule="evenodd"
                 />
+              </svg>
+            </button>
+          )}
+          {filterSelfFunded && (
+            <button
+              onClick={() => { setFilterSelfFunded(false); setPage(1); }}
+              className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors"
+            >
+              💰 จ่ายเอง
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
               </svg>
             </button>
           )}
@@ -1941,6 +1973,11 @@ export default function StudentListClient() {
                   {s.scholarship && (
                     <span className="inline-flex items-center rounded-full bg-violet-50 border border-violet-200 px-2 py-0.5 text-[10px] font-semibold text-violet-700 whitespace-nowrap shrink-0">
                       {scholarshipLabel(s.scholarship)}
+                    </span>
+                  )}
+                  {s.selfFunded && (
+                    <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[10px] font-semibold text-amber-700 whitespace-nowrap shrink-0">
+                      💰 จ่ายเอง
                     </span>
                   )}
                 </div>
