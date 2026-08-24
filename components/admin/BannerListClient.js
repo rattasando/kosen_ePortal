@@ -1078,6 +1078,11 @@ export default function BannerListClient() {
     .filter((b) => filterStatus === "" || b.status === filterStatus)
     .sort((a, b) => a.order - b.order);
 
+  // preview แสดงเฉพาะ banner ที่ active เท่านั้น (เหมือนหน้าหลักจริงๆ)
+  const previewBanners = banners
+    .filter((b) => b.status === "active")
+    .sort((a, b) => a.order - b.order);
+
   const activeCount   = banners.filter((b) => b.status === "active").length;
   const inactiveCount = banners.filter((b) => b.status === "inactive").length;
 
@@ -1153,7 +1158,7 @@ export default function BannerListClient() {
           ))}
         </div>
         <div className="flex gap-2">
-          {displayed.length > 0 && (
+          {previewBanners.length > 0 && (
             <button onClick={() => setPreviewIndex(0)}
               className="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50 px-4 py-1.5 text-sm font-medium text-sky-700 hover:bg-sky-100 transition-colors whitespace-nowrap">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1194,7 +1199,11 @@ export default function BannerListClient() {
               onToggle={() => handleToggle(banner)}
               onMoveUp={() => handleMoveUp(banner)}
               onMoveDown={() => handleMoveDown(banner)}
-              onPreview={() => setPreviewIndex(i)}
+              onPreview={() => {
+                const idx = previewBanners.findIndex((b) => b.id === banner.id);
+                if (idx >= 0) setPreviewIndex(idx);
+                else setPreviewIndex(0); // inactive → เปิดที่ active แรก
+              }}
             />
           ))}
         </div>
@@ -1208,9 +1217,9 @@ export default function BannerListClient() {
         />
       )}
 
-      {previewIndex !== null && (
+      {previewIndex !== null && previewBanners.length > 0 && (
         <AllBannersPreviewModal
-          banners={displayed}
+          banners={previewBanners}
           initialIndex={previewIndex}
           onClose={() => setPreviewIndex(null)}
           pubNews={pubNews}
