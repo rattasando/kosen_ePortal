@@ -6,6 +6,7 @@ import { useNews } from "./contexts/NewsContext";
 import { useNewsCategory } from "./contexts/NewsCategoryContext";
 import { formatDate, formatDateTime } from "@/lib/utils/newsUtils";
 import NewsEditor, { emptyNewsForm, NewsPreview } from "./editors/NewsEditor";
+import NewsCategoriesListClient from "./NewsCategoriesListClient";
 
 const STATUS_CONFIG = {
   published: { label: "เผยแพร่",   color: "bg-emerald-100 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
@@ -354,10 +355,11 @@ export default function NewsListClient() {
   const [hydrated,    setHydrated]      = useState(false);
 
   // ── Modal state ─
-  const [modal,     setModal]    = useState(null);
-  const [preview,   setPreview]  = useState(null);
-  const [detail,    setDetail]   = useState(null);
-  const [delTarget, setDelTarget] = useState(null);
+  const [modal,          setModal]          = useState(null);
+  const [preview,        setPreview]        = useState(null);
+  const [detail,         setDetail]         = useState(null);
+  const [delTarget,      setDelTarget]      = useState(null);
+  const [showCategories, setShowCategories] = useState(false);
 
   // Restore filters from localStorage
   useEffect(() => {
@@ -526,6 +528,7 @@ export default function NewsListClient() {
           />
         </div>
         <button onClick={addKeyword} className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted hover:text-foreground transition-colors">ค้นหา</button>
+        <button onClick={() => setShowCategories(true)} className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted hover:text-foreground transition-colors whitespace-nowrap">🏷 หมวดหมู่</button>
         <button onClick={() => setModal({ mode: "add" })} className="btn-primary whitespace-nowrap">+ เพิ่มข่าว</button>
       </div>
 
@@ -719,6 +722,30 @@ export default function NewsListClient() {
           onConfirm={() => { deleteNews(delTarget.id); setDelTarget(null); }}
           onCancel={() => setDelTarget(null)}
         />
+      )}
+
+      {/* ── Categories modal ── */}
+      {showCategories && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
+          onClick={(e) => { if (e.target === e.currentTarget) setShowCategories(false); }}
+        >
+          <div className="flex w-full max-w-xl flex-col rounded-2xl border border-border bg-surface shadow-2xl max-h-[85vh]">
+            <div className="flex items-center justify-between border-b border-border px-5 py-4 flex-shrink-0">
+              <h2 className="text-sm font-bold text-foreground">🏷 จัดการหมวดหมู่ข่าว</h2>
+              <button
+                onClick={() => setShowCategories(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full text-muted hover:bg-surface-muted hover:text-foreground transition-colors"
+              >
+                <XIcon />
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1">
+              <NewsCategoriesListClient />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
