@@ -715,8 +715,191 @@ function BannerModal({ item, onClose, onSave }) {
   );
 }
 
+// ── BannerSlide — renders one banner's content (shared by preview modal) ──
+function BannerSlide({ banner, pubNews }) {
+  const isNewsSingle   = banner.layout === "news-single";
+  const linkedNews     = isNewsSingle ? (pubNews?.find((n) => n.id === banner.newsId) ?? null) : null;
+  const previewImg     = linkedNews?.image ?? banner.image;
+  const effectiveBadge = banner.badge || (isNewsSingle && linkedNews?.featured ? "เรื่องเด่น" : "");
+  const ts    = banner.textSize  ?? "sm";
+  const ta    = banner.textAlign ?? "left";
+  const hCls  = BANNER_HEADLINE_CLS[ts] ?? BANNER_HEADLINE_CLS.sm;
+  const bCls  = BANNER_BODY_CLS[ts]     ?? BANNER_BODY_CLS.sm;
+  const atxt  = ALIGN_TEXT[ta]  ?? "text-left";
+  const aflex = ALIGN_FLEX[ta]  ?? "justify-start";
+  const acont = ALIGN_CONT[ta]  ?? "";
+
+  return (
+    <div className="absolute inset-0">
+      {/* bg */}
+      {previewImg ? (
+        <Image src={previewImg} alt="banner" fill className="object-cover"
+          style={{ objectPosition: banner.imagePosition ?? "center" }} sizes="100vw" priority />
+      ) : (
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-700 to-slate-900" />
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/10" />
+
+      {/* badge */}
+      {effectiveBadge && (
+        <div className="absolute top-6 left-8 z-20">
+          <span className="inline-flex items-center gap-2 rounded-2xl px-5 py-2 text-sm font-extrabold shadow-lg tracking-wide"
+            style={{ background: "linear-gradient(135deg,#f59e0b,#d97706)", color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,.3)" }}>
+            ★ {effectiveBadge}
+          </span>
+        </div>
+      )}
+
+      {/* content */}
+      <div className="absolute inset-0 flex items-end text-white">
+        <div className="w-full max-w-6xl mx-auto px-8 pb-16">
+          {isNewsSingle && linkedNews ? (
+            <>
+              <div className="flex items-center gap-3 mb-4">
+                <span className={`rounded-full px-4 py-1.5 text-base font-bold ${linkedNews.catColor}`}>{linkedNews.category}</span>
+                <time className="text-lg font-bold text-white/90 rounded-full bg-black/30 backdrop-blur-sm px-3 py-1">{formatDate(linkedNews.publishedAt)}</time>
+              </div>
+              <div className="flex items-end justify-between gap-10">
+                <h1 className={`font-extrabold leading-tight tracking-tight line-clamp-3 ${hCls} ${atxt}`}>
+                  {banner.headline?.trim() || linkedNews.title}
+                </h1>
+                <span className="btn-primary inline-flex shrink-0 text-base px-6 py-3">{banner.ctaLabel || "อ่านข่าวเต็ม"}</span>
+              </div>
+            </>
+          ) : isNewsSingle ? (
+            <p className="italic text-white/40 text-2xl">ยังไม่ได้เลือกข่าว</p>
+          ) : (
+            <div style={{ maxWidth: "42rem" }} className={acont}>
+              {banner.eyebrow && (
+                <p className={`mb-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-white/70 ${ta === "right" ? "flex-row-reverse" : ""} ${ta === "center" ? "justify-center w-full" : ""}`}>
+                  <span className="h-px w-8 bg-white/50 flex-shrink-0" />
+                  {banner.eyebrow}
+                </p>
+              )}
+              <h1 className={`font-extrabold leading-tight tracking-tight ${hCls} ${atxt}`}>{banner.headline}</h1>
+              {banner.body && <p className={`mt-4 text-white/80 ${bCls} ${atxt}`}>{banner.body}</p>}
+              <div className={`mt-6 flex flex-wrap gap-3 ${aflex}`}>
+                {banner.ctaLabel && <span className="btn-primary text-base px-6 py-3">{banner.ctaLabel}</span>}
+                {banner.secondaryLabel && (
+                  <span className="inline-flex items-center rounded-xl border border-white/30 px-6 py-3 text-base font-semibold text-white">
+                    {banner.secondaryLabel}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── AllBannersPreviewModal — slider ของ banner ทั้งหมด ────────────
+function AllBannersPreviewModal({ banners, initialIndex = 0, onClose, pubNews }) {
+  const [current, setCurrent] = useState(Math.max(0, Math.min(initialIndex, banners.length - 1)));
+  const [dir, setDir] = useState(null); // "left" | "right" — for animation hint
+  const total = banners.length;
+
+  const go = useCallback((next) => {
+    if (next < 0 || next >= total) return;
+    setDir(next > current ? "right" : "left");
+    setCurrent(next);
+  }, [current, total]);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape")      onClose();
+      if (e.key === "ArrowRight")  go(current + 1);
+      if (e.key === "ArrowLeft")   go(current - 1);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose, go, current]);
+
+  const banner = banners[current];
+  if (!banner) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col" style={{ backgroundColor: "rgba(0,0,0,0.95)" }}>
+
+      {/* ── Admin header ── */}
+      <div className="flex items-center justify-between px-5 py-3 border-b border-white/10 flex-shrink-0 bg-black/70 backdrop-blur">
+        <div className="flex items-center gap-3">
+          <p className="text-sm font-semibold text-white">พรีวิว Banner ทั้งหมด</p>
+          <span className="rounded-full bg-white/10 px-3 py-0.5 text-xs font-mono text-white/70">
+            {current + 1} / {total}
+          </span>
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${banner.status === "active" ? "bg-emerald-500/80 text-white" : "bg-gray-500/70 text-white"}`}>
+            {banner.status === "active" ? "Active" : "Hidden"}
+          </span>
+          <span className="text-xs text-white/40 font-mono">{banner.id}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] text-white/30 hidden sm:block">← → เพื่อเปลี่ยนสไลด์ · Esc ปิด</span>
+          <button onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-white/60 hover:text-white hover:bg-white/10 transition-colors">
+            <XIcon />
+          </button>
+        </div>
+      </div>
+
+      {/* ── Fake nav ── */}
+      <div className="h-14 bg-white flex-shrink-0 border-b border-gray-200 flex items-center px-8 gap-6">
+        <div className="w-20 h-4 rounded bg-gray-200" />
+        <div className="flex-1" />
+        {[80, 64, 72, 56].map((w, i) => (
+          <div key={i} className="h-3 rounded bg-gray-100" style={{ width: w }} />
+        ))}
+        <div className="w-20 h-7 rounded-lg bg-gray-200" />
+      </div>
+
+      {/* ── Banner area (slider) ── */}
+      <div className="relative flex-1 overflow-hidden bg-slate-900">
+        {/* Slide */}
+        <div key={`${banner.id}-${current}`}
+          className="absolute inset-0"
+          style={{ animation: "fadeIn 0.35s ease" }}>
+          <BannerSlide banner={banner} pubNews={pubNews} />
+        </div>
+
+        {/* Left arrow */}
+        <button
+          onClick={() => go(current - 1)}
+          disabled={current === 0}
+          className="absolute left-4 top-1/2 -translate-y-1/2 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm transition hover:bg-black/70 disabled:opacity-20 disabled:cursor-not-allowed text-xl font-bold">
+          ‹
+        </button>
+
+        {/* Right arrow */}
+        <button
+          onClick={() => go(current + 1)}
+          disabled={current === total - 1}
+          className="absolute right-4 top-1/2 -translate-y-1/2 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm transition hover:bg-black/70 disabled:opacity-20 disabled:cursor-not-allowed text-xl font-bold">
+          ›
+        </button>
+
+        {/* Dots */}
+        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2">
+          {banners.map((b, i) => (
+            <button key={b.id} onClick={() => go(i)}
+              title={`Banner ${i + 1}`}
+              className={`rounded-full transition-all duration-300 ${i === current ? "w-8 h-3 bg-white shadow-lg" : "w-3 h-3 bg-white/40 hover:bg-white/70"}`} />
+          ))}
+        </div>
+      </div>
+
+      {/* ── Stub below ── */}
+      <div className="h-10 bg-[#f5f5f5] flex-shrink-0 flex items-center justify-center">
+        <p className="text-[11px] text-gray-400">— เนื้อหาหน้า Home ด้านล่าง —</p>
+      </div>
+
+      <style>{`@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }`}</style>
+    </div>
+  );
+}
+
 // ── BannerCard ─────────────────────────────────────────────────
-function BannerCard({ banner, index, total, onEdit, onDelete, onToggle, onMoveUp, onMoveDown, pubNews }) {
+function BannerCard({ banner, index, total, onEdit, onDelete, onToggle, onMoveUp, onMoveDown, onPreview, pubNews }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const layoutCfg = LAYOUT_CONFIG[banner.layout] ?? { label: banner.layout, color: "bg-gray-100 text-gray-600 border-gray-200" };
   const isActive  = banner.status === "active";
@@ -776,7 +959,7 @@ function BannerCard({ banner, index, total, onEdit, onDelete, onToggle, onMoveUp
           </div>
         </div>
 
-        <div className="absolute top-3 left-3 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-xs font-bold text-white backdrop-blur-sm">
+        <div className="absolute top-3 left-3 flex h-10 w-10 items-center justify-center rounded-full bg-primary text-base font-black text-white shadow-lg ring-2 ring-white/40 ring-offset-1 ring-offset-black/30">
           {index + 1}
         </div>
         <div className="absolute top-3 right-3">
@@ -802,11 +985,19 @@ function BannerCard({ banner, index, total, onEdit, onDelete, onToggle, onMoveUp
             <button onClick={onMoveDown} disabled={index === total - 1}
               className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted hover:border-primary hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm">↓</button>
             <button onClick={onToggle}
-              className={`flex-1 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${isActive ? "border-amber-200 text-amber-600 hover:bg-amber-50" : "border-emerald-200 text-emerald-600 hover:bg-emerald-50"}`}>
+              className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${isActive ? "border-amber-200 text-amber-600 hover:bg-amber-50" : "border-emerald-200 text-emerald-600 hover:bg-emerald-50"}`}>
               {isActive ? "ซ่อน" : "แสดง"}
             </button>
+            <button onClick={onPreview}
+              className="flex items-center gap-1 rounded-lg border border-sky-200 px-2.5 py-1.5 text-xs font-medium text-sky-600 hover:bg-sky-50 transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              พรีวิว
+            </button>
             <button onClick={() => onEdit(banner)}
-              className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted hover:border-primary hover:text-primary transition-colors">แก้ไข</button>
+              className="rounded-lg border border-border px-2.5 py-1.5 text-xs font-medium text-muted hover:border-primary hover:text-primary transition-colors">แก้ไข</button>
             <button onClick={() => setConfirmDelete(true)}
               className="flex h-8 w-8 items-center justify-center rounded-lg border border-red-200 text-red-400 hover:bg-red-50 transition-colors">
               <XIcon />
@@ -832,6 +1023,7 @@ export default function BannerListClient() {
   const { news: allNews } = useNews();
   const pubNews = publishedNews(allNews);
   const [modal, setModal] = useState(null);
+  const [previewIndex, setPreviewIndex] = useState(null); // null = ปิด, number = index ใน displayed
   const [filterStatus, setFilterStatus] = useState("");
 
   const displayed = banners
@@ -912,7 +1104,19 @@ export default function BannerListClient() {
             </button>
           ))}
         </div>
-        <button onClick={() => setModal({ mode: "add" })} className="btn-primary whitespace-nowrap">+ เพิ่ม Banner</button>
+        <div className="flex gap-2">
+          {displayed.length > 0 && (
+            <button onClick={() => setPreviewIndex(0)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-sky-200 bg-sky-50 px-4 py-1.5 text-sm font-medium text-sky-700 hover:bg-sky-100 transition-colors whitespace-nowrap">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              พรีวิวทั้งหมด
+            </button>
+          )}
+          <button onClick={() => setModal({ mode: "add" })} className="btn-primary whitespace-nowrap">+ เพิ่ม Banner</button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -942,6 +1146,7 @@ export default function BannerListClient() {
               onToggle={() => handleToggle(banner)}
               onMoveUp={() => handleMoveUp(banner)}
               onMoveDown={() => handleMoveDown(banner)}
+              onPreview={() => setPreviewIndex(i)}
             />
           ))}
         </div>
@@ -952,6 +1157,15 @@ export default function BannerListClient() {
           item={modal.item}
           onClose={() => setModal(null)}
           onSave={handleSave}
+        />
+      )}
+
+      {previewIndex !== null && (
+        <AllBannersPreviewModal
+          banners={displayed}
+          initialIndex={previewIndex}
+          onClose={() => setPreviewIndex(null)}
+          pubNews={pubNews}
         />
       )}
     </div>
