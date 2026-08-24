@@ -113,7 +113,7 @@ function HeroContent({ slide, animating, onPause, onResume }: ContentProps) {
   return (
     <div
       key={slide.id}
-      className={`max-w-2xl transition-all duration-500 ${acont} ${animating ? "translate-x-4 opacity-0" : "translate-x-0 opacity-100"}`}
+      className={`w-full transition-all duration-500 ${animating ? "translate-x-4 opacity-0" : "translate-x-0 opacity-100"}`}
     >
       {slide.eyebrow && (
         <p className={`mb-4 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-white/70 ${ta === "right" ? "flex-row-reverse" : ""} ${ta === "center" ? "justify-center w-full" : ""}`}>
@@ -124,7 +124,7 @@ function HeroContent({ slide, animating, onPause, onResume }: ContentProps) {
       <h1 className={`font-extrabold leading-tight tracking-tight ${HEADLINE_CLS[slide.textSize ?? "sm"]} ${atxt}`}>
         {slide.headline}
       </h1>
-      {slide.body && <p className={`mt-4 text-white/80 max-w-2xl ${BODY_CLS[slide.textSize ?? "sm"]} ${atxt}`}>{slide.body}</p>}
+      {slide.body && <p className={`mt-4 text-white/80 ${BODY_CLS[slide.textSize ?? "sm"]} ${atxt}`}>{slide.body}</p>}
       <div className={`mt-6 flex flex-wrap gap-3 ${aflex}`}>
         <Link href={slide.ctaHref} className="btn-primary text-base px-6 py-3" onMouseEnter={onPause} onMouseLeave={onResume}>
           {slide.ctaLabel}

@@ -543,8 +543,8 @@ function BannerModal({ item, onClose, onSave }) {
                     ) : isNewsSingle ? (
                       <p className="text-white/50 italic text-2xl">← เลือกข่าวด้านขวาเพื่อดูพรีวิว</p>
                     ) : (
-                      /* HeroContent — ตรงกับ BannerSlider.tsx HeroContent */
-                      <div className={`max-w-2xl ${acont}`}>
+                      /* HeroContent — w-full ตรงกับ BannerSlider.tsx */
+                      <div className="w-full">
                         {(form.eyebrow || true) && (
                           <p className={`mb-4 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-white/70 ${ta === "right" ? "flex-row-reverse" : ""} ${ta === "center" ? "justify-center w-full" : ""}`}>
                             {form.eyebrow && <span className="h-px w-8 bg-white/50" />}
@@ -569,7 +569,7 @@ function BannerModal({ item, onClose, onSave }) {
                           onChange={(v) => set("body", v)}
                           tag="p"
                           placeholder="ข้อความอธิบาย…"
-                          className={`mt-4 text-white/80 max-w-2xl ${bCls} ${atxt}`}
+                          className={`mt-4 text-white/80 ${bCls} ${atxt}`}
                           multiline
                         />
                         <div className={`mt-6 flex flex-wrap gap-3 ${aflex}`}>
@@ -779,8 +779,8 @@ function BannerSlide({ banner, pubNews, animating = false }) {
               <p className="italic text-white/40 text-2xl">ยังไม่ได้เลือกข่าว</p>
             )
           ) : (
-            /* HeroContent */
-            <div className={`max-w-2xl transition-all duration-500 ${acont} ${animating ? "translate-x-4 opacity-0" : "translate-x-0 opacity-100"}`}>
+            /* HeroContent — w-full ตรงกับ BannerSlider.tsx */
+            <div className={`w-full transition-all duration-500 ${animating ? "translate-x-4 opacity-0" : "translate-x-0 opacity-100"}`}>
               {banner.eyebrow && (
                 <p className={`mb-4 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-white/70 ${ta === "right" ? "flex-row-reverse" : ""} ${ta === "center" ? "justify-center w-full" : ""}`}>
                   <span className="h-px w-8 bg-white/50" />
@@ -788,7 +788,7 @@ function BannerSlide({ banner, pubNews, animating = false }) {
                 </p>
               )}
               <h1 className={`font-extrabold leading-tight tracking-tight ${hCls} ${atxt}`}>{banner.headline}</h1>
-              {banner.body && <p className={`mt-4 text-white/80 max-w-2xl ${bCls} ${atxt}`}>{banner.body}</p>}
+              {banner.body && <p className={`mt-4 text-white/80 ${bCls} ${atxt}`}>{banner.body}</p>}
               <div className={`mt-6 flex flex-wrap gap-3 ${aflex}`}>
                 {banner.ctaLabel && <span className="btn-primary text-base px-6 py-3">{banner.ctaLabel}</span>}
                 {banner.secondaryLabel && (
