@@ -35,7 +35,7 @@ const STUDENT_FIELDS = [
   "nationalId","passport","militaryStatus","tel","email","lineId","country",
   "addrThHouseNo","addrThSubdistrict","addrThDistrict","addrThProvince","addrThPostalCode",
   "addrJpPostalCode","addrJpPrefecture","addrJpCity","addrJpStreetAddress","addrJpBuilding",
-  "prevSchool","scholarship","scholarshipTypeId",
+  "prevSchool","scholarship","selfFunded","scholarshipTypeId",
   "bankName","bankBranch","bankAccountNo",
   "departureDateTh","arrivalDateJp","status","note","avatar","createdBy",
 ];

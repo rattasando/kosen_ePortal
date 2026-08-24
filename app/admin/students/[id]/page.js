@@ -635,6 +635,11 @@ function ProfileHeroCard({ d, editing }) {
                                 {scholarshipLabel(d.scholarship)}
                             </span>
                         )}
+                        {d.selfFunded && (
+                            <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
+                                💰 จ่ายเอง
+                            </span>
+                        )}
                         {/* Universities from enrollments */}
                         {(d.enrollments ?? []).filter(e => e.university).map((e, i) => (
                             <span key={i} className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-muted px-2.5 py-0.5 text-xs text-muted">
@@ -708,11 +713,25 @@ function EditHeroCard({ form, setForm, student, isValid, saving, onCancel }) {
                                 <option value="">-- ไม่ระบุ --</option>
                                 {SCHOLARSHIPS.map(s => <option key={s} value={s}>{scholarshipLabel(s)}</option>)}
                             </select>
+                            <label className="mt-2 flex cursor-pointer items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    checked={!!form.selfFunded}
+                                    onChange={(e) => setForm(prev => ({ ...prev, selfFunded: e.target.checked }))}
+                                    className="h-3.5 w-3.5 rounded border-border accent-amber-500"
+                                />
+                                <span className="text-xs text-muted">จ่ายค่าเรียนเอง</span>
+                            </label>
                             {form.scholarship && (
-                                <div className="mt-1.5">
+                                <div className="mt-1 flex flex-wrap gap-1">
                                     <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${SCHOLARSHIP_COLOR[form.scholarship] ?? "bg-gray-100 text-gray-600 border-gray-200"}`}>
                                         {scholarshipLabel(form.scholarship)}
                                     </span>
+                                    {form.selfFunded && (
+                                        <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                                            💰 จ่ายเอง
+                                        </span>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -1007,6 +1026,22 @@ function StudentDetail({ student, students, updateStudent, deleteStudent, histor
                                                 <option value="">-- ไม่ระบุ --</option>
                                                 {SCHOLARSHIPS.map(s => <option key={s} value={s}>{scholarshipLabel(s)}</option>)}
                                             </select>
+                                            {editing && (
+                                                <label className="mt-2 flex cursor-pointer items-center gap-2">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={!!form.selfFunded}
+                                                        onChange={(e) => setForm(prev => ({ ...prev, selfFunded: e.target.checked }))}
+                                                        className="h-3.5 w-3.5 rounded border-border accent-amber-500"
+                                                    />
+                                                    <span className="text-xs text-muted">จ่ายค่าเรียนเอง</span>
+                                                </label>
+                                            )}
+                                            {!editing && form.selfFunded && (
+                                                <span className="mt-1 inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                                                    💰 จ่ายเอง
+                                                </span>
+                                            )}
                                         </EField>
                                     </div>
                                     <div className="grid gap-4 sm:grid-cols-3">

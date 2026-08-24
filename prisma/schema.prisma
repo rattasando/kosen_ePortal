@@ -175,6 +175,7 @@ model Student {
   prevSchool          String?   @map("prev_school") @db.VarChar(200)
 
   scholarship         String?   @db.VarChar(100)
+  selfFunded          Boolean   @default(false) @map("self_funded")
   scholarshipTypeId   String?   @map("scholarship_type_id") @db.VarChar(20)
 
   bankName            String?   @map("bank_name") @db.VarChar(100)
