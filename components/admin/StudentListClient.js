@@ -539,6 +539,13 @@ const STATUS_CONFIG = {
 };
 const ALL_STATUSES = ["ทั้งหมด", ...Object.keys(STATUS_CONFIG)];
 
+// ── ชื่อแสดงของทุน ───────────────────────────────────────────
+const SCHOLARSHIP_LABEL = {
+  "ทุน 2 ปี": "ทุน 2 ปี (advance course)",
+  "ทุน 3 ปี": "ทุน 3 ปี (transfer)",
+};
+const scholarshipLabel = (val) => SCHOLARSHIP_LABEL[val] ?? val;
+
 // ── StatusBadge ─────────────────────────────────────────────
 function StatusBadge({ status }) {
   const cfg = STATUS_CONFIG[status] ?? {
@@ -1630,7 +1637,7 @@ export default function StudentListClient() {
           >
             {scholarships.map((s) => (
               <option key={s} value={s}>
-                {s === "ทั้งหมด" ? "🏆 ทุนทั้งหมด" : s}
+                {s === "ทั้งหมด" ? "🏆 ทุนทั้งหมด" : scholarshipLabel(s)}
               </option>
             ))}
           </select>
@@ -1756,7 +1763,7 @@ export default function StudentListClient() {
               }}
               className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-primary hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors"
             >
-              🏆 {filterScholarship}
+              🏆 {scholarshipLabel(filterScholarship)}
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 className="h-3.5 w-3.5"
@@ -1933,7 +1940,7 @@ export default function StudentListClient() {
                   </span>
                   {s.scholarship && (
                     <span className="inline-flex items-center rounded-full bg-violet-50 border border-violet-200 px-2 py-0.5 text-[10px] font-semibold text-violet-700 whitespace-nowrap shrink-0">
-                      {s.scholarship}
+                      {scholarshipLabel(s.scholarship)}
                     </span>
                   )}
                 </div>
