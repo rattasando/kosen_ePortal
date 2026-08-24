@@ -511,17 +511,18 @@ function BannerModal({ item, onClose, onSave }) {
                   </div>
                 )}
 
-                {/* Content area — matches page-container */}
-                <div className="absolute inset-0 flex items-end text-white" style={{ pointerEvents: "none" }}>
-                  <div style={{ width: "100%", maxWidth: "1152px", margin: "0 auto", padding: "0 32px 64px", pointerEvents: "auto" }}>
+                {/* Content area — ตรงกับโครงสร้าง BannerSlider.tsx ทุก class */}
+                <div className="absolute inset-0 z-10 flex items-end text-white" style={{ pointerEvents: "none" }}>
+                  <div className="page-container w-full pb-16" style={{ pointerEvents: "auto" }}>
                     {isNewsSingle && selectedNews ? (
-                      <>
+                      /* NewsSingleContent — ตรงกับ BannerSlider.tsx NewsSingleContent */
+                      <div className="w-full">
                         <div className="flex items-center gap-3 mb-4">
                           <span className={`rounded-full px-4 py-1.5 text-base font-bold ${selectedNews.catColor}`}>{selectedNews.category}</span>
                           <time className="text-lg font-bold text-white/90 rounded-full bg-black/30 backdrop-blur-sm px-3 py-1">{formatDate(selectedNews.publishedAt)}</time>
                         </div>
                         <div className="flex items-end justify-between gap-10">
-                          <div className="min-w-0 flex-1">
+                          <div className="min-w-0">
                             <EditableField
                               value={form.headline?.trim() || selectedNews.title}
                               onChange={(v) => set("headline", v)}
@@ -538,20 +539,23 @@ function BannerModal({ item, onClose, onSave }) {
                             className="btn-primary inline-flex shrink-0 text-base px-6 py-3 cursor-text"
                           />
                         </div>
-                      </>
+                      </div>
                     ) : isNewsSingle ? (
                       <p className="text-white/50 italic text-2xl">← เลือกข่าวด้านขวาเพื่อดูพรีวิว</p>
                     ) : (
-                      <div style={{ maxWidth: "42rem" }} className={acont}>
-                        <p className={`mb-4 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-white/70 ${ta === "right" ? "flex-row-reverse" : ""} ${ta === "center" ? "justify-center w-full" : ""}`}>
-                          {form.eyebrow && <span className="h-px w-8 bg-white/50 flex-shrink-0" />}
-                          <EditableField
-                            value={form.eyebrow ?? ""}
-                            onChange={(v) => set("eyebrow", v)}
-                            tag="span"
-                            placeholder="คลิกเพื่อเพิ่ม eyebrow…"
-                          />
-                        </p>
+                      /* HeroContent — ตรงกับ BannerSlider.tsx HeroContent */
+                      <div className={`max-w-2xl ${acont}`}>
+                        {(form.eyebrow || true) && (
+                          <p className={`mb-4 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-white/70 ${ta === "right" ? "flex-row-reverse" : ""} ${ta === "center" ? "justify-center w-full" : ""}`}>
+                            {form.eyebrow && <span className="h-px w-8 bg-white/50" />}
+                            <EditableField
+                              value={form.eyebrow ?? ""}
+                              onChange={(v) => set("eyebrow", v)}
+                              tag="span"
+                              placeholder="คลิกเพื่อเพิ่ม eyebrow…"
+                            />
+                          </p>
+                        )}
                         <EditableField
                           value={form.headline ?? ""}
                           onChange={(v) => set("headline", v)}
@@ -565,7 +569,7 @@ function BannerModal({ item, onClose, onSave }) {
                           onChange={(v) => set("body", v)}
                           tag="p"
                           placeholder="ข้อความอธิบาย…"
-                          className={`mt-4 text-white/80 ${bCls} ${atxt}`}
+                          className={`mt-4 text-white/80 max-w-2xl ${bCls} ${atxt}`}
                           multiline
                         />
                         <div className={`mt-6 flex flex-wrap gap-3 ${aflex}`}>
@@ -582,7 +586,7 @@ function BannerModal({ item, onClose, onSave }) {
                               onChange={(v) => set("secondaryLabel", v)}
                               tag="span"
                               placeholder="ปุ่มรอง…"
-                              className="inline-flex items-center rounded-xl border border-white/30 px-6 py-3 text-base font-semibold text-white cursor-text"
+                              className="inline-flex items-center rounded-xl border border-white/30 px-6 py-3 text-base font-semibold text-white hover:bg-white/10 transition-colors cursor-text"
                             />
                           )}
                         </div>
