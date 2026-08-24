@@ -55,18 +55,18 @@ const XIcon = () => (
   </svg>
 );
 const EyeIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
   </svg>
 );
 const EditIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
   </svg>
 );
 const TrashIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
   </svg>
 );
@@ -505,18 +505,23 @@ export default function NewsListClient() {
       {/* ── Status pills ── */}
       <div className="flex flex-wrap gap-2">
         {[
-          { key: "",          label: "ทั้งหมด",   count: statusCounts.all,       pill: "bg-surface-muted border-border text-foreground" },
-          { key: "published", label: "เผยแพร่",   count: statusCounts.published, pill: "bg-emerald-50 border-emerald-200 text-emerald-700" },
-          { key: "draft",     label: "แบบร่าง",   count: statusCounts.draft,     pill: "bg-amber-50 border-amber-200 text-amber-700" },
-          { key: "archived",  label: "เก็บถาวร",  count: statusCounts.archived,  pill: "bg-gray-50 border-gray-200 text-gray-600" },
-        ].map(({ key, label, count, pill }) => (
+          { key: "",          label: "ทั้งหมด",   count: statusCounts.all,       color: "bg-surface-muted border-border text-foreground",         dot: "bg-gray-400" },
+          { key: "published", label: "เผยแพร่",   count: statusCounts.published, color: "bg-emerald-100 text-emerald-700 border-emerald-200",     dot: "bg-emerald-500" },
+          { key: "draft",     label: "แบบร่าง",   count: statusCounts.draft,     color: "bg-amber-100 text-amber-700 border-amber-200",           dot: "bg-amber-400" },
+          { key: "archived",  label: "เก็บถาวร",  count: statusCounts.archived,  color: "bg-gray-100 text-gray-600 border-gray-200",              dot: "bg-gray-400" },
+        ].map(({ key, label, count, color, dot }) => (
           <button
             key={key}
             onClick={() => setFilterStatus(filterStatus === key ? "" : key)}
-            className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-semibold transition-all ${pill} ${filterStatus === key ? "ring-2 ring-primary/30 ring-offset-1" : "opacity-70 hover:opacity-100"}`}
+            className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-semibold transition-all ${
+              filterStatus === key
+                ? `${color} ring-2 ring-offset-1 ring-current`
+                : "border-border bg-surface text-muted hover:border-primary hover:text-primary"
+            }`}
           >
+            <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
             {label}
-            <span className={`rounded-full px-1.5 py-0.5 text-xs font-semibold ${filterStatus === key ? "bg-primary/10" : "bg-border"}`}>{count}</span>
+            <span className="rounded-full bg-black/10 px-1.5 py-0.5 text-[10px] font-bold">{count}</span>
           </button>
         ))}
       </div>
@@ -660,15 +665,15 @@ export default function NewsListClient() {
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                       <button title="ดูพรีวิวข่าว" onClick={() => setPreview(n)}
-                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-border text-muted hover:border-primary hover:text-primary transition-colors">
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted hover:border-primary hover:text-primary transition-colors">
                         <EyeIcon />
                       </button>
                       <button title="แก้ไข" onClick={() => setModal({ mode: "edit", item: n })}
-                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-border text-muted hover:border-amber-400 hover:text-amber-500 transition-colors">
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted hover:border-amber-400 hover:text-amber-500 transition-colors">
                         <EditIcon />
                       </button>
                       <button title="ลบ" onClick={() => setDelTarget(n)}
-                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-border text-muted hover:border-red-400 hover:text-red-500 transition-colors">
+                        className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted hover:border-red-400 hover:text-red-500 transition-colors">
                         <TrashIcon />
                       </button>
                     </div>
