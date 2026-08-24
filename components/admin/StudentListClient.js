@@ -1940,11 +1940,12 @@ export default function StudentListClient() {
               align: "center",
               width: "44px",
             },
-            { label: "ชื่อ-นามสกุล", width: "17%" },
-            { label: "มหาวิทยาลัย / คณะ", width: "17%" },
+            { label: "ชื่อ-นามสกุล", width: "18%" },
+            { label: "มหาวิทยาลัย / คณะ", width: "16%" },
             { label: "ปี / สาขา", width: "10%" },
-            { label: <span className="whitespace-nowrap">อาศัยอยู่ที่</span>, align: "center", width: "10%" },
-            { label: "ติดต่อ", width: "18%" },
+            { label: "ทุน", align: "center", width: "130px" },
+            { label: <span className="whitespace-nowrap">อาศัยอยู่ที่</span>, align: "center", width: "90px" },
+            { label: "ติดต่อ", width: "15%" },
             { label: "สถานะ", align: "center", width: "110px" },
             { label: "จัดการ", align: "center", width: "115px" },
           ]}
@@ -1970,16 +1971,6 @@ export default function StudentListClient() {
                       terms={activeTerms}
                     />
                   </span>
-                  {s.scholarship && (
-                    <span className="inline-flex items-center rounded-full bg-violet-50 border border-violet-200 px-2 py-0.5 text-[10px] font-semibold text-violet-700 whitespace-nowrap shrink-0">
-                      {scholarshipLabel(s.scholarship)}
-                    </span>
-                  )}
-                  {s.selfFunded && (
-                    <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[10px] font-semibold text-amber-700 whitespace-nowrap shrink-0">
-                      💰 จ่ายเอง
-                    </span>
-                  )}
                 </div>
                 {(s.nameEn || s.lastnameEn) && (
                   <p className="text-xs text-muted/80">
@@ -2035,6 +2026,20 @@ export default function StudentListClient() {
                   >
                     <HighlightText text={pe.major} terms={activeTerms} />
                   </p>
+                )}
+              </div>,
+              <div key="scholarship" className="flex flex-col items-center gap-1">
+                {s.scholarship ? (
+                  <span className="inline-flex items-center rounded-full bg-violet-50 border border-violet-200 px-2 py-0.5 text-[10px] font-semibold text-violet-700 whitespace-nowrap">
+                    {scholarshipLabel(s.scholarship)}
+                  </span>
+                ) : (
+                  <span className="text-muted text-xs">—</span>
+                )}
+                {s.selfFunded && (
+                  <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[10px] font-semibold text-amber-700 whitespace-nowrap">
+                    💰 จ่ายเอง
+                  </span>
                 )}
               </div>,
               <div key="country" className="text-center text-sm">
