@@ -3,6 +3,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import Image from "next/image";
 import { useActivities } from "./contexts/ActivitiesContext";
+import { formatDate, formatDateTime } from "@/lib/utils/newsUtils";
 
 // ── Constants ──────────────────────────────────────────────────
 const TYPES = ["Workshop", "การแข่งขัน", "Career", "สังคม", "สัมมนา", "กีฬา"];
@@ -248,11 +249,11 @@ function ActivityDetail({ item, onClose, onEdit, onDelete }) {
             <p className="mt-1.5 text-sm text-muted leading-relaxed">{item.excerpt}</p>
           </div>
           <div className="space-y-2.5 rounded-xl border border-border p-4">
-            {row("วันที่จัด", item.date)}
+            {row("วันที่จัด", formatDate(item.date))}
             {row("สถานที่", item.location)}
             {row("จัดโดย", item.organizer)}
-            {row("สร้างเมื่อ", item.createdAt)}
-            {row("แก้ไขล่าสุด", item.updatedAt)}
+            {row("สร้างเมื่อ", formatDateTime(item.createdAt))}
+            {row("แก้ไขล่าสุด", formatDateTime(item.updatedAt))}
             {row("ยอดวิว", item.views != null ? `${item.views.toLocaleString()} ครั้ง` : null)}
           </div>
           {item.tags?.length > 0 && (
@@ -723,7 +724,7 @@ export default function ActivitiesListClient() {
                   </td>
                   <td className="px-4 py-3"><TypeBadge type={a.type} /></td>
                   <td className="px-4 py-3 text-xs text-muted">
-                    <p className="font-medium text-foreground">{a.date}</p>
+                    <p className="font-medium text-foreground">{formatDate(a.date)}</p>
                     <p className="mt-0.5 line-clamp-1">{a.location}</p>
                   </td>
                   <td className="px-4 py-3"><StatusBadge status={a.status} /></td>
