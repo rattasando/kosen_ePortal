@@ -210,7 +210,30 @@ async function seedStudents() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// 4. News (with blocks)
+// 4. News Categories
+// ─────────────────────────────────────────────────────────────
+async function seedNewsCategories() {
+  console.log("Seeding news categories...");
+  const categories = [
+    { id: "CAT-001", name: "ความร่วมมือ",       color: "bg-blue-100 text-blue-700",     order: 1 },
+    { id: "CAT-002", name: "กิจกรรม",            color: "bg-violet-100 text-violet-700",  order: 2 },
+    { id: "CAT-003", name: "ทุนการศึกษา",        color: "bg-yellow-100 text-yellow-700",  order: 3 },
+    { id: "CAT-004", name: "ประกาศ",             color: "bg-slate-100 text-slate-700",    order: 4 },
+    { id: "CAT-005", name: "ความสำเร็จ",         color: "bg-teal-100 text-teal-700",      order: 5 },
+    { id: "CAT-006", name: "โครงการแลกเปลี่ยน",  color: "bg-rose-100 text-rose-700",      order: 6 },
+  ];
+  for (const cat of categories) {
+    await (prisma as any).newsCategory.upsert({
+      where: { id: cat.id },
+      update: { name: cat.name, color: cat.color, order: cat.order },
+      create: cat,
+    });
+  }
+  console.log(`  ✓ ${categories.length} news categories`);
+}
+
+// ─────────────────────────────────────────────────────────────
+// 5. News (with blocks)
 // ─────────────────────────────────────────────────────────────
 async function seedNews() {
   console.log("Seeding news...");
@@ -578,6 +601,7 @@ async function main() {
   await seedUsers();
   await seedScholarshipTypes();
   await seedStudents();
+  await seedNewsCategories();
   await seedNews();
   await seedBanners();
   await seedAlumni();

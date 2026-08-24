@@ -2,19 +2,8 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useNews } from "@/components/admin/contexts/NewsContext";
+import { useNewsCategory } from "@/components/admin/contexts/NewsCategoryContext";
 import { publishedNews, formatDate } from "@/lib/utils/newsUtils";
-
-// ── Constants ─────────────────────────────────────────────────────────────────
-
-const CATEGORIES = ["ความร่วมมือ", "กิจกรรม", "ทุนการศึกษา", "ประกาศ", "ความสำเร็จ", "โครงการแลกเปลี่ยน"];
-const CAT_COLORS = {
-  ความร่วมมือ:       "bg-blue-100 text-blue-700",
-  กิจกรรม:           "bg-violet-100 text-violet-700",
-  ทุนการศึกษา:       "bg-amber-100 text-amber-700",
-  ประกาศ:            "bg-slate-100 text-slate-700",
-  ความสำเร็จ:        "bg-emerald-100 text-emerald-700",
-  โครงการแลกเปลี่ยน: "bg-rose-100 text-rose-700",
-};
 
 const STATUS_CONFIG = {
   published: { label: "เผยแพร่",  color: "bg-emerald-100 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
@@ -62,7 +51,7 @@ function slugify(t) {
 
 export function emptyNewsForm() {
   return {
-    title: "", slug: "", category: CATEGORIES[0], catColor: CAT_COLORS[CATEGORIES[0]],
+    title: "", slug: "", category: "", catColor: "",
     excerpt: "", image: "", author: "", tags: [], status: "draft", featured: false, publishedAt: "", blocks: [],
     heroAspect: "21/9", imagePosition: "center",
   };
@@ -462,20 +451,28 @@ function ArticleBlock({ block, index, total, onUpdate, onMove, onDelete }) {
 
 export default function NewsEditor({ item, onSave, onClose }) {
   const isEdit = !!item?.id;
+  const { categories, getCategoryColor } = useNewsCategory();
   const [form, setForm] = useState(() => item
     ? { blocks: [], tags: [], publishedAt: "", excerpt: "", author: "", heroAspect: "21/9", imagePosition: "center", ...item }
     : emptyNewsForm());
   const [errors, setErrors] = useState({});
 
+  // เมื่อ categories โหลดเสร็จและ form ยังไม่มี category ให้เลือก default
+  useEffect(() => {
+    if (!form.category && categories.length > 0) {
+      setForm(f => ({ ...f, category: categories[0].name, catColor: categories[0].color }));
+    }
+  }, [categories]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const set = useCallback((key, val) => {
     setForm(f => {
       const next = { ...f, [key]: val };
       if (key === "title" && !isEdit) next.slug = slugify(val);
-      if (key === "category") next.catColor = CAT_COLORS[val] ?? "";
+      if (key === "category") next.catColor = getCategoryColor(val);
       return next;
     });
     setErrors(e => ({ ...e, [key]: "" }));
-  }, [isEdit]);
+  }, [isEdit, getCategoryColor]);
 
   const addBlock = useCallback((type, afterIndex) => {
     setForm(f => {
@@ -522,7 +519,7 @@ export default function NewsEditor({ item, onSave, onClose }) {
   const titleRef = useAutoResize(form.title);
   const excerptRef = useAutoResize(form.excerpt);
   const blocks = form.blocks ?? [];
-  const catColor = CAT_COLORS[form.category] ?? "bg-gray-100 text-gray-700";
+  const catColor = getCategoryColor(form.category) || "bg-gray-100 text-gray-700";
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-white">
@@ -567,7 +564,7 @@ export default function NewsEditor({ item, onSave, onClose }) {
               <label className="block text-xs font-semibold text-foreground mb-1.5">หมวดหมู่</label>
               <select value={form.category} onChange={(e) => set("category", e.target.value)}
                 className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm outline-none focus:border-primary">
-                {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
               </select>
               <span className={`mt-2 inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${catColor}`}>
                 {form.category}
@@ -866,6 +863,7 @@ function RenderBlock({ block }) {
 
 export function NewsPreview({ item, onClose, onEdit }) {
   const { news: allNews } = useNews();
+  const { getCategoryColor } = useNewsCategory();
   const sidebarNews = useMemo(() => publishedNews(allNews).slice(0, 8), [allNews]);
 
   useEffect(() => {
@@ -874,7 +872,7 @@ export function NewsPreview({ item, onClose, onEdit }) {
     return () => window.removeEventListener("keydown", fn);
   }, [onClose]);
 
-  const catColor = CAT_COLORS[item.category] ?? "bg-gray-100 text-gray-700";
+  const catColor = getCategoryColor(item.category) || "bg-gray-100 text-gray-700";
   const statusCfg = STATUS_CONFIG[item.status] ?? STATUS_CONFIG.draft;
   const blocks = item.blocks ?? [];
   const readMin = estimatedReadTime(item);
@@ -995,7 +993,7 @@ export function NewsPreview({ item, onClose, onEdit }) {
                 <div className="flex flex-col">
                   {sidebarNews.map((n) => {
                     const isActive = n.id === item.id;
-                    const nc = CAT_COLORS[n.category] ?? "bg-gray-100 text-gray-700";
+                    const nc = getCategoryColor(n.category) || "bg-gray-100 text-gray-700";
                     return (
                       <div key={n.id}
                         className={`flex gap-3 items-start py-3 border-b border-border/60 last:border-0 rounded-lg px-2 -mx-2 ${isActive ? "bg-primary/5" : ""}`}>

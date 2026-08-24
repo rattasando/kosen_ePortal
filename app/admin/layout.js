@@ -11,6 +11,7 @@ import { MappingProvider } from "@/components/admin/contexts/MappingContext";
 import { InternshipProvider } from "@/components/admin/contexts/InternshipContext";
 import { UserProvider } from "@/components/admin/contexts/UserContext";
 import { NewsProvider } from "@/components/admin/contexts/NewsContext";
+import { NewsCategoryProvider } from "@/components/admin/contexts/NewsCategoryContext";
 import { ActivitiesProvider } from "@/components/admin/contexts/ActivitiesContext";
 import { ScholarshipTypesProvider } from "@/components/admin/contexts/ScholarshipTypesContext";
 import { BannerProvider } from "@/components/admin/contexts/BannerContext";
@@ -34,6 +35,7 @@ export default function AdminLayout({ children }) {
       <MappingProvider>
       <InternshipProvider>
       <UserProvider>
+      <NewsCategoryProvider>
       <NewsProvider>
       <ActivitiesProvider>
       <ScholarshipTypesProvider>
@@ -59,6 +61,7 @@ export default function AdminLayout({ children }) {
       </ScholarshipTypesProvider>
       </ActivitiesProvider>
       </NewsProvider>
+      </NewsCategoryProvider>
       </UserProvider>
       </InternshipProvider>
       </MappingProvider>

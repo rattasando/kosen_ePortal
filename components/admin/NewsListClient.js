@@ -3,27 +3,9 @@
 import { useState, useMemo, useEffect } from "react";
 import Image from "next/image";
 import { useNews } from "./contexts/NewsContext";
+import { useNewsCategory } from "./contexts/NewsCategoryContext";
 import { formatDate, formatDateTime } from "@/lib/utils/newsUtils";
 import NewsEditor, { emptyNewsForm, NewsPreview } from "./editors/NewsEditor";
-
-// ── Constants ──────────────────────────────────────────────────
-const CATEGORIES = [
-  "ความร่วมมือ",
-  "กิจกรรม",
-  "ทุนการศึกษา",
-  "ประกาศ",
-  "ความสำเร็จ",
-  "โครงการแลกเปลี่ยน",
-];
-
-const CAT_COLORS = {
-  ความร่วมมือ:       "bg-blue-100 text-blue-700",
-  กิจกรรม:           "bg-violet-100 text-violet-700",
-  ทุนการศึกษา:       "bg-yellow-100 text-yellow-700",   // amber → yellow (amber ชนกับ draft)
-  ประกาศ:            "bg-slate-100 text-slate-700",
-  ความสำเร็จ:        "bg-teal-100 text-teal-700",        // emerald → teal (emerald ชนกับ published)
-  โครงการแลกเปลี่ยน: "bg-rose-100 text-rose-700",
-};
 
 const STATUS_CONFIG = {
   published: { label: "เผยแพร่",   color: "bg-emerald-100 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
@@ -94,10 +76,10 @@ function StatusBadge({ status }) {
   );
 }
 
-function CategoryBadge({ category }) {
-  const color = CAT_COLORS[category] ?? "bg-gray-100 text-gray-600";
+function CategoryBadge({ category, color }) {
+  const cls = color ?? "bg-gray-100 text-gray-600";
   return (
-    <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${color}`}>
+    <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold ${cls}`}>
       {category}
     </span>
   );
@@ -240,7 +222,7 @@ function DeleteModal({ title, onConfirm, onCancel }) {
 
 
 // ── NewsDetail (Detail panel) ──────────────────────────────────
-function NewsDetail({ item, onClose, onEdit, onDelete }) {
+function NewsDetail({ item, onClose, onEdit, onDelete, categoryColor }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
@@ -292,7 +274,7 @@ function NewsDetail({ item, onClose, onEdit, onDelete }) {
 
           {/* Title */}
           <div>
-            <CategoryBadge category={item.category} />
+            <CategoryBadge category={item.category} color={categoryColor} />
             <h2 className="mt-2 text-base font-bold text-foreground leading-snug">{item.title}</h2>
             <p className="mt-1.5 text-sm text-muted leading-relaxed">{item.excerpt}</p>
           </div>
@@ -359,6 +341,7 @@ function NewsDetail({ item, onClose, onEdit, onDelete }) {
 // ── Main component ─────────────────────────────────────────────
 export default function NewsListClient() {
   const { news, ready, addNews, updateNews, deleteNews } = useNews();
+  const { categories, getCategoryColor } = useNewsCategory();
 
   // ── Filter state (session-persisted) ─
   const [searchInput, setSearchInput]   = useState("");
@@ -552,7 +535,7 @@ export default function NewsListClient() {
           <label className={labelCls}>หมวดหมู่</label>
           <select value={filterCat} onChange={(e) => setFilterCat(e.target.value)} className={selectCls}>
             <option value="">หมวดหมู่ทั้งหมด</option>
-            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            {categories.map((c) => <option key={c.id} value={c.name}>{c.name}</option>)}
           </select>
         </div>
         <div className="flex flex-col gap-0.5">
@@ -647,7 +630,7 @@ export default function NewsListClient() {
                   </td>
                   {/* Category */}
                   <td className="px-4 py-3">
-                    <CategoryBadge category={n.category} />
+                    <CategoryBadge category={n.category} color={getCategoryColor(n.category)} />
                   </td>
                   {/* Author */}
                   <td className="px-4 py-3 text-xs text-muted whitespace-nowrap">
@@ -727,6 +710,7 @@ export default function NewsListClient() {
           onClose={() => setDetail(null)}
           onEdit={(n) => { setDetail(null); setModal({ mode: "edit", item: n }); }}
           onDelete={(id) => { deleteNews(id); setDetail(null); }}
+          categoryColor={getCategoryColor(detail.category)}
         />
       )}
       {delTarget && (

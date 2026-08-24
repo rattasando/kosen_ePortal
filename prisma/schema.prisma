@@ -420,6 +420,17 @@ model News {
   @@map("news")
 }
 
+model NewsCategory {
+  id        String   @id @db.VarChar(20)
+  name      String   @unique @db.VarChar(100)
+  color     String   @db.VarChar(100)
+  order     Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("news_categories")
+}
+
 model NewsBlock {
   id             String     @id @db.VarChar(20)
   newsId         String     @map("news_id") @db.VarChar(20)
