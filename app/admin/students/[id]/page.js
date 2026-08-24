@@ -1026,22 +1026,23 @@ function StudentDetail({ student, students, updateStudent, deleteStudent, histor
                                                 <option value="">-- ไม่ระบุ --</option>
                                                 {SCHOLARSHIPS.map(s => <option key={s} value={s}>{scholarshipLabel(s)}</option>)}
                                             </select>
-                                            {editing && (
-                                                <label className="mt-2 flex cursor-pointer items-center gap-2">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={!!form.selfFunded}
-                                                        onChange={(e) => setForm(prev => ({ ...prev, selfFunded: e.target.checked }))}
-                                                        className="h-3.5 w-3.5 rounded border-border accent-amber-500"
-                                                    />
-                                                    <span className="text-xs text-muted">จ่ายค่าเรียนเอง</span>
-                                                </label>
-                                            )}
-                                            {!editing && form.selfFunded && (
-                                                <span className="mt-1 inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
-                                                    💰 จ่ายเอง
+                                            <label className={`mt-2 flex items-center gap-2 ${editing ? "cursor-pointer" : "cursor-default"}`}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={!!form.selfFunded}
+                                                    onChange={(e) => editing && setForm(prev => ({ ...prev, selfFunded: e.target.checked }))}
+                                                    disabled={!editing}
+                                                    className="h-3.5 w-3.5 rounded border-border accent-amber-500"
+                                                />
+                                                <span className={`text-xs ${form.selfFunded ? "font-semibold text-amber-700" : "text-muted"}`}>
+                                                    จ่ายค่าเรียนเอง
                                                 </span>
-                                            )}
+                                                {form.selfFunded && (
+                                                    <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                                                        💰
+                                                    </span>
+                                                )}
+                                            </label>
                                         </EField>
                                     </div>
                                     <div className="grid gap-4 sm:grid-cols-3">
