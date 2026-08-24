@@ -4,6 +4,13 @@ import { createContext, useContext, useState, useEffect, useCallback } from "rea
 
 const CompanyContext = createContext(null);
 
+/** Parse JSON และ throw ถ้า response ไม่ ok — กัน error หายไปเงียบๆ */
+async function parseOrThrow(res) {
+  const json = await res.json();
+  if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`);
+  return json;
+}
+
 export function CompanyProvider({ children }) {
   const [companies, setCompanies] = useState([]);
   const [ready, setReady] = useState(false);
@@ -22,7 +29,7 @@ export function CompanyProvider({ children }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(company),
     });
-    const created = await res.json();
+    const created = await parseOrThrow(res);
     setCompanies((prev) => [...prev, created]);
     return created;
   }, []);
@@ -33,7 +40,7 @@ export function CompanyProvider({ children }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    const updated = await res.json();
+    const updated = await parseOrThrow(res);
     setCompanies((prev) => prev.map((c) => (c.id === id ? updated : c)));
     return updated;
   }, []);
