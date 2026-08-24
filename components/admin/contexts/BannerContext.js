@@ -1,8 +1,17 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { BANNER_STORAGE_KEY, BANNER_SEED_KEY, BANNER_SEED_VER } from "@/lib/data/bannerData";
 
 const BannerContext = createContext(null);
+
+// sync ข้อมูล banners ลง localStorage ให้ BannerSlider (หน้าหลัก) อ่านได้ทันที
+function syncToLocalStorage(banners) {
+  try {
+    localStorage.setItem(BANNER_STORAGE_KEY, JSON.stringify(banners));
+    localStorage.setItem(BANNER_SEED_KEY, BANNER_SEED_VER);
+  } catch { /* ignore — SSR / private mode */ }
+}
 
 export function BannerProvider({ children }) {
   const [banners, setBanners] = useState([]);
@@ -11,7 +20,10 @@ export function BannerProvider({ children }) {
   useEffect(() => {
     fetch("/api/banners")
       .then((r) => r.json())
-      .then(setBanners)
+      .then((data) => {
+        setBanners(data);
+        syncToLocalStorage(data); // sync ครั้งแรกตอน load เพื่อให้ homepage ตรงกับ DB
+      })
       .catch(console.error)
       .finally(() => setReady(true));
   }, []);
@@ -23,7 +35,11 @@ export function BannerProvider({ children }) {
       body: JSON.stringify(b),
     });
     const created = await res.json();
-    setBanners((prev) => [...prev, created]);
+    setBanners((prev) => {
+      const next = [...prev, created];
+      syncToLocalStorage(next);
+      return next;
+    });
     return created;
   }, []);
 
@@ -34,17 +50,26 @@ export function BannerProvider({ children }) {
       body: JSON.stringify(data),
     });
     const updated = await res.json();
-    setBanners((prev) => prev.map((b) => (b.id === id ? updated : b)));
+    setBanners((prev) => {
+      const next = prev.map((b) => (b.id === id ? updated : b));
+      syncToLocalStorage(next);
+      return next;
+    });
     return updated;
   }, []);
 
   const deleteBanner = useCallback(async (id) => {
     await fetch(`/api/banners/${id}`, { method: "DELETE" });
-    setBanners((prev) => prev.filter((b) => b.id !== id));
+    setBanners((prev) => {
+      const next = prev.filter((b) => b.id !== id);
+      syncToLocalStorage(next);
+      return next;
+    });
   }, []);
 
   const reorder = useCallback(async (ordered) => {
     setBanners(ordered);
+    syncToLocalStorage(ordered);
     await fetch("/api/banners/reorder", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
