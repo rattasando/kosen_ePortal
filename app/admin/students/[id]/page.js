@@ -79,6 +79,11 @@ const SCHOLARSHIP_COLOR = {
     "ทุน 5 ปี": "bg-emerald-50 text-emerald-700 border-emerald-200",
     "ทุน จภ.":  "bg-violet-50 text-violet-700 border-violet-200",
 };
+const SCHOLARSHIP_LABEL = {
+    "ทุน 2 ปี": "ทุน 2 ปี (advance course)",
+    "ทุน 3 ปี": "ทุน 3 ปี (transfer)",
+};
+const scholarshipLabel = (val) => SCHOLARSHIP_LABEL[val] ?? val;
 
 const MAX_ENROLLMENTS = 4;
 const EMPTY_ENROLLMENT = { university: "", studentId: "", univEmail: "", faculty: "", department: "", major: "", year: "", advisor: "", project: "", startDate: "", endDate: "" };
@@ -627,7 +632,7 @@ function ProfileHeroCard({ d, editing }) {
                         {/* Scholarship */}
                         {d.scholarship && (
                             <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${SCHOLARSHIP_COLOR[d.scholarship] ?? "bg-gray-100 text-gray-600 border-gray-200"}`}>
-                                {d.scholarship}
+                                {scholarshipLabel(d.scholarship)}
                             </span>
                         )}
                         {/* Universities from enrollments */}
@@ -701,12 +706,12 @@ function EditHeroCard({ form, setForm, student, isValid, saving, onCancel }) {
                             <label className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-muted">ทุนการศึกษา</label>
                             <select value={form.scholarship ?? ""} onChange={set("scholarship")} className={selectCls}>
                                 <option value="">-- ไม่ระบุ --</option>
-                                {SCHOLARSHIPS.map(s => <option key={s}>{s}</option>)}
+                                {SCHOLARSHIPS.map(s => <option key={s} value={s}>{scholarshipLabel(s)}</option>)}
                             </select>
                             {form.scholarship && (
                                 <div className="mt-1.5">
                                     <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${SCHOLARSHIP_COLOR[form.scholarship] ?? "bg-gray-100 text-gray-600 border-gray-200"}`}>
-                                        {form.scholarship}
+                                        {scholarshipLabel(form.scholarship)}
                                     </span>
                                 </div>
                             )}
@@ -1000,7 +1005,7 @@ function StudentDetail({ student, students, updateStudent, deleteStudent, histor
                                         <EField label="ทุนการศึกษา">
                                             <select value={form.scholarship ?? ""} onChange={set("scholarship")} disabled={!editing} className={sCls}>
                                                 <option value="">-- ไม่ระบุ --</option>
-                                                {SCHOLARSHIPS.map(s => <option key={s}>{s}</option>)}
+                                                {SCHOLARSHIPS.map(s => <option key={s} value={s}>{scholarshipLabel(s)}</option>)}
                                             </select>
                                         </EField>
                                     </div>
