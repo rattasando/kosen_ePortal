@@ -61,14 +61,18 @@ function parseCSVLine(line) {
 }
 function parseCSV(text) {
   const lines = text.replace(/\r\n/g,"\n").replace(/\r/g,"\n").split("\n").filter(Boolean);
-  if (lines.length < 2) return [];
-  const headers = parseCSVLine(lines[0]);
-  return lines.slice(1).map((line) => {
+  if (lines.length < 2) return { error: "ไฟล์ว่างหรือไม่มีข้อมูล" };
+  const headers = parseCSVLine(lines[0]).map(h => h.trim());
+  const missing = ["id", "name"].filter(r => !headers.includes(r));
+  if (missing.length) return { error: `ไม่พบคอลัมน์ที่จำเป็น: ${missing.join(", ")}` };
+  const rows = lines.slice(1).map((line) => {
     const vals = parseCSVLine(line); const obj = {};
-    headers.forEach((h, i) => { obj[h.trim()] = (vals[i] ?? "").trim(); });
+    headers.forEach((h, i) => { obj[h] = (vals[i] ?? "").trim(); });
     if (obj.openPositions) obj.openPositions = parseInt(obj.openPositions, 10) || 0;
     return obj;
-  });
+  }).filter(r => r.id?.trim() && r.name?.trim());
+  if (!rows.length) return { error: "ไม่พบข้อมูลบริษัทที่ถูกต้อง (ต้องมีทั้ง id และ name)" };
+  return { rows };
 }
 
 // ── Filter persistence ─────────────────────────────────────────────────────────
@@ -155,12 +159,13 @@ function ImportModal({ onClose, onImport }) {
 
   const handleFile = (file) => {
     if (!file) return;
+    if (!file.name.endsWith(".csv")) { setError("กรุณาเลือกไฟล์ .csv เท่านั้น"); return; }
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const parsed = parseCSV(e.target.result);
-        if (!parsed.length) { setError("ไม่พบข้อมูลในไฟล์"); return; }
-        setRows(parsed); setError("");
+        const result = parseCSV(e.target.result);
+        if (result.error) { setError(result.error); return; }
+        setRows(result.rows); setError("");
       } catch { setError("ไม่สามารถอ่านไฟล์ได้"); }
     };
     reader.readAsText(file, "UTF-8");
@@ -183,6 +188,10 @@ function ImportModal({ onClose, onImport }) {
               <p className="text-sm font-medium text-foreground">ลากไฟล์ CSV มาวาง หรือคลิกเพื่อเลือก</p>
               <p className="text-xs text-muted">รองรับไฟล์ .csv เท่านั้น (UTF-8 หรือ UTF-8 BOM)</p>
               <input type="file" accept=".csv" className="hidden" onChange={(e) => handleFile(e.target.files[0])} />
+              <div className="mt-1 rounded-lg bg-surface-muted px-4 py-2 text-left text-xs text-muted">
+                <p className="font-semibold text-foreground mb-0.5">คอลัมน์บังคับ: <span className="text-red-500">id, name</span></p>
+                <p className="font-mono">{CSV_HEADERS.join(", ")}</p>
+              </div>
             </div>
           ) : (
             <div className="space-y-3">

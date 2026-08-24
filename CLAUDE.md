@@ -248,8 +248,47 @@ onCellClick={(e, i, j) => {
 
 ## Context Providers
 ทุก context ใน `components/admin/contexts/` ดึงข้อมูลจาก API แล้ว (ไม่ใช้ localStorage)
-- ยกเว้น: `MappingContext`, `LanguageContext`, `PageTitleContext` (UI state เท่านั้น)
+- ยกเว้น: `LanguageContext`, `PageTitleContext` (UI state เท่านั้น)
+- `MappingContext` migrate จาก localStorage → `/api/mappings` แล้ว (ดู Marketplace section)
 - Pattern: fetch **ทั้งตาราง** ครั้งเดียวตอน mount (`useEffect` ว่าง deps) เก็บใน state แล้ว filter/search/sort ฝั่ง client ทั้งหมด (ดู `StudentContext.js` + `StudentListClient.js`) — **เป็นการตัดสินใจตั้งใจ ไม่ใช่ bug**: วัดจริงที่ 100 students ≈ 143KB/25ms, ประมาณการที่ 1,000 students ≈ 1.4MB ยังรับได้สบายสำหรับ admin tool ภายใน ไม่ต้องรีบเปลี่ยนเป็น server-side search+pagination จนกว่าจะเกิน ~3,000-5,000 rows
+
+## Marketplace (`/admin/marketplace/`)
+
+### Job Positions (`/api/jobs`, `JobListClient.js`)
+- CRUD ผ่าน `JobContext` → `/api/jobs` + `/api/jobs/[id]`
+- ID รูปแบบ `JOB-NNN` — **auto-generate** ในหน้าสร้างใหม่ (`nextJobId(jobs)` ใน `useMemo`) ผู้ใช้ไม่ต้องกรอกเอง
+- ID **read-only** ในหน้าแก้ไข (ไม่สามารถเปลี่ยนได้)
+- ตาราง `AdminTable` มีคอลัมน์: ☐ | ตำแหน่งงาน (200px) | สาขา (130px) | เงินเดือน (110px) | บริษัท/ที่ตั้ง (175px) | ประเภท/ระยะเวลา (120px) | สมัคร/รับ (96px) | ปิดรับ (102px) | สถานะ (108px) | จัดการ (115px)
+
+### Applications — Mapping (`/api/mappings`, `MappingListClient.js`)
+- ใช้ Prisma model **`JobApplication`** (table: `job_applications`)
+- API: `GET/POST /api/mappings`, `GET/PUT/DELETE /api/mappings/[id]`
+- ID รูปแบบ `MAP-NNN` — auto-generate ฝั่ง server
+- `MappingContext` ดึงข้อมูลจาก API (migrate จาก localStorage แล้ว)
+- ตาราง `AdminTable`: ☐ | นักเรียน (180px) | ตำแหน่งงาน (200px) | ประเภท/สาขา (140px) | วันที่สมัคร (110px) | สถานะ (170px) | จัดการ (115px)
+- คอลัมน์นักเรียนแสดง: รหัส + ชื่อ + badge สถาบัน (สีแยก KMUTT/KMITL/Chulabhorn) + สาขา/ปี จาก enrollment ปัจจุบัน (`endDate == null`)
+
+## CSV Import/Export
+
+### คอลัมน์บังคับแต่ละโมดูล
+
+| โมดูล | คอลัมน์บังคับ | หมายเหตุ |
+|-------|-------------|---------|
+| Students | `nationalId` | จับคู่กับ record ที่มีอยู่ หรือสร้างใหม่ |
+| Job Positions | `id`, `title` | |
+| Applications | `studentId`, `jobId` | |
+| Companies | `id`, `name` | กรองแถวที่ขาด id/name ออกอัตโนมัติ |
+
+### Students CSV Headers (49 คอลัมน์)
+`no.` `prefix` `name` `lastname` `prefixEn` `nameEn` `lastnameEn` `nickname` `gender` `dob` `nationalId` `passport` `militaryStatus`
+`enroll1_university` `enroll1_studentId` `enroll1_email` `enroll1_faculty` `enroll1_department` `enroll1_major` `enroll1_year` `enroll1_advisor` `enroll1_project` (×3 ชุด: enroll1/2/3)
+`prevSchool` `scholarship` `tel` `email` `lineId` `country`
+`addr_th_houseNo` `addr_th_subdistrict` `addr_th_district` `addr_th_province` `addr_th_postalCode`
+`addr_jp_postalCode` `addr_jp_prefecture` `addr_jp_city` `addr_jp_street` `addr_jp_building`
+`bankName` `bankBranch` `bankAccountNo` `departureDateTH` `arrivalDateJP` `status` `note`
+
+### Applications CSV Export — คอลัมน์อ่านอย่างเดียว
+Export มี `studentName`, `jobTitle`, `companyName` เพิ่มมาด้วย แต่ **import ไม่รับ** 3 คอลัมน์นี้ (เป็นแค่ข้อมูลอ้างอิง)
 
 ## Public Pages
 `app/(public)/` — marketplace และ homepage ยังใช้ localStorage อยู่ (ยังไม่ได้ migrate)
