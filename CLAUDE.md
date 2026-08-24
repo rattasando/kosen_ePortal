@@ -297,6 +297,44 @@ Export มี `studentName`, `jobTitle`, `companyName` เพิ่มมาด�
 - Banner: `POST /api/upload/banner` → เก็บที่ `public/banners/`
 - Splash: `POST /api/upload/splash` → เก็บที่ `public/splash/`
 
+## Banner (`/admin/information/banner`)
+
+### Data flow — สำคัญมาก
+`BannerContext` (admin) อ่าน/เขียน **PostgreSQL** ผ่าน `/api/banners`
+`BannerSlider.tsx` (หน้าหลัก) อ่านจาก **localStorage** (`kosen_banners`)
+→ ทั้งสองต้องตรงกัน: `BannerContext` จึง sync ลง localStorage ทุก operation (load/add/update/delete/reorder) ผ่าน `syncToLocalStorage()` ใน `BannerContext.js`
+
+### Banner PUT — whitelist field
+`PUT /api/banners/[id]` ต้องกรอง field ด้วย `BANNER_FIELDS` array ก่อนส่ง Prisma
+เหมือน Student PUT — form ตอน edit มี `createdAt`, `updatedAt`, `id`, relation fields ติดมา → Prisma reject
+```js
+const BANNER_FIELDS = [
+  "layout", "eyebrow", "headline", "body", "badge",
+  "newsId", "activityId", "ctaLabel", "ctaHref",
+  "secondaryLabel", "secondaryHref", "image", "imagePosition",
+  "textSize", "textAlign", "status", "order",
+];
+const data = Object.fromEntries(
+  BANNER_FIELDS.filter((k) => k in body).map((k) => [k, body[k]])
+);
+```
+
+### Preview (AllBannersPreviewModal)
+- แสดงเฉพาะ banner ที่ `status === "active"` เหมือนหน้าหลักจริง
+- กด ‹ › หรือ ← → keyboard เพื่อเปลี่ยน slide, Esc ปิด
+- Dots ด้านล่าง กดได้
+- ปุ่ม "พรีวิว" บนแต่ละ card เปิด slider ที่ slide นั้นเลย
+- ปุ่ม "พรีวิวทั้งหมด" ใน toolbar เปิดที่ slide แรก
+
+### Preview vs หน้าหลัก — ให้ตรงกัน
+`BannerSlide` (preview) และ `HeroContent` ใน `BannerSlider.tsx` ต้องใช้ class เดียวกันทุกจุด:
+- Container: `w-full` (ไม่ใช่ `max-w-2xl`) — text เต็มแบนเนอร์
+- Layout: `page-container w-full pb-16` + `z-10` สำหรับ content wrapper
+- news-single: `<div className="w-full">` ห่อ content, `<div className="min-w-0">` ห่อ h1 (ไม่มี `flex-1`)
+- Arrows: `h-14 w-14 text-3xl` hover สีขาว → primary
+- Dots: `bottom-4`, `h-3 w-8 bg-white` active, `h-3 w-3 bg-white/40` inactive
+- Animation: 400ms `translate-x-4 opacity-0` → `translate-x-0 opacity-100`
+
 ## ยังไม่ได้ทำ (Remaining)
 - API Authentication (ทุก route ยังไม่ได้ protect)
 - Role-based access control
