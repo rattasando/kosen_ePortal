@@ -615,7 +615,7 @@ export default function NewsListClient() {
                 <tr
                   key={n.id}
                   className="hover:bg-surface-muted/60 transition-colors cursor-pointer"
-                  onClick={() => setDetail(n)}
+                  onClick={() => setPreview(n)}
                 >
                   {/* Thumbnail */}
                   <td className="px-4 py-3">
