@@ -1,9 +1,13 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useSession } from "next-auth/react";
 import { useNews } from "@/components/admin/contexts/NewsContext";
 import { useNewsCategory } from "@/components/admin/contexts/NewsCategoryContext";
 import { publishedNews, formatDate } from "@/lib/utils/newsUtils";
+
+// ── localStorage key สำหรับจำชื่อผู้เขียนล่าสุด ──────────────────────────────
+const LAST_AUTHOR_KEY = "news-last-author";
 
 const STATUS_CONFIG = {
   published: { label: "เผยแพร่",  color: "bg-emerald-100 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
@@ -452,6 +456,7 @@ function ArticleBlock({ block, index, total, onUpdate, onMove, onDelete }) {
 export default function NewsEditor({ item, onSave, onClose }) {
   const isEdit = !!item?.id;
   const { categories, getCategoryColor } = useNewsCategory();
+  const { data: session } = useSession();
   const [form, setForm] = useState(() => item
     ? { blocks: [], tags: [], publishedAt: "", excerpt: "", author: "", heroAspect: "21/9", imagePosition: "center", ...item }
     : emptyNewsForm());
@@ -464,6 +469,20 @@ export default function NewsEditor({ item, onSave, onClose }) {
     }
   }, [categories]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // เติม author อัตโนมัติเมื่อสร้างข่าวใหม่ (ลำดับ: localStorage → ชื่อ user → role)
+  useEffect(() => {
+    if (isEdit) return; // edit ไม่แตะ — ใช้ค่าจาก item เดิม
+    try {
+      const last = localStorage.getItem(LAST_AUTHOR_KEY);
+      if (last) { setForm(f => ({ ...f, author: last })); return; }
+    } catch { /* ignore */ }
+    // ยังไม่มีใน localStorage → ใช้ชื่อ user หรือ role จาก session
+    if (session?.user) {
+      const fallback = session.user.name || session.user.role || "";
+      setForm(f => ({ ...f, author: fallback }));
+    }
+  }, [isEdit, session]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const set = useCallback((key, val) => {
     setForm(f => {
       const next = { ...f, [key]: val };
@@ -471,6 +490,10 @@ export default function NewsEditor({ item, onSave, onClose }) {
       if (key === "category") next.catColor = getCategoryColor(val);
       return next;
     });
+    // บันทึกชื่อผู้เขียนล่าสุดลง localStorage
+    if (key === "author" && val.trim()) {
+      try { localStorage.setItem(LAST_AUTHOR_KEY, val); } catch { /* ignore */ }
+    }
     setErrors(e => ({ ...e, [key]: "" }));
   }, [isEdit, getCategoryColor]);
 
