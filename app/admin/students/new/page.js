@@ -28,6 +28,12 @@ function findPrefixIndex(prefix, prefixEn) {
 }
 const STATUSES = ["กำลังศึกษา", "ฝึกงาน", "จบการศึกษา", "พักการเรียน", "พ้นสภาพ"];
 const SCHOLARSHIPS = ["ทุน 2 ปี", "ทุน 3 ปี", "ทุน 5 ปี", "ทุน จภ."];
+const SCHOLARSHIP_LABEL = {
+    "ทุน 2 ปี": "ทุน 2 ปี (advance course)",
+    "ทุน 3 ปี": "ทุน 3 ปี (transfer)",
+};
+const scholarshipLabel = (val) => SCHOLARSHIP_LABEL[val] ?? val;
+const MAX_ENROLLMENTS = 4;
 const MILITARY_STATUSES = ["ยังไม่ถึงเกณฑ์", "ผ่อนผัน", "ผ่านการเกณฑ์", "ได้รับการยกเว้น", "-"];
 const UNIVERSITIES = [
     "KOSEN-KMUTT", "KOSEN-KMITL", "KOSEN-Chulabhorn",
@@ -187,6 +193,7 @@ const emptyForm = () => ({
     lineId: "",
     prevSchool: "",
     scholarship: "",
+    selfFunded: false,
     status: "กำลังศึกษา",
     note: "",
     enrollments: [{ ...EMPTY_ENROLLMENT }],
@@ -206,16 +213,28 @@ export default function AddStudentPage() {
     const set  = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e.target.value }));
     const setT = (key, sanitize) => (e) => setForm((prev) => ({ ...prev, [key]: sanitize(e.target.value) }));
 
-    const setEnrollment = (key) => (e) =>
+    const setEnrollment = (idx, key) => (e) =>
         setForm((prev) => ({
             ...prev,
-            enrollments: [{ ...prev.enrollments[0], [key]: e.target.value }],
+            enrollments: prev.enrollments.map((enr, i) => i === idx ? { ...enr, [key]: e.target.value } : enr),
         }));
 
-    const setEnrollmentT = (key, sanitize) => (e) =>
+    const setEnrollmentT = (idx, key, sanitize) => (e) =>
         setForm((prev) => ({
             ...prev,
-            enrollments: [{ ...prev.enrollments[0], [key]: sanitize(e.target.value) }],
+            enrollments: prev.enrollments.map((enr, i) => i === idx ? { ...enr, [key]: sanitize(e.target.value) } : enr),
+        }));
+
+    const addEnrollment = () =>
+        setForm((prev) => ({
+            ...prev,
+            enrollments: [...prev.enrollments, { ...EMPTY_ENROLLMENT }],
+        }));
+
+    const removeEnrollment = (idx) =>
+        setForm((prev) => ({
+            ...prev,
+            enrollments: prev.enrollments.filter((_, i) => i !== idx),
         }));
 
     const setAddressTH = (updated) =>
@@ -224,18 +243,16 @@ export default function AddStudentPage() {
     const setAddressJP = (updated) =>
         setForm((prev) => ({ ...prev, addresses: { ...prev.addresses, jp: updated } }));
 
-    const enr = form.enrollments[0];
-
     const isValid =
         form.name.trim() && form.lastname.trim() &&
-        enr.university.trim() && form.tel.trim() && form.email.trim();
+        form.enrollments[0]?.university?.trim() && form.tel.trim() && form.email.trim();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!isValid) return;
         setSaving(true);
         await new Promise((r) => setTimeout(r, 600));
-        const newId = addStudent({ ...form, university: enr.university });
+        const newId = addStudent({ ...form });
         setSaving(false);
         setSavedId(newId);
         setSaved(true);
@@ -312,8 +329,24 @@ export default function AddStudentPage() {
                                 <Field label="ทุนการศึกษา">
                                     <select value={form.scholarship} onChange={set("scholarship")} className={selectCls}>
                                         <option value="">-- ไม่ระบุ --</option>
-                                        {SCHOLARSHIPS.map((s) => <option key={s}>{s}</option>)}
+                                        {SCHOLARSHIPS.map((s) => <option key={s} value={s}>{scholarshipLabel(s)}</option>)}
                                     </select>
+                                    <label className="mt-2 flex cursor-pointer items-center gap-2">
+                                        <input
+                                            type="checkbox"
+                                            checked={!!form.selfFunded}
+                                            onChange={(e) => setForm((prev) => ({ ...prev, selfFunded: e.target.checked }))}
+                                            className="h-3.5 w-3.5 rounded border-border accent-amber-500"
+                                        />
+                                        <span className={`text-xs ${form.selfFunded ? "font-semibold text-amber-700" : "text-muted"}`}>
+                                            จ่ายค่าเรียนเอง
+                                        </span>
+                                        {form.selfFunded && (
+                                            <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                                                💰
+                                            </span>
+                                        )}
+                                    </label>
                                 </Field>
                             </div>
                         </Section>
@@ -439,68 +472,89 @@ export default function AddStudentPage() {
                                 </Field>
 
                                 <div className="border-t border-border pt-4 space-y-4">
-                                    <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">การศึกษาปัจจุบัน</p>
-
-                                    <div className="grid gap-4 sm:grid-cols-3">
-                                        <Field label="มหาวิทยาลัย" required>
-                                            <input
-                                                type="text"
-                                                list="uni-list"
-                                                value={enr.university}
-                                                onChange={setEnrollment("university")}
-                                                placeholder="ชื่อมหาวิทยาลัย..."
-                                                className={inputCls}
-                                            />
-                                            <datalist id="uni-list">
-                                                {UNIVERSITIES.map(u => <option key={u} value={u} />)}
-                                            </datalist>
-                                        </Field>
-                                        <Field label="รหัสนักศึกษา (สถาบันนี้)">
-                                            <input type="text" value={enr.studentId} onChange={setEnrollmentT("studentId", onlyAscii)} placeholder="64XXXXXXX" className={inputCls} />
-                                        </Field>
-                                        <Field label="อีเมล (สถาบัน)">
-                                            <input type="email" value={enr.univEmail} onChange={setEnrollmentT("univEmail", onlyAscii)} placeholder="student@university.ac.th" className={inputCls} />
-                                        </Field>
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted">สถาบันการศึกษา</p>
+                                        <span className="text-xs text-muted">{form.enrollments.length}/{MAX_ENROLLMENTS}</span>
                                     </div>
 
-                                    <div className="grid gap-4 sm:grid-cols-2">
-                                        <Field label="วันที่เริ่มเรียน">
-                                            <input type="date" value={toDateInputValue(enr.startDate)} onChange={setEnrollment("startDate")} className={inputCls} />
-                                        </Field>
-                                        <Field label="วันที่จบ / ย้ายออก" hint="เว้นว่างไว้ถ้ายังเรียนอยู่สถาบันนี้">
-                                            <input type="date" value={toDateInputValue(enr.endDate)} onChange={setEnrollment("endDate")} className={inputCls} />
-                                        </Field>
-                                    </div>
+                                    {form.enrollments.map((enr, idx) => (
+                                        <div key={idx} className="rounded-xl border border-border overflow-hidden">
+                                            <div className="flex items-center justify-between border-b border-border bg-surface-muted/50 px-4 py-2.5">
+                                                <p className="text-xs font-semibold text-foreground">
+                                                    สถาบัน {idx + 1}
+                                                    {idx === 0 && <span className="ml-1.5 text-[10px] font-normal text-muted">(หลัก)</span>}
+                                                </p>
+                                                {idx > 0 && (
+                                                    <button type="button" onClick={() => removeEnrollment(idx)}
+                                                        className="text-xs text-red-500 hover:text-red-700 transition-colors">
+                                                        ลบ
+                                                    </button>
+                                                )}
+                                            </div>
+                                            <div className="space-y-4 p-4">
+                                                <div className="grid gap-4 sm:grid-cols-3">
+                                                    <Field label="มหาวิทยาลัย" required={idx === 0}>
+                                                        <input type="text" list={`uni-list-${idx}`} value={enr.university}
+                                                            onChange={setEnrollment(idx, "university")}
+                                                            placeholder="ชื่อมหาวิทยาลัย..." className={inputCls} />
+                                                        <datalist id={`uni-list-${idx}`}>
+                                                            {UNIVERSITIES.map(u => <option key={u} value={u} />)}
+                                                        </datalist>
+                                                    </Field>
+                                                    <Field label="รหัสนักศึกษา (สถาบันนี้)">
+                                                        <input type="text" value={enr.studentId} onChange={setEnrollmentT(idx, "studentId", onlyAscii)} placeholder="64XXXXXXX" className={inputCls} />
+                                                    </Field>
+                                                    <Field label="อีเมล (สถาบัน)">
+                                                        <input type="email" value={enr.univEmail} onChange={setEnrollmentT(idx, "univEmail", onlyAscii)} placeholder="student@university.ac.th" className={inputCls} />
+                                                    </Field>
+                                                </div>
+                                                <div className="grid gap-4 sm:grid-cols-2">
+                                                    <Field label="วันที่เริ่มเรียน">
+                                                        <input type="date" value={toDateInputValue(enr.startDate)} onChange={setEnrollment(idx, "startDate")} className={inputCls} />
+                                                    </Field>
+                                                    <Field label="วันที่จบ / ย้ายออก" hint="เว้นว่างไว้ถ้ายังเรียนอยู่สถาบันนี้">
+                                                        <input type="date" value={toDateInputValue(enr.endDate)} onChange={setEnrollment(idx, "endDate")} className={inputCls} />
+                                                    </Field>
+                                                </div>
+                                                <div className="grid gap-4 sm:grid-cols-3">
+                                                    <Field label="คณะ">
+                                                        <input type="text" value={enr.faculty} onChange={setEnrollment(idx, "faculty")} placeholder="วิศวกรรมศาสตร์" className={inputCls} />
+                                                    </Field>
+                                                    <Field label="ภาควิชา">
+                                                        <input type="text" value={enr.department} onChange={setEnrollment(idx, "department")} placeholder="ภาควิชา..." className={inputCls} />
+                                                    </Field>
+                                                    <Field label="สาขาวิชา">
+                                                        <input type="text" value={enr.major} onChange={setEnrollment(idx, "major")} placeholder="สาขาวิชา..." className={inputCls} />
+                                                    </Field>
+                                                </div>
+                                                <div className="grid gap-4 sm:grid-cols-2">
+                                                    <Field label="ชั้นปี">
+                                                        <select value={enr.year} onChange={setEnrollment(idx, "year")} className={selectCls}>
+                                                            <option value="">-- เลือกชั้นปี --</option>
+                                                            {[1, 2, 3, 4, 5].map((y) => <option key={y} value={String(y)}>ปีที่ {y}</option>)}
+                                                        </select>
+                                                    </Field>
+                                                    <Field label="อาจารย์ที่ปรึกษา">
+                                                        <input type="text" value={enr.advisor} onChange={setEnrollment(idx, "advisor")} placeholder="รศ.ดร.ชื่อ นามสกุล" className={inputCls} />
+                                                    </Field>
+                                                </div>
+                                                <Field label="หัวข้อโปรเจกต์ / วิทยานิพนธ์" hint="กรอกเมื่อนักเรียนเริ่มทำโปรเจกต์ (ปี 3 ขึ้นไป)">
+                                                    <textarea value={enr.project} onChange={setEnrollment(idx, "project")} rows={2}
+                                                        placeholder="ระบุหัวข้อโปรเจกต์..." className={inputCls + " resize-none"} />
+                                                </Field>
+                                            </div>
+                                        </div>
+                                    ))}
 
-                                    <div className="grid gap-4 sm:grid-cols-3">
-                                        <Field label="คณะ">
-                                            <input type="text" value={enr.faculty} onChange={setEnrollment("faculty")} placeholder="วิศวกรรมศาสตร์" className={inputCls} />
-                                        </Field>
-                                        <Field label="ภาควิชา">
-                                            <input type="text" value={enr.department} onChange={setEnrollment("department")} placeholder="ภาควิชา..." className={inputCls} />
-                                        </Field>
-                                        <Field label="สาขาวิชา">
-                                            <input type="text" value={enr.major} onChange={setEnrollment("major")} placeholder="สาขาวิชา..." className={inputCls} />
-                                        </Field>
-                                    </div>
-
-                                    <div className="grid gap-4 sm:grid-cols-2">
-                                        <Field label="ชั้นปี">
-                                            <select value={enr.year} onChange={setEnrollment("year")} className={selectCls}>
-                                                <option value="">-- เลือกชั้นปี --</option>
-                                                {[1, 2, 3, 4, 5].map((y) => <option key={y} value={String(y)}>ปีที่ {y}</option>)}
-                                            </select>
-                                        </Field>
-                                        <Field label="อาจารย์ที่ปรึกษา">
-                                            <input type="text" value={enr.advisor} onChange={setEnrollment("advisor")} placeholder="รศ.ดร.ชื่อ นามสกุล" className={inputCls} />
-                                        </Field>
-                                    </div>
-
-                                    <Field label="หัวข้อโปรเจกต์ / วิทยานิพนธ์" hint="กรอกเมื่อนักเรียนเริ่มทำโปรเจกต์ (ปี 3 ขึ้นไป)">
-                                        <textarea value={enr.project} onChange={setEnrollment("project")} rows={2}
-                                            placeholder="ระบุหัวข้อโปรเจกต์..."
-                                            className={inputCls + " resize-none"} />
-                                    </Field>
+                                    {form.enrollments.length < MAX_ENROLLMENTS && (
+                                        <button type="button" onClick={addEnrollment}
+                                            className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border py-2.5 text-sm text-muted hover:border-primary hover:text-primary transition-colors">
+                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                                            </svg>
+                                            + เพิ่มสถาบันการศึกษา
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </Section>
