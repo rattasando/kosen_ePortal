@@ -5,10 +5,12 @@ export default function JobPositionsPage() {
   return (
     <>
       <AdminTopBar
-        title="Job Positions"
+        title="ตำแหน่งงาน"
         description="จัดการตำแหน่งงานและโอกาสฝึกงานสำหรับนักเรียน KOSEN"
       />
-      <JobListClient />
+      <div className="p-6">
+        <JobListClient />
+      </div>
     </>
   );
 }

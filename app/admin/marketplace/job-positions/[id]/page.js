@@ -174,9 +174,7 @@ function JobDetail({ job, jobs, updateJob, deleteJob }) {
     const set = (key) => (e) => setForm(prev => ({ ...prev, [key]: e.target.value }));
     const setNum = (key) => (e) => setForm(prev => ({ ...prev, [key]: parseInt(e.target.value, 10) || 0 }));
 
-    const idChanged   = form.id?.trim() !== job.id;
-    const idDuplicate = idChanged && jobs.some(j => j.id !== job.id && j.id === form.id?.trim());
-    const isValid     = form.id?.trim() && !idDuplicate && form.title?.trim() && form.companyName?.trim() && form.type && form.field && form.status;
+    const isValid = form.title?.trim() && form.companyName?.trim() && form.type && form.field && form.status;
 
     const handleEdit   = () => { setForm({ ...job }); setEditing(true); };
     const handleCancel = () => { setForm({ ...job }); setEditing(false); };
@@ -186,12 +184,9 @@ function JobDetail({ job, jobs, updateJob, deleteJob }) {
         if (!isValid) return;
         setSaving(true);
         await new Promise(r => setTimeout(r, 400));
-        updateJob(job.id, { ...form, id: form.id.trim() });
+        updateJob(job.id, { ...form });
         setSaving(false);
         setEditing(false);
-        if (form.id.trim() !== job.id) {
-            router.replace(`/admin/marketplace/job-positions/${form.id.trim()}`);
-        }
     };
 
     const handleDelete = () => {
@@ -211,56 +206,58 @@ function JobDetail({ job, jobs, updateJob, deleteJob }) {
                 description={`${d.id} · ${d.companyName}`}
             />
 
-            <div className="p-6">
+            {/* ── Sticky top bar — เหมือน student/company ── */}
+            <div className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-surface/95 px-6 py-2.5 backdrop-blur">
                 <Link href="/admin/marketplace/job-positions"
-                    className="mb-5 inline-flex items-center gap-1.5 text-sm text-muted hover:text-foreground transition-colors">
+                    className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-foreground transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
                     </svg>
-                    กลับรายการ
+                    กลับรายการตำแหน่งงาน
                 </Link>
 
-                <form onSubmit={handleSave} className="space-y-5">
-
-                    {/* ── Top action bar ── */}
-                    <div className="flex items-center justify-end gap-2">
-                        {editing ? (
-                            <>
-                                <button type="button" onClick={handleCancel}
-                                    className="inline-flex items-center gap-1.5 rounded-xl border border-border px-4 py-2 text-sm font-medium text-muted hover:text-foreground transition-colors">
-                                    ยกเลิก
-                                </button>
-                                <button type="submit" disabled={!isValid || saving}
-                                    className="btn-primary inline-flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
-                                    {saving ? <><Spinner />กำลังบันทึก...</> : (
-                                        <>
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                            </svg>
-                                            บันทึกการแก้ไข
-                                        </>
-                                    )}
-                                </button>
-                            </>
-                        ) : (
-                            <>
-                                <button type="button" onClick={handleEdit}
-                                    className="inline-flex items-center gap-1.5 rounded-xl border border-border px-4 py-2 text-sm font-medium text-foreground hover:border-amber-500 hover:text-amber-600 transition-colors">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                {editing ? (
+                    <div className="flex items-center gap-2">
+                        <button type="button" onClick={handleCancel}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3.5 py-1.5 text-sm font-medium text-muted hover:text-foreground transition-colors">
+                            ยกเลิก
+                        </button>
+                        <button form="job-form" type="submit" disabled={!isValid || saving}
+                            className="inline-flex items-center gap-1.5 rounded-xl btn-primary disabled:opacity-40 disabled:cursor-not-allowed text-sm px-3.5 py-1.5">
+                            {saving ? (
+                                <><Spinner />กำลังบันทึก...</>
+                            ) : (
+                                <>
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                     </svg>
-                                    แก้ไข
-                                </button>
-                                <button type="button" onClick={() => setShowDelete(true)}
-                                    className="inline-flex items-center gap-1.5 rounded-xl border border-border px-4 py-2 text-sm font-medium text-foreground hover:border-red-500 hover:text-red-500 transition-colors">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                                    </svg>
-                                    ลบข้อมูล
-                                </button>
-                            </>
-                        )}
+                                    บันทึก
+                                </>
+                            )}
+                        </button>
                     </div>
+                ) : (
+                    <div className="flex items-center gap-2">
+                        <button type="button" onClick={handleEdit}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3.5 py-1.5 text-sm font-medium text-foreground hover:border-primary hover:text-primary transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                            </svg>
+                            แก้ไข
+                        </button>
+                        <button type="button" onClick={() => setShowDelete(true)}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3.5 py-1.5 text-sm font-medium text-foreground hover:border-red-400 hover:text-red-500 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                            </svg>
+                            ลบ
+                        </button>
+                    </div>
+                )}
+            </div>
+
+            <div className="p-6">
+                <form id="job-form" onSubmit={handleSave} className="space-y-5">
 
                     {/* ══════════════════════════════════════════════
                         Row 1 — สถานะ (narrow) | ข้อมูลตำแหน่งงาน (wide)
@@ -280,11 +277,13 @@ function JobDetail({ job, jobs, updateJob, deleteJob }) {
 
                                 {editing ? (
                                     <>
-                                        <EField label="รหัสตำแหน่งงาน" required hintError={idDuplicate}
-                                            hint={idDuplicate ? "⚠️ รหัสนี้ซ้ำกับตำแหน่งอื่น" : idChanged ? `เดิม: ${job.id}` : undefined}>
-                                            <input type="text" value={form.id} onChange={set("id")} placeholder="JOB-001"
-                                                className={inputCls + (idDuplicate ? " border-red-400" : idChanged ? " border-amber-400" : "")} />
-                                        </EField>
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-medium text-foreground">รหัสตำแหน่งงาน</label>
+                                            <div className="flex items-center gap-2 rounded-xl border border-border bg-surface-muted px-3 py-2">
+                                                <span className="text-sm font-mono font-semibold text-foreground">{job.id}</span>
+                                                <span className="ml-auto rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold text-muted border border-border">ไม่สามารถเปลี่ยนได้</span>
+                                            </div>
+                                        </div>
                                         <EField label="สถานะ" required>
                                             <select value={form.status} onChange={set("status")} className={selectCls}>
                                                 {JOB_STATUSES.map(s => <option key={s}>{s}</option>)}
@@ -531,30 +530,6 @@ function JobDetail({ job, jobs, updateJob, deleteJob }) {
                                 : <p className="text-sm text-muted">—</p>
                         )}
                     </Section>
-
-                    {/* ── Bottom save bar (edit mode only) ── */}
-                    {editing && (
-                        <div className="flex items-center justify-between rounded-2xl border border-border bg-surface px-5 py-4">
-                            <p className="text-xs text-muted"><span className="text-red-500">*</span> จำเป็นต้องกรอก</p>
-                            <div className="flex items-center gap-3">
-                                <button type="button" onClick={handleCancel}
-                                    className="rounded-xl border border-border px-5 py-2 text-sm font-medium text-muted hover:text-foreground transition-colors">
-                                    ยกเลิก
-                                </button>
-                                <button type="submit" disabled={!isValid || saving}
-                                    className="btn-primary inline-flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
-                                    {saving ? <><Spinner />กำลังบันทึก...</> : (
-                                        <>
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                            </svg>
-                                            บันทึกการแก้ไข
-                                        </>
-                                    )}
-                                </button>
-                            </div>
-                        </div>
-                    )}
 
                 </form>
             </div>

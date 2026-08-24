@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import AdminTopBar from "@/components/admin/ui/AdminTopBar";
@@ -47,9 +47,17 @@ function Section({ icon, title, description, children }) {
     );
 }
 
+// ── ID auto-generate ──────────────────────────────────────────
+function nextJobId(jobs) {
+    const nums = jobs
+        .map(j => parseInt(j.id?.replace(/^JOB-/i, ""), 10))
+        .filter(n => !isNaN(n) && n > 0);
+    const max = nums.length ? Math.max(...nums) : 0;
+    return `JOB-${String(max + 1).padStart(3, "0")}`;
+}
+
 // ── Empty form ────────────────────────────────────────────────
 const emptyForm = () => ({
-    id: "",
     title: "",
     titleEn: "",
     companyName: "",
@@ -83,9 +91,8 @@ export default function AddJobPage() {
     const set    = (key) => (e) => setForm(prev => ({ ...prev, [key]: e.target.value }));
     const setNum = (key) => (e) => setForm(prev => ({ ...prev, [key]: parseInt(e.target.value, 10) || 0 }));
 
-    const idDuplicate = form.id.trim() && jobs.some(j => j.id === form.id.trim());
-    const isValid     = form.id.trim() && !idDuplicate &&
-                        form.title.trim() && form.companyName.trim() &&
+    const generatedId = useMemo(() => nextJobId(jobs), [jobs]);
+    const isValid     = form.title.trim() && form.companyName.trim() &&
                         form.type && form.field && form.status;
 
     const handleSubmit = async (e) => {
@@ -95,7 +102,7 @@ export default function AddJobPage() {
         await new Promise(r => setTimeout(r, 500));
         addJob({
             ...form,
-            id: form.id.trim(),
+            id: generatedId,
             slots: parseInt(form.slots, 10) || 0,
             applications: 0,
         });
@@ -124,9 +131,10 @@ export default function AddJobPage() {
                         <p className="mt-1 text-sm text-muted">
                             {form.title} — {form.companyName} ถูกเพิ่มเข้าระบบแล้ว
                         </p>
+                        <p className="mt-1 text-xs font-mono text-muted">รหัส: {generatedId}</p>
                     </div>
                     <div className="mt-2 flex flex-wrap justify-center gap-3">
-                        <Link href={`/admin/marketplace/job-positions/${form.id.trim()}`} className="btn-primary">
+                        <Link href={`/admin/marketplace/job-positions/${generatedId}`} className="btn-primary">
                             ดูข้อมูลตำแหน่งงาน
                         </Link>
                         <button onClick={handleReset}
@@ -178,12 +186,14 @@ export default function AddJobPage() {
                                     </div>
                                 </div>
 
-                                <Field label="รหัสตำแหน่งงาน" required
-                                    hintError={!!idDuplicate}
-                                    hint={idDuplicate ? "⚠️ รหัสนี้มีอยู่ในระบบแล้ว" : "เช่น JOB-011"}>
-                                    <input type="text" value={form.id} onChange={set("id")} placeholder="JOB-011"
-                                        className={inputCls + (idDuplicate ? " border-red-400" : "")} />
-                                </Field>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-medium text-foreground">รหัสตำแหน่งงาน</label>
+                                    <div className="flex items-center gap-2 rounded-xl border border-border bg-surface-muted px-3 py-2">
+                                        <span className="text-sm font-mono font-semibold text-foreground">{generatedId}</span>
+                                        <span className="ml-auto rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">auto</span>
+                                    </div>
+                                    <p className="text-xs text-muted">ระบบสร้างรหัสให้อัตโนมัติ</p>
+                                </div>
 
                                 <Field label="สถานะ" required>
                                     <select value={form.status} onChange={set("status")} className={selectCls}>
