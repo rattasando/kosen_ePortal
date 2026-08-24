@@ -715,8 +715,8 @@ function BannerModal({ item, onClose, onSave }) {
   );
 }
 
-// ── BannerSlide — renders one banner's content (shared by preview modal) ──
-function BannerSlide({ banner, pubNews }) {
+// ── BannerSlide — mirrors BannerSlider.tsx content exactly ──────
+function BannerSlide({ banner, pubNews, animating = false }) {
   const isNewsSingle   = banner.layout === "news-single";
   const linkedNews     = isNewsSingle ? (pubNews?.find((n) => n.id === banner.newsId) ?? null) : null;
   const previewImg     = linkedNews?.image ?? banner.image;
@@ -731,57 +731,64 @@ function BannerSlide({ banner, pubNews }) {
 
   return (
     <div className="absolute inset-0">
-      {/* bg */}
+      {/* bg image */}
       {previewImg ? (
         <Image src={previewImg} alt="banner" fill className="object-cover"
           style={{ objectPosition: banner.imagePosition ?? "center" }} sizes="100vw" priority />
       ) : (
         <div className="absolute inset-0 bg-gradient-to-br from-slate-700 to-slate-900" />
       )}
+      {/* gradient — ตรงกับ BannerSlider.tsx */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/10" />
 
-      {/* badge */}
+      {/* badge — ตำแหน่งและ style ตรงกับ BannerSlider.tsx */}
       {effectiveBadge && (
         <div className="absolute top-6 left-8 z-20">
           <span className="inline-flex items-center gap-2 rounded-2xl px-5 py-2 text-sm font-extrabold shadow-lg tracking-wide"
-            style={{ background: "linear-gradient(135deg,#f59e0b,#d97706)", color: "#fff", textShadow: "0 1px 2px rgba(0,0,0,.3)" }}>
+            style={{ background: "linear-gradient(135deg,#f59e0b,#d97706)", color:"#fff", textShadow:"0 1px 2px rgba(0,0,0,.3)" }}>
             ★ {effectiveBadge}
           </span>
         </div>
       )}
 
-      {/* content */}
-      <div className="absolute inset-0 flex items-end text-white">
-        <div className="w-full max-w-6xl mx-auto px-8 pb-16">
-          {isNewsSingle && linkedNews ? (
-            <>
-              <div className="flex items-center gap-3 mb-4">
-                <span className={`rounded-full px-4 py-1.5 text-base font-bold ${linkedNews.catColor}`}>{linkedNews.category}</span>
-                <time className="text-lg font-bold text-white/90 rounded-full bg-black/30 backdrop-blur-sm px-3 py-1">{formatDate(linkedNews.publishedAt)}</time>
+      {/* content — ตรงกับโครงสร้างใน BannerSlider.tsx */}
+      <div className="absolute inset-0 z-10 flex items-end text-white">
+        <div className="page-container w-full pb-16">
+          {isNewsSingle ? (
+            linkedNews ? (
+              /* NewsSingleContent */
+              <div className={`w-full transition-all duration-500 ${animating ? "translate-x-4 opacity-0" : "translate-x-0 opacity-100"}`}>
+                <div className="flex items-center gap-3 mb-4">
+                  <span className={`rounded-full px-4 py-1.5 text-base font-bold ${linkedNews.catColor}`}>{linkedNews.category}</span>
+                  <time className="text-lg font-bold text-white/90 rounded-full bg-black/30 backdrop-blur-sm px-3 py-1">{formatDate(linkedNews.publishedAt)}</time>
+                </div>
+                <div className="flex items-end justify-between gap-10">
+                  <div className="min-w-0">
+                    <h1 className={`font-extrabold leading-tight tracking-tight line-clamp-3 ${hCls} ${atxt}`}>
+                      {banner.headline?.trim() || linkedNews.title}
+                    </h1>
+                  </div>
+                  <span className="btn-primary inline-flex shrink-0 text-base px-6 py-3">{banner.ctaLabel || "อ่านข่าวเต็ม"}</span>
+                </div>
               </div>
-              <div className="flex items-end justify-between gap-10">
-                <h1 className={`font-extrabold leading-tight tracking-tight line-clamp-3 ${hCls} ${atxt}`}>
-                  {banner.headline?.trim() || linkedNews.title}
-                </h1>
-                <span className="btn-primary inline-flex shrink-0 text-base px-6 py-3">{banner.ctaLabel || "อ่านข่าวเต็ม"}</span>
-              </div>
-            </>
-          ) : isNewsSingle ? (
-            <p className="italic text-white/40 text-2xl">ยังไม่ได้เลือกข่าว</p>
+            ) : (
+              <p className="italic text-white/40 text-2xl">ยังไม่ได้เลือกข่าว</p>
+            )
           ) : (
-            <div style={{ maxWidth: "42rem" }} className={acont}>
+            /* HeroContent */
+            <div className={`max-w-2xl transition-all duration-500 ${acont} ${animating ? "translate-x-4 opacity-0" : "translate-x-0 opacity-100"}`}>
               {banner.eyebrow && (
-                <p className={`mb-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-white/70 ${ta === "right" ? "flex-row-reverse" : ""} ${ta === "center" ? "justify-center w-full" : ""}`}>
-                  <span className="h-px w-8 bg-white/50 flex-shrink-0" />
+                <p className={`mb-4 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-white/70 ${ta === "right" ? "flex-row-reverse" : ""} ${ta === "center" ? "justify-center w-full" : ""}`}>
+                  <span className="h-px w-8 bg-white/50" />
                   {banner.eyebrow}
                 </p>
               )}
               <h1 className={`font-extrabold leading-tight tracking-tight ${hCls} ${atxt}`}>{banner.headline}</h1>
-              {banner.body && <p className={`mt-4 text-white/80 ${bCls} ${atxt}`}>{banner.body}</p>}
+              {banner.body && <p className={`mt-4 text-white/80 max-w-2xl ${bCls} ${atxt}`}>{banner.body}</p>}
               <div className={`mt-6 flex flex-wrap gap-3 ${aflex}`}>
                 {banner.ctaLabel && <span className="btn-primary text-base px-6 py-3">{banner.ctaLabel}</span>}
                 {banner.secondaryLabel && (
-                  <span className="inline-flex items-center rounded-xl border border-white/30 px-6 py-3 text-base font-semibold text-white">
+                  <span className="inline-flex items-center rounded-xl border border-white/30 px-6 py-3 text-base font-semibold text-white hover:bg-white/10 transition-colors">
                     {banner.secondaryLabel}
                   </span>
                 )}
@@ -794,27 +801,29 @@ function BannerSlide({ banner, pubNews }) {
   );
 }
 
-// ── AllBannersPreviewModal — slider ของ banner ทั้งหมด ────────────
+// ── AllBannersPreviewModal — slider ตรงกับ BannerSlider.tsx ──────
 function AllBannersPreviewModal({ banners, initialIndex = 0, onClose, pubNews }) {
-  const [current, setCurrent] = useState(Math.max(0, Math.min(initialIndex, banners.length - 1)));
-  const [dir, setDir] = useState(null); // "left" | "right" — for animation hint
+  const [current,   setCurrent]   = useState(Math.max(0, Math.min(initialIndex, banners.length - 1)));
+  const [animating, setAnimating] = useState(false);
+  const [hoveredDot, setHoveredDot] = useState(null);
   const total = banners.length;
 
-  const go = useCallback((next) => {
-    if (next < 0 || next >= total) return;
-    setDir(next > current ? "right" : "left");
-    setCurrent(next);
-  }, [current, total]);
+  // mirrors BannerSlider goTo logic (400ms animation)
+  const goTo = useCallback((next) => {
+    if (animating || next === current || next < 0 || next >= total) return;
+    setAnimating(true);
+    setTimeout(() => { setCurrent(next); setAnimating(false); }, 400);
+  }, [animating, current, total]);
 
   useEffect(() => {
     const onKey = (e) => {
-      if (e.key === "Escape")      onClose();
-      if (e.key === "ArrowRight")  go(current + 1);
-      if (e.key === "ArrowLeft")   go(current - 1);
+      if (e.key === "Escape")     onClose();
+      if (e.key === "ArrowRight") goTo(current + 1);
+      if (e.key === "ArrowLeft")  goTo(current - 1);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose, go, current]);
+  }, [onClose, goTo, current]);
 
   const banner = banners[current];
   if (!banner) return null;
@@ -843,7 +852,7 @@ function AllBannersPreviewModal({ banners, initialIndex = 0, onClose, pubNews })
         </div>
       </div>
 
-      {/* ── Fake nav ── */}
+      {/* ── Fake nav — เหมือนหน้า Home ── */}
       <div className="h-14 bg-white flex-shrink-0 border-b border-gray-200 flex items-center px-8 gap-6">
         <div className="w-20 h-4 rounded bg-gray-200" />
         <div className="flex-1" />
@@ -853,47 +862,82 @@ function AllBannersPreviewModal({ banners, initialIndex = 0, onClose, pubNews })
         <div className="w-20 h-7 rounded-lg bg-gray-200" />
       </div>
 
-      {/* ── Banner area (slider) ── */}
-      <div className="relative flex-1 overflow-hidden bg-slate-900">
-        {/* Slide */}
-        <div key={`${banner.id}-${current}`}
-          className="absolute inset-0"
-          style={{ animation: "fadeIn 0.35s ease" }}>
-          <BannerSlide banner={banner} pubNews={pubNews} />
-        </div>
+      {/* ── Banner area — h-[80vh] ตรงกับ BannerSlider.tsx ── */}
+      <div className="relative overflow-hidden bg-slate-900 select-none" style={{ height: "80vh" }}>
 
-        {/* Left arrow */}
-        <button
-          onClick={() => go(current - 1)}
-          disabled={current === 0}
-          className="absolute left-4 top-1/2 -translate-y-1/2 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm transition hover:bg-black/70 disabled:opacity-20 disabled:cursor-not-allowed text-xl font-bold">
+        {/* Background images — all stacked, fade opacity (ตรงกับ BannerSlider) */}
+        {banners.map((b, i) => {
+          const ln = b.layout === "news-single" ? (pubNews?.find((n) => n.id === b.newsId) ?? null) : null;
+          const img = ln?.image ?? b.image;
+          return (
+            <div key={b.id} className="absolute inset-0 transition-opacity duration-700"
+              style={{ opacity: i === current ? 1 : 0 }} aria-hidden={i !== current}>
+              {img ? (
+                <Image src={img} alt="" fill priority={i === 0} className="object-cover"
+                  style={{ objectPosition: b.imagePosition ?? "center" }} sizes="100vw" />
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-br from-slate-700 to-slate-900" />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-black/10" />
+            </div>
+          );
+        })}
+
+        {/* Badge */}
+        {(() => {
+          const effectiveBadge = banner.badge || (banner.layout === "news-single" && (pubNews?.find((n) => n.id === banner.newsId)?.featured) ? "เรื่องเด่น" : "");
+          return effectiveBadge ? (
+            <div className="absolute top-6 left-8 z-20">
+              <span className="inline-flex items-center gap-2 rounded-2xl px-5 py-2 text-sm font-extrabold shadow-lg tracking-wide"
+                style={{ background:"linear-gradient(135deg,#f59e0b,#d97706)", color:"#fff", textShadow:"0 1px 2px rgba(0,0,0,.3)" }}>
+                ★ {effectiveBadge}
+              </span>
+            </div>
+          ) : null;
+        })()}
+
+        {/* Slide content — ใช้ BannerSlide พร้อม animating prop */}
+        <BannerSlide banner={banner} pubNews={pubNews} animating={animating} />
+
+        {/* Left arrow — h-14 w-14 ตรงกับ BannerSlider.tsx */}
+        <button onClick={() => goTo(current - 1)} aria-label="Previous slide"
+          disabled={animating}
+          className="absolute left-4 top-1/2 z-30 -translate-y-1/2 flex h-14 w-14 items-center justify-center rounded-full bg-black/25 text-white/70 backdrop-blur-sm border border-white/10 hover:bg-white hover:text-primary hover:scale-110 hover:border-white transition-all duration-200 text-3xl leading-none disabled:opacity-30">
           ‹
         </button>
 
         {/* Right arrow */}
-        <button
-          onClick={() => go(current + 1)}
-          disabled={current === total - 1}
-          className="absolute right-4 top-1/2 -translate-y-1/2 z-30 flex h-12 w-12 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm transition hover:bg-black/70 disabled:opacity-20 disabled:cursor-not-allowed text-xl font-bold">
+        <button onClick={() => goTo(current + 1)} aria-label="Next slide"
+          disabled={animating}
+          className="absolute right-4 top-1/2 z-30 -translate-y-1/2 flex h-14 w-14 items-center justify-center rounded-full bg-black/25 text-white/70 backdrop-blur-sm border border-white/10 hover:bg-white hover:text-primary hover:scale-110 hover:border-white transition-all duration-200 text-3xl leading-none disabled:opacity-30">
           ›
         </button>
 
-        {/* Dots */}
-        <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2">
-          {banners.map((b, i) => (
-            <button key={b.id} onClick={() => go(i)}
-              title={`Banner ${i + 1}`}
-              className={`rounded-full transition-all duration-300 ${i === current ? "w-8 h-3 bg-white shadow-lg" : "w-3 h-3 bg-white/40 hover:bg-white/70"}`} />
-          ))}
+        {/* Dots — bottom-4, style ตรงกับ BannerSlider.tsx */}
+        <div className="absolute bottom-4 left-1/2 z-30 -translate-x-1/2 flex items-center gap-1.5"
+          onMouseLeave={() => setHoveredDot(null)}>
+          {banners.map((b, i) => {
+            const isActive  = i === current;
+            const isHovered = hoveredDot === i;
+            return (
+              <button key={b.id} onClick={() => goTo(i)}
+                onMouseEnter={() => setHoveredDot(i)}
+                onMouseLeave={() => setHoveredDot(null)}
+                aria-label={`Go to slide ${i + 1}`}
+                className={`rounded-full transition-all duration-200 ${
+                  isActive  ? "h-3 w-8 bg-white" :
+                  isHovered ? "h-4 w-7 bg-white/90" :
+                              "h-3 w-3 bg-white/40"
+                }`} />
+            );
+          })}
         </div>
       </div>
 
       {/* ── Stub below ── */}
-      <div className="h-10 bg-[#f5f5f5] flex-shrink-0 flex items-center justify-center">
-        <p className="text-[11px] text-gray-400">— เนื้อหาหน้า Home ด้านล่าง —</p>
+      <div className="flex-1 bg-[#f5f5f5] flex items-center justify-center">
+        <p className="text-xs text-gray-400">— เนื้อหาหน้า Home ด้านล่าง —</p>
       </div>
-
-      <style>{`@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }`}</style>
     </div>
   );
 }
