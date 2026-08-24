@@ -494,7 +494,7 @@ export default function AlumniPage() {
   };
 
   const hasActiveFilter =
-    keywords.length > 0 || searchInput.trim() ||
+    keywords.length > 0 ||
     filterUni !== "ทั้งหมด" || filterStatus !== "ทั้งหมด" || filterYear !== "ทั้งหมด" || sortBy !== "default";
 
   const filtered = useMemo(() => {
@@ -773,11 +773,6 @@ export default function AlumniPage() {
                   🔍 &ldquo;{kw}&rdquo; {CLOSE_SVG}
                 </button>
               ))}
-              {searchInput.trim() && (
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-primary/30 px-3 py-1 text-xs font-medium text-muted">
-                  🔍 &ldquo;{searchInput}&rdquo;
-                </span>
-              )}
               <button onClick={clearFilters}
                 className="text-xs font-medium text-muted hover:text-red-500 transition-colors underline underline-offset-2 ml-1">
                 ล้างทั้งหมด
