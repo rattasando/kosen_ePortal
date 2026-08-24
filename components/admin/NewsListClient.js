@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import Image from "next/image";
 import { useNews } from "./contexts/NewsContext";
+import { formatDate, formatDateTime } from "@/lib/utils/newsUtils";
 import NewsEditor, { emptyNewsForm, NewsPreview } from "./editors/NewsEditor";
 
 // ── Constants ──────────────────────────────────────────────────
@@ -300,9 +301,9 @@ function NewsDetail({ item, onClose, onEdit, onDelete }) {
           <div className="space-y-2.5 rounded-xl border border-border p-4">
             {infoRow("ผู้เขียน", item.author)}
             {infoRow("Slug", item.slug || "—")}
-            {infoRow("วันที่เผยแพร่", item.publishedAt ?? "ยังไม่เผยแพร่")}
-            {infoRow("สร้างเมื่อ", item.createdAt)}
-            {infoRow("แก้ไขล่าสุด", item.updatedAt)}
+            {infoRow("วันที่เผยแพร่", item.publishedAt ? formatDateTime(item.publishedAt) : "ยังไม่เผยแพร่")}
+            {infoRow("สร้างเมื่อ", formatDateTime(item.createdAt))}
+            {infoRow("แก้ไขล่าสุด", formatDateTime(item.updatedAt))}
             {infoRow("ยอดวิว", item.views != null ? `${item.views.toLocaleString()} ครั้ง` : "—")}
           </div>
 
@@ -649,7 +650,7 @@ export default function NewsListClient() {
                   </td>
                   {/* Published at */}
                   <td className="px-4 py-3 text-xs text-muted whitespace-nowrap">
-                    {n.publishedAt ?? <span className="italic">ยังไม่เผยแพร่</span>}
+                    {n.publishedAt ? formatDateTime(n.publishedAt) : <span className="italic">ยังไม่เผยแพร่</span>}
                   </td>
                   {/* Status */}
                   <td className="px-4 py-3">
