@@ -4,6 +4,13 @@ import { createContext, useContext, useState, useEffect, useCallback } from "rea
 
 const AlumniContext = createContext(null);
 
+// Helper — parse JSON และ throw ถ้า response ไม่ OK
+async function parseOrThrow(res) {
+  const json = await res.json();
+  if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`);
+  return json;
+}
+
 export function AlumniProvider({ children }) {
   const [alumni, setAlumni] = useState([]);
   const [ready, setReady] = useState(false);
@@ -22,7 +29,7 @@ export function AlumniProvider({ children }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    const created = await res.json();
+    const created = await parseOrThrow(res);
     setAlumni((prev) => [...prev, created]);
     return created;
   }, []);
@@ -33,13 +40,17 @@ export function AlumniProvider({ children }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
-    const updated = await res.json();
+    const updated = await parseOrThrow(res);
     setAlumni((prev) => prev.map((a) => (a.id === id ? updated : a)));
     return updated;
   }, []);
 
   const deleteAlumni = useCallback(async (id) => {
-    await fetch(`/api/alumni/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/alumni/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      throw new Error(json?.error ?? `HTTP ${res.status}`);
+    }
     setAlumni((prev) => prev.filter((a) => a.id !== id));
   }, []);
 

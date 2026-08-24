@@ -10,6 +10,7 @@ import { useAlumni } from "@/components/admin/contexts/AlumniContext";
 import { useStudents } from "@/components/admin/contexts/StudentContext";
 import { useAlumniHistory } from "@/components/admin/contexts/AlumniHistoryContext";
 import { diffAlumniSnapshot, buildAlumniSummary, formatHistoryDate } from "@/lib/utils/alumniHistoryHelpers";
+import { onlyThai, onlyThaiText, onlyEnglish, onlyAscii, formatThaiPhone } from "@/lib/utils/inputFilters";
 
 // ── Constants ─────────────────────────────────────────────────
 const PREFIXES = ["นาย", "นางสาว", "นาง"];
@@ -212,59 +213,87 @@ function HistorySection({ history }) {
   );
 }
 
-// ── Employment Timeline (view mode) ──────────────────────────
-function EmploymentTimeline({ jobs }) {
-  if (!jobs.length) return <p className="py-8 text-center text-sm text-muted">ยังไม่มีประวัติการทำงาน</p>;
+// ── EmploymentCard (unified view + edit) ─────────────────────
+// เหมือน EnrollmentEditCard ของ student — DOM structure เดิมทั้งสองโหมด
+// ป้องกัน layout shift ตอน toggle edit mode
+// กรองวันที่ให้รับเฉพาะตัวเลข + ขีด รูปแบบ YYYY-MM (max 7 ตัว)
+const onlyYearMonth = (s) => s.replace(/[^0-9-]/g, "").slice(0, 7);
+
+function EmploymentCard({ job, index, editing, isNew, onChange, onRemove }) {
+  const iCls = editing ? inputCls : roInputCls;
+  const sCls = editing ? selectCls : roSelectCls;
+  const isCurrent = !job.endDate;
+  const set  = (key) => (e) => onChange({ ...job, [key]: e.target.value });
+  const setT = (key, sanitize) => (e) => onChange({ ...job, [key]: sanitize(e.target.value) });
+
   return (
-    <div className="space-y-5">
-      <div className="relative">
-        <div className="absolute left-5 top-0 h-full w-px bg-border" />
-        <div className="space-y-6">
-          {[...jobs].reverse().map((job, i, arr) => {
-            const isCurrent = !job.endDate;
-            return (
-              <div key={i} className="relative flex gap-5">
-                <div className={`relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 text-xs font-bold ${isCurrent ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-border bg-surface text-muted"}`}>
-                  {arr.length - i}
-                </div>
-                <div className={`flex-1 rounded-xl border p-4 ${isCurrent ? "border-emerald-200 bg-emerald-50/50" : "border-border bg-surface"}`}>
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-bold text-foreground">{job.company}</p>
-                        {isCurrent && <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">ปัจจุบัน</span>}
-                      </div>
-                      <p className="text-sm text-muted mt-0.5">{job.position}</p>
-                    </div>
-                    <span className="rounded-full border border-border px-2.5 py-0.5 text-xs text-muted whitespace-nowrap">{job.type}</span>
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted">
-                    <span>📍 {job.location}</span>
-                    <span>📅 {fmtDate(job.startDate)} — {fmtDate(job.endDate)}</span>
-                    <span className="font-medium text-foreground">⏱ {calcDuration(job.startDate, job.endDate)}</span>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+    <div className={`rounded-xl border overflow-hidden border-l-4 transition-all duration-300 ${
+      isNew       ? "border-primary border-l-primary bg-primary/5 ring-2 ring-primary/20"
+      : isCurrent ? "border-emerald-200 border-l-emerald-500"
+      :              "border-border border-l-border"
+    }`}>
+      {/* Header — always same structure */}
+      <div className={`flex items-center gap-2.5 px-4 py-3 border-b border-border ${isCurrent ? "bg-emerald-50/50" : "bg-surface-muted"}`}>
+        <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white ${isCurrent ? "bg-emerald-500" : "bg-muted"}`}>
+          {index + 1}
+        </span>
+        <p className="flex-1 text-sm font-semibold text-foreground truncate min-w-0">
+          {job.company || <span className="italic font-normal text-muted">ที่ทำงานที่ {index + 1}</span>}
+        </p>
+        {isNew && editing && (
+          <span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-white">✦ เพิ่งเพิ่ม</span>
+        )}
+        {isCurrent ? (
+          <span className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">● ปัจจุบัน</span>
+        ) : (
+          <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-semibold text-gray-500">จบแล้ว</span>
+        )}
+        {editing && (
+          <button type="button" onClick={onRemove}
+            className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-1 text-xs text-muted hover:border-red-400 hover:text-red-500 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            ลบ
+          </button>
+        )}
       </div>
-      {jobs.length > 0 && (
-        <div className="border-t border-border pt-4 grid grid-cols-3 gap-4 text-center">
-          <div>
-            <p className="text-xl font-extrabold text-foreground">{jobs.length}</p>
-            <p className="text-xs text-muted">บริษัทที่เคยทำงาน</p>
-          </div>
-          <div>
-            <p className="text-xl font-extrabold text-foreground">{calcDuration(jobs[0].startDate, null)}</p>
-            <p className="text-xs text-muted">ประสบการณ์ทั้งหมด</p>
-          </div>
-          <div>
-            <p className="text-xl font-extrabold text-foreground">{new Set(jobs.map(e => e.location)).size}</p>
-            <p className="text-xs text-muted">จังหวัดที่ทำงาน</p>
-          </div>
+
+      {/* Fields — same grid in both modes, only inputCls toggles */}
+      <div className="space-y-3 p-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <EField label="ชื่อบริษัท / หน่วยงาน">
+            <input type="text" value={job.company ?? ""} onChange={setT("company", onlyThaiText)}
+              readOnly={!editing} maxLength={200} className={iCls} placeholder={editing ? "ชื่อบริษัท" : ""} />
+          </EField>
+          <EField label="ตำแหน่ง">
+            <input type="text" value={job.position ?? ""} onChange={setT("position", onlyThaiText)}
+              readOnly={!editing} maxLength={100} className={iCls} placeholder={editing ? "ตำแหน่งงาน" : ""} />
+          </EField>
+          <EField label="วันที่เริ่ม" hint={editing ? "พ.ศ. เช่น 2565-06" : undefined}>
+            <input type="text" value={job.startDate ?? ""} onChange={setT("startDate", onlyYearMonth)}
+              readOnly={!editing} maxLength={7} inputMode="numeric" className={iCls} placeholder={editing ? "2565-06" : ""} />
+          </EField>
+          <EField label="วันที่สิ้นสุด" hint={editing ? "ว่างไว้ = ยังทำงานอยู่" : undefined}>
+            <input type="text" value={job.endDate ?? ""}
+              onChange={e => onChange({ ...job, endDate: onlyYearMonth(e.target.value) || null })}
+              readOnly={!editing} maxLength={7} inputMode="numeric" className={iCls} placeholder={editing ? "ว่าง = ปัจจุบัน" : ""} />
+          </EField>
+          <EField label="สถานที่">
+            <input type="text" value={job.location ?? ""} onChange={setT("location", onlyThaiText)}
+              readOnly={!editing} maxLength={100} className={iCls} placeholder={editing ? "จังหวัด / เมือง" : ""} />
+          </EField>
+          <EField label="ประเภทการจ้าง">
+            <select value={job.type ?? "พนักงานประจำ"} onChange={e => onChange({ ...job, type: e.target.value })} disabled={!editing} className={sCls}>
+              {JOB_TYPES.map(t => <option key={t}>{t}</option>)}
+            </select>
+          </EField>
         </div>
-      )}
+        {/* Duration (view mode เท่านั้น — ไม่กระทบ layout card เพราะอยู่ล่างสุด) */}
+        {!editing && job.startDate && (
+          <p className="text-xs text-muted">⏱ {calcDuration(job.startDate, job.endDate)}</p>
+        )}
+      </div>
     </div>
   );
 }
@@ -280,7 +309,9 @@ function AlumniDetail({ alumni, linkedStudent, history, updateAlumni, deleteAlum
   const [pulled, setPulled]         = useState(false);
   const [lastAddedIdx, setLastAddedIdx] = useState(null);
 
-  const set = (key) => (e) => setForm(prev => ({ ...prev, [key]: e.target.value }));
+  const set  = (key) => (e) => setForm(prev => ({ ...prev, [key]: e.target.value }));
+  // setT — เหมือน set แต่กรองตัวอักษรด้วย sanitize function ก่อนเซ็ต state
+  const setT = (key, sanitize) => (e) => setForm(prev => ({ ...prev, [key]: sanitize(e.target.value) }));
   const iCls = editing ? inputCls : roInputCls;
   const sCls = editing ? selectCls : roSelectCls;
 
@@ -370,9 +401,9 @@ function AlumniDetail({ alumni, linkedStudent, history, updateAlumni, deleteAlum
     setTimeout(() => setPulled(false), 3000);
   };
 
-  const setJob = (idx, key, val) => setForm(prev => ({
+  const updateJob = (idx, updatedJob) => setForm(prev => ({
     ...prev,
-    employmentHistory: prev.employmentHistory.map((j, i) => i === idx ? { ...j, [key]: val } : j),
+    employmentHistory: prev.employmentHistory.map((j, i) => i === idx ? updatedJob : j),
   }));
   const addJob = () => setForm(prev => {
     const next = [...prev.employmentHistory, { ...EMPTY_JOB }];
@@ -462,11 +493,13 @@ function AlumniDetail({ alumni, linkedStudent, history, updateAlumni, deleteAlum
 
               <Section icon="👤" title="ข้อมูลส่วนตัว">
                 <div className="space-y-4">
-                  {/* Pull button */}
-                  {linkedStudent && editing && (
-                    <button type="button" onClick={handlePull}
+                  {/* Pull button — ซ่อนด้วย invisible (ไม่ใช่ conditional) กัน layout shift */}
+                  {linkedStudent && (
+                    <button type="button" onClick={editing ? handlePull : undefined}
                       className={`w-full inline-flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition-colors ${
-                        pulled ? "border-emerald-400 bg-emerald-50 text-emerald-700" : "border-border text-muted hover:border-primary hover:text-primary"
+                        !editing ? "invisible pointer-events-none"
+                        : pulled  ? "border-emerald-400 bg-emerald-50 text-emerald-700"
+                        :           "border-border text-muted hover:border-primary hover:text-primary"
                       }`}>
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -484,61 +517,74 @@ function AlumniDetail({ alumni, linkedStudent, history, updateAlumni, deleteAlum
                     </EField>
                     <div className="col-span-3">
                       <EField label="ชื่อ" required={editing}>
-                        <input type="text" value={form.name ?? ""} onChange={set("name")} readOnly={!editing} className={iCls} />
+                        <input type="text" value={form.name ?? ""} onChange={setT("name", onlyThai)}
+                          readOnly={!editing} maxLength={100} className={iCls} />
                       </EField>
                     </div>
                   </div>
 
                   <EField label="นามสกุล" required={editing}>
-                    <input type="text" value={form.lastname ?? ""} onChange={set("lastname")} readOnly={!editing} className={iCls} />
+                    <input type="text" value={form.lastname ?? ""} onChange={setT("lastname", onlyThai)}
+                      readOnly={!editing} maxLength={100} className={iCls} />
                   </EField>
 
                   <div className="grid grid-cols-2 gap-2">
                     <EField label="First name (EN)">
-                      <input type="text" value={form.nameEn ?? ""} onChange={set("nameEn")} readOnly={!editing} className={iCls} />
+                      <input type="text" value={form.nameEn ?? ""} onChange={setT("nameEn", onlyEnglish)}
+                        readOnly={!editing} maxLength={100} className={iCls} />
                     </EField>
                     <EField label="Last name (EN)">
-                      <input type="text" value={form.lastnameEn ?? ""} onChange={set("lastnameEn")} readOnly={!editing} className={iCls} />
+                      <input type="text" value={form.lastnameEn ?? ""} onChange={setT("lastnameEn", onlyEnglish)}
+                        readOnly={!editing} maxLength={100} className={iCls} />
                     </EField>
                   </div>
 
                   <EField label="ชื่อเล่น">
-                    <input type="text" value={form.nickname ?? ""} onChange={set("nickname")} readOnly={!editing} className={iCls} />
+                    <input type="text" value={form.nickname ?? ""} onChange={setT("nickname", onlyThai)}
+                      readOnly={!editing} maxLength={50} className={iCls} />
                   </EField>
 
                   <EField label="สาขา">
-                    <input type="text" value={form.major ?? ""} onChange={set("major")} readOnly={!editing} className={iCls} />
+                    <input type="text" value={form.major ?? ""} onChange={setT("major", onlyThaiText)}
+                      readOnly={!editing} maxLength={100} className={iCls} />
                   </EField>
 
                   <EField label="มหาวิทยาลัย">
-                    <input type="text" value={form.university ?? ""} onChange={set("university")} readOnly={!editing} className={iCls} />
+                    <input type="text" value={form.university ?? ""} onChange={setT("university", onlyThaiText)}
+                      readOnly={!editing} maxLength={100} className={iCls} />
                   </EField>
 
-                  <EField label="ปีที่จบ (พ.ศ.)">
-                    <input type="number" value={form.graduatedYear ?? ""} onChange={set("graduatedYear")} readOnly={!editing} className={iCls} />
+                  <EField label="ปีที่จบ (พ.ศ.)" hint={editing ? "เช่น 2567" : undefined}>
+                    <input type="number" value={form.graduatedYear ?? ""} onChange={set("graduatedYear")}
+                      readOnly={!editing} min={2500} max={2600} className={iCls} />
                   </EField>
 
-                  {/* Student link (view mode only) */}
-                  {alumni.studentId && !editing && (
-                    <div>
-                      <p className="mb-1.5 text-xs font-medium text-foreground">รหัสนักเรียน</p>
-                      <Link href={`/admin/students/${alumni.studentId}`}
-                        className="inline-flex items-center gap-1.5 text-sm font-semibold text-primary hover:underline">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                          <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
-                          <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
-                        </svg>
-                        {alumni.studentId}
-                      </Link>
-                    </div>
+                  {/* Student link — แสดงทั้งสองโหมด (กัน layout shift) */}
+                  {alumni.studentId && (
+                    <EField label="รหัสนักเรียน">
+                      {!editing ? (
+                        <Link href={`/admin/students/${alumni.studentId}`}
+                          className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-semibold text-primary hover:underline">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
+                            <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
+                          </svg>
+                          {alumni.studentId}
+                        </Link>
+                      ) : (
+                        <p className={roInputCls}>{alumni.studentId}</p>
+                      )}
+                    </EField>
                   )}
 
                   <EField label="อีเมล">
-                    <input type="email" value={form.contact ?? ""} onChange={set("contact")} readOnly={!editing} className={iCls} />
+                    <input type="email" value={form.contact ?? ""} onChange={setT("contact", onlyAscii)}
+                      readOnly={!editing} maxLength={150} className={iCls} inputMode="email" />
                   </EField>
 
                   <EField label="โทรศัพท์">
-                    <input type="tel" value={form.phone ?? ""} onChange={set("phone")} readOnly={!editing} className={iCls} />
+                    <input type="tel" value={form.phone ?? ""} onChange={setT("phone", formatThaiPhone)}
+                      readOnly={!editing} maxLength={12} inputMode="numeric" className={iCls} />
                   </EField>
                 </div>
               </Section>
@@ -547,7 +593,8 @@ function AlumniDetail({ alumni, linkedStudent, history, updateAlumni, deleteAlum
               <Section icon="📋" title="การทำงานตามสัญญาทุน">
                 <div className="space-y-4">
                   <EField label="จำนวนปีตามสัญญาทุน">
-                    <input type="number" min="1" max="10" value={form.scholarshipYears ?? ""} onChange={set("scholarshipYears")} readOnly={!editing} className={iCls} />
+                    <input type="number" min="1" max="10" value={form.scholarshipYears ?? ""} onChange={set("scholarshipYears")}
+                      readOnly={!editing} className={iCls} />
                   </EField>
                   <EField label="สถานะการทำงานตามสัญญา">
                     <select value={form.scholarshipStatus ?? ""} onChange={set("scholarshipStatus")} disabled={!editing} className={sCls}>
@@ -586,68 +633,57 @@ function AlumniDetail({ alumni, linkedStudent, history, updateAlumni, deleteAlum
               <Section
                 icon="💼"
                 title="ประวัติการทำงาน"
-                description={`${editing ? form.employmentHistory.length : alumni.employmentHistory.length} บริษัท`}
-                action={editing ? (
+                description={`${form.employmentHistory.length} บริษัท`}
+                action={
+                  /* ใช้ invisible แทน conditional — Section header height คงที่ */
                   <button type="button" onClick={addJob}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-primary px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/5 transition-colors">
+                    className={`inline-flex items-center gap-1.5 rounded-lg border border-primary px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/5 transition-colors ${!editing ? "invisible pointer-events-none" : ""}`}>
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
                     </svg>
                     เพิ่มที่ทำงาน
                   </button>
-                ) : null}
+                }
               >
-                {editing ? (
-                  <div className="space-y-4">
-                    {form.employmentHistory.length === 0 && (
-                      <p className="py-4 text-center text-sm text-muted">ยังไม่มีประวัติการทำงาน — กด "เพิ่มที่ทำงาน" เพื่อเพิ่ม</p>
-                    )}
-                    {[...form.employmentHistory].reverse().map((job, ri) => {
-                      const idx = form.employmentHistory.length - 1 - ri;
-                      const isNew = idx === lastAddedIdx;
-                      return (
-                        <div key={idx} className={`rounded-xl border p-4 space-y-3 transition-all duration-300 ${isNew ? "border-primary bg-primary/5 ring-2 ring-primary/20" : "border-border"}`}>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-bold text-muted">บริษัทที่ {idx + 1}</span>
-                              {isNew && <span className="inline-flex rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-white">✦ เพิ่งเพิ่ม</span>}
-                            </div>
-                            <button type="button" onClick={() => removeJob(idx)}
-                              className="flex h-6 w-6 items-center justify-center rounded-lg border border-border text-muted hover:border-red-400 hover:text-red-500 transition-colors">
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                              </svg>
-                            </button>
+                {/* EmploymentCard เดียวกันทั้ง view/edit mode — ไม่สลับ DOM structure */}
+                <div className="space-y-4">
+                  {form.employmentHistory.length === 0 ? (
+                    <p className="py-8 text-center text-sm text-muted">
+                      {editing ? 'ยังไม่มีประวัติการทำงาน — กด "เพิ่มที่ทำงาน" เพื่อเพิ่ม' : "ยังไม่มีประวัติการทำงาน"}
+                    </p>
+                  ) : (
+                    <>
+                      {form.employmentHistory.map((job, i) => ({ job, i })).reverse().map(({ job, i }) => (
+                        <EmploymentCard
+                          key={i}
+                          job={job}
+                          index={i}
+                          editing={editing}
+                          isNew={i === lastAddedIdx}
+                          onChange={(updated) => updateJob(i, updated)}
+                          onRemove={() => removeJob(i)}
+                        />
+                      ))}
+                      {/* Stats (view mode เท่านั้น — อยู่ล่างสุด ไม่กระทบ card layout ด้านบน) */}
+                      {!editing && form.employmentHistory.length > 0 && (
+                        <div className="border-t border-border pt-4 grid grid-cols-3 gap-4 text-center">
+                          <div>
+                            <p className="text-xl font-extrabold text-foreground">{form.employmentHistory.length}</p>
+                            <p className="text-xs text-muted">บริษัท</p>
                           </div>
-                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                            <EField label="ชื่อบริษัท / หน่วยงาน">
-                              <input value={job.company} onChange={e => setJob(idx, "company", e.target.value)} className={inputCls} placeholder="ชื่อบริษัท" />
-                            </EField>
-                            <EField label="ตำแหน่ง">
-                              <input value={job.position} onChange={e => setJob(idx, "position", e.target.value)} className={inputCls} placeholder="ตำแหน่งงาน" />
-                            </EField>
-                            <EField label="วันที่เริ่ม (พ.ศ. เช่น 2565-06)">
-                              <input value={job.startDate ?? ""} onChange={e => setJob(idx, "startDate", e.target.value)} className={inputCls} placeholder="2565-06" />
-                            </EField>
-                            <EField label="วันที่สิ้นสุด" hint="ว่างไว้ = ยังทำงานอยู่ (ปัจจุบัน)">
-                              <input value={job.endDate ?? ""} onChange={e => setJob(idx, "endDate", e.target.value || null)} className={inputCls} placeholder="ว่าง = ปัจจุบัน" />
-                            </EField>
-                            <EField label="สถานที่">
-                              <input value={job.location ?? ""} onChange={e => setJob(idx, "location", e.target.value)} className={inputCls} placeholder="จังหวัด" />
-                            </EField>
-                            <EField label="ประเภทการจ้าง">
-                              <select value={job.type ?? "พนักงานประจำ"} onChange={e => setJob(idx, "type", e.target.value)} className={selectCls}>
-                                {JOB_TYPES.map(t => <option key={t}>{t}</option>)}
-                              </select>
-                            </EField>
+                          <div>
+                            <p className="text-xl font-extrabold text-foreground">{calcDuration(form.employmentHistory[0]?.startDate, null)}</p>
+                            <p className="text-xs text-muted">ประสบการณ์รวม</p>
+                          </div>
+                          <div>
+                            <p className="text-xl font-extrabold text-foreground">{new Set(form.employmentHistory.map(e => e.location).filter(Boolean)).size}</p>
+                            <p className="text-xs text-muted">จังหวัด</p>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <EmploymentTimeline jobs={alumni.employmentHistory} />
-                )}
+                      )}
+                    </>
+                  )}
+                </div>
               </Section>
             </div>
           </div>

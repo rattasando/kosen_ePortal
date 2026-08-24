@@ -840,7 +840,7 @@ export default function AlumniPage() {
               { label: "ที่ทำงานปัจจุบัน", width: "16%" },
               { label: <span className="whitespace-nowrap">ปี / สัญญา</span>, align: "center", width: "10%" },
               { label: "สถานะ", align: "center", width: "130px" },
-              { label: "Actions", align: "center", width: "115px" },
+              { label: "จัดการ", align: "center", width: "115px" },
             ]}
             rows={paginated.map((a) => {
               const current = (a.employmentHistory ?? []).find((e) => !e.endDate);

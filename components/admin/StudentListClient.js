@@ -1907,7 +1907,7 @@ export default function StudentListClient() {
             { label: <span className="whitespace-nowrap">อาศัยอยู่ที่</span>, align: "center", width: "10%" },
             { label: "ติดต่อ", width: "18%" },
             { label: "สถานะ", align: "center", width: "110px" },
-            { label: "Actions", align: "center", width: "115px" },
+            { label: "จัดการ", align: "center", width: "115px" },
           ]}
           rows={paginated.map((s) => {
             const pe = getLatestEnrollment(s);
