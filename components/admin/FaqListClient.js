@@ -4,9 +4,9 @@ import { useState, useMemo, useEffect, useRef } from "react";
 import { useFaq } from "./contexts/FaqContext";
 import { FAQ_CATEGORIES } from "@/lib/data/faqData";
 
-const inputCls    = "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft placeholder:text-muted";
-const labelCls    = "text-xs font-medium text-foreground";
-const PAGE_SIZE   = 10;
+const inputCls  = "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft placeholder:text-muted";
+const labelCls  = "text-xs font-medium text-foreground";
+const PAGE_SIZE = 20;
 
 // ── CSV helpers ──────────────────────────────────────────────
 const CSV_HEADERS = ["id", "question", "answer", "category", "status", "order"];
@@ -68,6 +68,55 @@ function computeDiff(incoming, existing) {
   return { results, deleted };
 }
 
+// ── Icons ────────────────────────────────────────────────────
+const XIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+  </svg>
+);
+const EditIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+  </svg>
+);
+const TrashIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+  </svg>
+);
+const ChevronDown = ({ open }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 transition-transform duration-200 ${open ? "rotate-180" : ""}`} viewBox="0 0 20 20" fill="currentColor">
+    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+  </svg>
+);
+
+// ── Status config ────────────────────────────────────────────
+const STATUS_CONFIG = {
+  published: { label: "เผยแพร่", pill: "bg-emerald-100 text-emerald-700 border-emerald-200" },
+  draft:     { label: "แบบร่าง", pill: "bg-amber-100 text-amber-700 border-amber-200" },
+};
+
+// ── Helpers ──────────────────────────────────────────────────
+function nextId(faqs) {
+  const nums = faqs.map((f) => parseInt(f.id.replace("FAQ", ""), 10)).filter(Boolean);
+  return `FAQ${String((nums.length ? Math.max(...nums) : 0) + 1).padStart(3, "0")}`;
+}
+function emptyForm() {
+  return { question: "", answer: "", category: FAQ_CATEGORIES[0], status: "published" };
+}
+function HighlightText({ text = "", terms = [] }) {
+  if (!terms.length) return <>{text}</>;
+  const regex = new RegExp(`(${terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "gi");
+  const parts = text.split(regex);
+  return (
+    <>
+      {parts.map((part, i) =>
+        regex.test(part) ? <mark key={i} className="rounded bg-amber-200 px-0.5 text-amber-900">{part}</mark> : part
+      )}
+    </>
+  );
+}
+
 // ── Import Modal ─────────────────────────────────────────────
 const DIFF_CFG = {
   new:       { pill: "bg-emerald-100 text-emerald-700 border-emerald-200", label: "ใหม่" },
@@ -76,10 +125,10 @@ const DIFF_CFG = {
 };
 
 function ImportModal({ existingFaqs, onClose, onConfirm }) {
-  const [step, setStep]       = useState("upload");
-  const [parsed, setParsed]   = useState(null);
-  const [mode, setMode]       = useState("merge");
-  const [error, setError]     = useState("");
+  const [step, setStep]         = useState("upload");
+  const [parsed, setParsed]     = useState(null);
+  const [mode, setMode]         = useState("merge");
+  const [error, setError]       = useState("");
   const [expanded, setExpanded] = useState(new Set());
   const fileRef = useRef(null);
 
@@ -119,7 +168,6 @@ function ImportModal({ existingFaqs, onClose, onConfirm }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div className="w-full max-w-2xl rounded-2xl border border-border bg-surface shadow-2xl flex flex-col max-h-[90vh]">
-        {/* Header */}
         <div className="flex items-center justify-between border-b border-border px-5 py-4 shrink-0">
           <div>
             <p className="text-sm font-semibold text-foreground">นำเข้าข้อมูล FAQ</p>
@@ -159,7 +207,6 @@ function ImportModal({ existingFaqs, onClose, onConfirm }) {
                 <button onClick={() => { setStep("upload"); setParsed(null); setExpanded(new Set()); }}
                   className="text-xs text-muted hover:text-foreground transition-colors">เลือกไฟล์ใหม่</button>
               </div>
-              {/* Mode */}
               <div className="grid grid-cols-2 gap-3">
                 {[
                   { value: "merge",   label: "รวมข้อมูล",     desc: "เพิ่มใหม่ / อัปเดตที่มี ID ซ้ำ" },
@@ -172,7 +219,6 @@ function ImportModal({ existingFaqs, onClose, onConfirm }) {
                   </button>
                 ))}
               </div>
-              {/* Summary chips */}
               {counts && (
                 <div className="flex flex-wrap gap-2">
                   {counts.new       > 0 && <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">+{counts.new} ใหม่</span>}
@@ -181,7 +227,6 @@ function ImportModal({ existingFaqs, onClose, onConfirm }) {
                   {counts.deleted   > 0 && <span className="rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-600">−{counts.deleted} ลบออก</span>}
                 </div>
               )}
-              {/* Row details */}
               <div className="space-y-2">
                 {diff?.results.map(({ type, row, changes }, i) => {
                   const cfg   = DIFF_CFG[type];
@@ -196,11 +241,7 @@ function ImportModal({ existingFaqs, onClose, onConfirm }) {
                         <span className="flex-1 text-sm font-medium text-foreground line-clamp-1">{row.question}</span>
                         <span className="text-xs text-muted shrink-0">{row.category || "—"}</span>
                         {type === "update" && <span className="text-xs text-blue-600 shrink-0">{changes.length} field เปลี่ยน</span>}
-                        {hasDetail && (
-                          <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 text-muted transition-transform shrink-0 ${isOpen ? "rotate-180" : ""}`} viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                          </svg>
-                        )}
+                        {hasDetail && <ChevronDown open={isOpen} />}
                       </button>
                       {isOpen && type === "update" && changes.length > 0 && (
                         <div className="border-t border-border px-4 py-3 space-y-1.5 bg-surface-muted/30">
@@ -249,40 +290,6 @@ function ImportModal({ existingFaqs, onClose, onConfirm }) {
         )}
       </div>
     </div>
-  );
-}
-
-const STATUS_CONFIG = {
-  published: { label: "เผยแพร่",   pill: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-  draft:     { label: "แบบร่าง",   pill: "bg-amber-100 text-amber-700 border-amber-200" },
-};
-
-const XIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-  </svg>
-);
-
-// ── Helpers ──────────────────────────────────────────────────
-function nextId(faqs) {
-  const nums = faqs.map((f) => parseInt(f.id.replace("FAQ", ""), 10)).filter(Boolean);
-  return `FAQ${String((nums.length ? Math.max(...nums) : 0) + 1).padStart(3, "0")}`;
-}
-
-function emptyForm() {
-  return { question: "", answer: "", category: FAQ_CATEGORIES[0], status: "published" };
-}
-
-function HighlightText({ text = "", terms = [] }) {
-  if (!terms.length) return <>{text}</>;
-  const regex = new RegExp(`(${terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})`, "gi");
-  const parts = text.split(regex);
-  return (
-    <>
-      {parts.map((part, i) =>
-        regex.test(part) ? <mark key={i} className="rounded bg-amber-200 px-0.5 text-amber-900">{part}</mark> : part
-      )}
-    </>
   );
 }
 
@@ -362,76 +369,28 @@ function FaqModal({ item, onClose, onSave }) {
   );
 }
 
-// ── FAQ Row ───────────────────────────────────────────────────
-function FaqRow({ faq, index, total, activeTerms, onEdit, onDelete, onToggleStatus, onMoveUp, onMoveDown }) {
-  const [expanded, setExpanded] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const st = STATUS_CONFIG[faq.status] ?? STATUS_CONFIG.draft;
+// ── Delete Confirm Modal ──────────────────────────────────────
+function DeleteModal({ faq, onClose, onConfirm }) {
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   return (
-    <div className="rounded-xl border border-border bg-surface overflow-hidden">
-      {/* Header row */}
-      <div className="flex items-start gap-3 p-4">
-        {/* Reorder */}
-        <div className="flex flex-col gap-0.5 shrink-0 mt-0.5">
-          <button onClick={onMoveUp} disabled={index === 0}
-            className="flex h-5 w-5 items-center justify-center rounded text-muted hover:text-primary disabled:opacity-25 transition-colors text-xs">▲</button>
-          <button onClick={onMoveDown} disabled={index === total - 1}
-            className="flex h-5 w-5 items-center justify-center rounded text-muted hover:text-primary disabled:opacity-25 transition-colors text-xs">▼</button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="w-full max-w-sm rounded-2xl border border-border bg-surface p-6 shadow-2xl">
+        <h3 className="text-base font-bold text-foreground">ยืนยันการลบ</h3>
+        <p className="mt-2 text-sm text-muted leading-relaxed">
+          ต้องการลบ FAQ นี้ใช่หรือไม่?
+        </p>
+        <p className="mt-1.5 rounded-lg bg-surface-muted px-3 py-2 text-sm font-medium text-foreground line-clamp-2">{faq.question}</p>
+        <div className="mt-5 flex justify-end gap-2">
+          <button onClick={onClose} className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted hover:text-foreground transition-colors">ยกเลิก</button>
+          <button onClick={() => { onConfirm(faq.id); onClose(); }} className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-600 transition-colors">ลบ FAQ</button>
         </div>
-
-        {/* Number */}
-        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-surface-muted text-xs font-bold text-muted mt-0.5">{index + 1}</span>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <button className="w-full text-left" onClick={() => setExpanded((v) => !v)}>
-            <p className="text-sm font-semibold text-foreground leading-snug">
-              <HighlightText text={faq.question} terms={activeTerms} />
-            </p>
-            {!expanded && (
-              <p className="mt-1 text-xs text-muted line-clamp-1">
-                <HighlightText text={faq.answer} terms={activeTerms} />
-              </p>
-            )}
-          </button>
-          {expanded && (
-            <p className="mt-2 text-sm text-muted leading-relaxed whitespace-pre-wrap">
-              <HighlightText text={faq.answer} terms={activeTerms} />
-            </p>
-          )}
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className="rounded-full border bg-surface-muted px-2.5 py-1 text-xs font-semibold text-muted">{faq.category}</span>
-            <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${st.pill}`}>{st.label}</span>
-            <span className="font-mono text-[10px] text-muted">{faq.id}</span>
-          </div>
-        </div>
-
-        {/* Chevron */}
-        <button onClick={() => setExpanded((v) => !v)} className="shrink-0 text-muted hover:text-foreground transition-colors mt-0.5">
-          <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`} viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-          </svg>
-        </button>
       </div>
-
-      {/* Actions */}
-      {!confirmDelete ? (
-        <div className="flex items-center gap-2 border-t border-border bg-surface-muted/40 px-4 py-2">
-          <button onClick={() => onToggleStatus(faq)}
-            className={`rounded-lg border px-2.5 py-1 text-xs font-semibold transition-colors ${faq.status === "published" ? "border-amber-200 text-amber-600 hover:bg-amber-50" : "border-emerald-200 text-emerald-600 hover:bg-emerald-50"}`}>
-            {faq.status === "published" ? "ย้ายเป็นแบบร่าง" : "เผยแพร่"}
-          </button>
-          <button onClick={() => onEdit(faq)} className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted hover:border-primary hover:text-primary transition-colors">แก้ไข</button>
-          <button onClick={() => setConfirmDelete(true)} className="ml-auto flex h-7 w-7 items-center justify-center rounded-lg border border-red-200 text-red-400 hover:bg-red-50 transition-colors"><XIcon /></button>
-        </div>
-      ) : (
-        <div className="flex items-center gap-2 border-t border-red-200 bg-red-50 px-4 py-2">
-          <p className="flex-1 text-xs font-semibold text-red-700">ลบ FAQ นี้?</p>
-          <button onClick={() => onDelete(faq.id)} className="rounded-lg bg-red-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-red-700 transition-colors">ยืนยัน</button>
-          <button onClick={() => setConfirmDelete(false)} className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted hover:text-foreground transition-colors">ยกเลิก</button>
-        </div>
-      )}
     </div>
   );
 }
@@ -439,20 +398,25 @@ function FaqRow({ faq, index, total, activeTerms, onEdit, onDelete, onToggleStat
 // ── Main ──────────────────────────────────────────────────────
 export default function FaqListClient() {
   const { faqs, ready, addFaq, updateFaq, deleteFaq, reorder } = useFaq();
-  const [search, setSearch]         = useState("");
-  const [filterCat, setFilterCat]   = useState("");
+
+  const [search, setSearch]             = useState("");
+  const [filterCat, setFilterCat]       = useState("");
   const [filterStatus, setFilterStatus] = useState("");
-  const [modal, setModal]           = useState(null);
-  const [page, setPage]             = useState(1);
-  const [showImport, setShowImport] = useState(false);
-  const [importDone, setImportDone] = useState(null);
+  const [modal, setModal]               = useState(null);       // null | {} | { item }
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [expandedIds, setExpandedIds]   = useState(new Set());
+  const [selectedIds, setSelectedIds]   = useState(new Set());
+  const [page, setPage]                 = useState(1);
+  const [showImport, setShowImport]     = useState(false);
+  const [importDone, setImportDone]     = useState(null);
 
   const activeTerms = [search.trim()].filter(Boolean);
 
+  // sorted + filtered list
   const filtered = useMemo(() => {
     const sorted = [...faqs].sort((a, b) => a.order - b.order);
     return sorted.filter((f) => {
-      if (filterCat    && f.category !== filterCat)  return false;
+      if (filterCat    && f.category !== filterCat)    return false;
       if (filterStatus && f.status   !== filterStatus) return false;
       if (search.trim()) {
         const q = search.toLowerCase();
@@ -462,13 +426,31 @@ export default function FaqListClient() {
     });
   }, [faqs, search, filterCat, filterStatus]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const totalPages  = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
-  const paged = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const paged       = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
-  // Reset page on filter change
-  const setFilter = (fn) => { fn(); setPage(1); };
+  // Selection helpers
+  const allPageSelected  = paged.length > 0 && paged.every((f) => selectedIds.has(f.id));
+  const somePageSelected = paged.some((f) => selectedIds.has(f.id)) && !allPageSelected;
 
+  const toggleSelect = (id) => setSelectedIds((prev) => {
+    const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next;
+  });
+  const toggleSelectPage = () => {
+    if (allPageSelected) {
+      setSelectedIds((prev) => { const next = new Set(prev); paged.forEach((f) => next.delete(f.id)); return next; });
+    } else {
+      setSelectedIds((prev) => { const next = new Set(prev); paged.forEach((f) => next.add(f.id)); return next; });
+    }
+  };
+
+  // Expand row (show full answer)
+  const toggleExpand = (id) => setExpandedIds((prev) => {
+    const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next;
+  });
+
+  // FAQ actions
   const handleSave = (form) => {
     if (modal?.item) {
       updateFaq(modal.item.id, form);
@@ -506,7 +488,7 @@ export default function FaqListClient() {
   };
 
   const handleImport = (rows, mode) => {
-    const maxOrder = faqs.reduce((m, f) => Math.max(m, f.order ?? 0), 0);
+    const maxOrder    = faqs.reduce((m, f) => Math.max(m, f.order ?? 0), 0);
     const existingMap = Object.fromEntries(faqs.map((f) => [f.id, f]));
     if (mode === "replace") {
       const next = rows.map((r, i) => ({
@@ -520,16 +502,9 @@ export default function FaqListClient() {
     } else {
       let added = 0, updated = 0;
       rows.forEach((r, i) => {
-        const norm = {
-          category: FAQ_CATEGORIES[0], status: "published",
-          ...r,
-          order: r.order ? Number(r.order) : maxOrder + i + 1,
-        };
-        if (r.id && existingMap[r.id]) {
-          updateFaq(r.id, norm); updated++;
-        } else {
-          addFaq({ ...norm, id: r.id || nextId(faqs) }); added++;
-        }
+        const norm = { category: FAQ_CATEGORIES[0], status: "published", ...r, order: r.order ? Number(r.order) : maxOrder + i + 1 };
+        if (r.id && existingMap[r.id]) { updateFaq(r.id, norm); updated++; }
+        else { addFaq({ ...norm, id: r.id || nextId(faqs) }); added++; }
       });
       setImportDone({ added, updated, mode: "merge" });
     }
@@ -538,6 +513,7 @@ export default function FaqListClient() {
 
   const publishedCount = faqs.filter((f) => f.status === "published").length;
   const draftCount     = faqs.filter((f) => f.status === "draft").length;
+  const selectedList   = faqs.filter((f) => selectedIds.has(f.id));
 
   if (!ready) {
     return (
@@ -553,7 +529,8 @@ export default function FaqListClient() {
 
   return (
     <div className="space-y-5 p-6">
-      {/* Import done banner */}
+
+      {/* Import success banner */}
       {importDone && (
         <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
@@ -570,11 +547,11 @@ export default function FaqListClient() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: "FAQ ทั้งหมด", count: faqs.length,     pill: "bg-surface-muted border-border text-foreground" },
-          { label: "เผยแพร่",     count: publishedCount,  pill: "bg-emerald-50 border-emerald-200 text-emerald-700" },
-          { label: "แบบร่าง",     count: draftCount,      pill: "bg-amber-50 border-amber-200 text-amber-700" },
+          { label: "FAQ ทั้งหมด", count: faqs.length,    cls: "border-border bg-surface-muted text-foreground" },
+          { label: "เผยแพร่",     count: publishedCount, cls: "border-emerald-200 bg-emerald-50 text-emerald-700" },
+          { label: "แบบร่าง",     count: draftCount,     cls: "border-amber-200 bg-amber-50 text-amber-700" },
         ].map((s) => (
-          <div key={s.label} className={`rounded-2xl border p-4 ${s.pill}`}>
+          <div key={s.label} className={`rounded-2xl border p-4 ${s.cls}`}>
             <p className="text-2xl font-extrabold">{s.count}</p>
             <p className="text-xs mt-0.5">{s.label}</p>
           </div>
@@ -593,31 +570,27 @@ export default function FaqListClient() {
             className="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft placeholder:text-muted" />
         </div>
         {/* Category filter */}
-        <select value={filterCat} onChange={(e) => setFilter(() => setFilterCat(e.target.value))}
+        <select value={filterCat} onChange={(e) => { setFilterCat(e.target.value); setPage(1); }}
           className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft">
           <option value="">หมวดหมู่ทั้งหมด</option>
           {FAQ_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
         {/* Status filter */}
-        <select value={filterStatus} onChange={(e) => setFilter(() => setFilterStatus(e.target.value))}
+        <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
           className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft">
           <option value="">สถานะทั้งหมด</option>
           <option value="published">เผยแพร่</option>
           <option value="draft">แบบร่าง</option>
         </select>
-        <button
-          onClick={() => exportCSV(faqs, `faq_${new Date().toISOString().slice(0,10)}.csv`)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:border-primary hover:text-primary transition-colors whitespace-nowrap"
-        >
+        <button onClick={() => exportCSV(faqs, `faq_${new Date().toISOString().slice(0,10)}.csv`)}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:border-primary hover:text-primary transition-colors whitespace-nowrap">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
           </svg>
           ส่งออก CSV
         </button>
-        <button
-          onClick={() => setShowImport(true)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:border-primary hover:text-primary transition-colors whitespace-nowrap"
-        >
+        <button onClick={() => setShowImport(true)}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:border-primary hover:text-primary transition-colors whitespace-nowrap">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
           </svg>
@@ -628,7 +601,7 @@ export default function FaqListClient() {
 
       {/* Category pills */}
       <div className="flex flex-wrap gap-2">
-        <button onClick={() => setFilter(() => setFilterCat(""))}
+        <button onClick={() => { setFilterCat(""); setPage(1); }}
           className={`rounded-full border px-2.5 py-1 text-xs font-semibold transition-all ${filterCat === "" ? "border-primary bg-accent-soft text-primary" : "border-border text-muted hover:text-foreground"}`}>
           ทั้งหมด ({faqs.length})
         </button>
@@ -636,7 +609,7 @@ export default function FaqListClient() {
           const count = faqs.filter((f) => f.category === cat).length;
           if (!count) return null;
           return (
-            <button key={cat} onClick={() => setFilter(() => setFilterCat(filterCat === cat ? "" : cat))}
+            <button key={cat} onClick={() => { setFilterCat(filterCat === cat ? "" : cat); setPage(1); }}
               className={`rounded-full border px-2.5 py-1 text-xs font-semibold transition-all ${filterCat === cat ? "border-primary bg-accent-soft text-primary" : "border-border text-muted hover:text-foreground"}`}>
               {cat} ({count})
             </button>
@@ -648,31 +621,175 @@ export default function FaqListClient() {
       {(search || filterCat || filterStatus) && (
         <p className="text-xs text-muted">
           พบ {filtered.length} รายการ
-          {search && <span> · ค้นหา "{search}"</span>}
-          {filterCat && <span> · หมวด {filterCat}</span>}
+          {search      && <span> · ค้นหา &ldquo;{search}&rdquo;</span>}
+          {filterCat   && <span> · หมวด {filterCat}</span>}
           {filterStatus && <span> · {STATUS_CONFIG[filterStatus]?.label}</span>}
         </p>
       )}
 
-      {/* FAQ list */}
+      {/* Selection bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 rounded-xl border border-primary/30 bg-accent-soft px-4 py-2.5">
+          <span className="text-sm font-semibold text-primary">เลือกแล้ว {selectedIds.size} รายการ</span>
+          <div className="flex-1" />
+          <button onClick={() => exportCSV(selectedList, `faq_selected_${new Date().toISOString().slice(0,10)}.csv`)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-primary/40 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary hover:text-white transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+            ส่งออกที่เลือก
+          </button>
+          <button onClick={() => setSelectedIds(new Set())}
+            className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted hover:text-foreground transition-colors">ยกเลิก</button>
+        </div>
+      )}
+
+      {/* Table */}
       {paged.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border py-20 text-center text-sm text-muted">ไม่พบ FAQ ที่ตรงกับเงื่อนไข</div>
+        <div className="rounded-2xl border border-dashed border-border py-20 text-center text-sm text-muted">
+          ไม่พบ FAQ ที่ตรงกับเงื่อนไข
+        </div>
       ) : (
-        <div className="space-y-3">
-          {paged.map((faq, i) => (
-            <FaqRow
-              key={faq.id}
-              faq={faq}
-              index={(currentPage - 1) * PAGE_SIZE + i}
-              total={faqs.length}
-              activeTerms={activeTerms}
-              onEdit={(f) => setModal({ item: f })}
-              onDelete={deleteFaq}
-              onToggleStatus={handleToggleStatus}
-              onMoveUp={() => handleMoveUp(faq)}
-              onMoveDown={() => handleMoveDown(faq)}
-            />
-          ))}
+        <div className="card overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm" style={{ tableLayout: "fixed" }}>
+              <colgroup>
+                <col style={{ width: "44px" }} />
+                <col style={{ width: "72px" }} />
+                <col />
+                <col style={{ width: "128px" }} />
+                <col style={{ width: "100px" }} />
+                <col style={{ width: "120px" }} />
+              </colgroup>
+              <thead>
+                <tr className="border-b border-border bg-surface-muted">
+                  {/* Checkbox header */}
+                  <th className="px-3 py-3 text-center">
+                    <input
+                      type="checkbox"
+                      checked={allPageSelected}
+                      ref={(el) => { if (el) el.indeterminate = somePageSelected; }}
+                      onChange={toggleSelectPage}
+                      onClick={(e) => e.stopPropagation()}
+                      className="rounded border-border"
+                    />
+                  </th>
+                  <th className="px-3 py-3 text-xs font-semibold text-muted text-center">ลำดับ</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-muted">คำถาม / คำตอบ</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-muted">หมวดหมู่</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-muted">สถานะ</th>
+                  <th className="px-4 py-3 text-xs font-semibold text-muted">จัดการ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paged.map((faq, i) => {
+                  const globalIdx = (currentPage - 1) * PAGE_SIZE + i;
+                  const sortedAll = [...faqs].sort((a, b) => a.order - b.order);
+                  const totalSorted = sortedAll.length;
+                  const isFirst   = sortedAll[0]?.id === faq.id;
+                  const isLast    = sortedAll[totalSorted - 1]?.id === faq.id;
+                  const isExpanded = expandedIds.has(faq.id);
+                  const isSelected = selectedIds.has(faq.id);
+                  const st = STATUS_CONFIG[faq.status] ?? STATUS_CONFIG.draft;
+
+                  return [
+                    /* Main row */
+                    <tr key={faq.id}
+                      onClick={() => toggleExpand(faq.id)}
+                      className={`border-b border-border cursor-pointer transition-colors hover:bg-accent-soft/50 ${isSelected ? "bg-accent-soft/30" : ""} ${isExpanded ? "bg-accent-soft/20" : ""}`}>
+
+                      {/* Checkbox */}
+                      <td className="px-3 py-3 text-center" onClick={(e) => { e.stopPropagation(); toggleSelect(faq.id); }}>
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelect(faq.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="rounded border-border"
+                        />
+                      </td>
+
+                      {/* Order + reorder arrows */}
+                      <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex flex-col items-center gap-0.5">
+                          <button onClick={() => handleMoveUp(faq)} disabled={isFirst}
+                            className="flex h-5 w-5 items-center justify-center rounded text-muted hover:text-primary disabled:opacity-20 transition-colors text-[10px]">▲</button>
+                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-surface-muted text-xs font-bold text-muted">
+                            {globalIdx + 1}
+                          </span>
+                          <button onClick={() => handleMoveDown(faq)} disabled={isLast}
+                            className="flex h-5 w-5 items-center justify-center rounded text-muted hover:text-primary disabled:opacity-20 transition-colors text-[10px]">▼</button>
+                        </div>
+                      </td>
+
+                      {/* Question + answer preview */}
+                      <td className="px-4 py-3 min-w-0">
+                        <div className="flex items-start gap-2 min-w-0">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-foreground leading-snug line-clamp-2">
+                              <HighlightText text={faq.question} terms={activeTerms} />
+                            </p>
+                            <p className="mt-0.5 text-xs text-muted line-clamp-1">
+                              <HighlightText text={faq.answer} terms={activeTerms} />
+                            </p>
+                            <p className="mt-1 font-mono text-[10px] text-muted/60">{faq.id}</p>
+                          </div>
+                          <ChevronDown open={isExpanded} />
+                        </div>
+                      </td>
+
+                      {/* Category */}
+                      <td className="px-4 py-3">
+                        <span className="rounded-full border border-border bg-surface-muted px-2.5 py-1 text-xs font-semibold text-muted whitespace-nowrap">
+                          {faq.category}
+                        </span>
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <button onClick={() => handleToggleStatus(faq)}
+                          title={faq.status === "published" ? "คลิกเพื่อย้ายเป็นแบบร่าง" : "คลิกเพื่อเผยแพร่"}
+                          className={`rounded-full border px-2.5 py-1 text-xs font-semibold transition-all hover:opacity-70 whitespace-nowrap ${st.pill}`}>
+                          {st.label}
+                        </button>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-1.5">
+                          <button onClick={() => setModal({ item: faq })} title="แก้ไข"
+                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted hover:border-amber-400 hover:text-amber-500 transition-colors">
+                            <EditIcon />
+                          </button>
+                          <button onClick={() => setDeleteTarget(faq)} title="ลบ"
+                            className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted hover:border-red-400 hover:text-red-500 transition-colors">
+                            <TrashIcon />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>,
+
+                    /* Expanded answer row */
+                    isExpanded && (
+                      <tr key={`${faq.id}-expanded`} className="border-b border-border bg-surface-muted/30">
+                        <td colSpan={6} className="px-6 py-4">
+                          <div className="flex gap-3">
+                            <div className="mt-0.5 h-full w-0.5 shrink-0 rounded-full bg-primary/30 self-stretch min-h-4" />
+                            <div className="space-y-1 min-w-0">
+                              <p className="text-xs font-semibold text-muted uppercase tracking-wide">คำตอบ</p>
+                              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
+                                <HighlightText text={faq.answer} terms={activeTerms} />
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ),
+                  ];
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -681,14 +798,23 @@ export default function FaqListClient() {
         <div className="flex items-center justify-center gap-2">
           <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}
             className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted hover:text-foreground disabled:opacity-40 transition-colors">←</button>
-          <span className="text-sm text-muted">หน้า {currentPage} / {totalPages}</span>
+          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+            <button key={p} onClick={() => setPage(p)}
+              className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${p === currentPage ? "border-primary bg-primary text-white" : "border-border text-muted hover:text-foreground"}`}>
+              {p}
+            </button>
+          ))}
           <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}
             className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted hover:text-foreground disabled:opacity-40 transition-colors">→</button>
         </div>
       )}
 
+      {/* Modals */}
       {modal !== null && (
         <FaqModal item={modal.item} onClose={() => setModal(null)} onSave={handleSave} />
+      )}
+      {deleteTarget && (
+        <DeleteModal faq={deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={deleteFaq} />
       )}
       {showImport && (
         <ImportModal existingFaqs={faqs} onClose={() => setShowImport(false)} onConfirm={handleImport} />
