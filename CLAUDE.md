@@ -233,8 +233,40 @@ onCellClick={(e, i, j) => {
 ## UI Conventions
 - **Sticky back bar** ใน detail pages: `<div className="sticky top-0 z-20 flex items-center border-b border-border bg-surface/95 px-6 py-2.5 backdrop-blur">` — มีทั้งใน student และ alumni detail
 - **Action buttons**: ขนาด `h-8 w-8` icon `h-4 w-4` — ใช้ทั้ง student (`StudentActionButtons.js`) และ alumni list Actions column width `115px`
-- **Filter persistence**: ใช้ `sessionStorage` เก็บ filter state ผ่าน `loadFilters()`/`saveFilters()` — student ใช้ key `student-list-filters`, alumni ใช้ key `alumni-list-filters`
+- **Filter persistence**: ใช้ `sessionStorage` เก็บ filter state ผ่าน `loadFilters()`/`saveFilters()` — student ใช้ key `student-list-filters`, alumni ใช้ key `alumni-list-filters`, doc ใช้ key `doc-list-filters`
 - **Sort options มาตรฐาน**: `newest` (createdAt desc), `oldest` (createdAt asc), `updated` (updatedAt desc), `th_az`/`th_za` (ชื่อไทย), เพิ่มเติมตามบริบท เช่น `year_desc`/`year_asc` สำหรับ alumni
+
+### List page layout มาตรฐาน (ใช้ทุกโมดูล: News, FAQ, Documents, Job, Company, Mapping)
+ลำดับ section ใน return ของ list client:
+1. **Status pills** — `inline-flex` pill buttons กรองตามสถานะ พร้อม count badge และ dot สี เลือกแล้วมี `ring-2 ring-offset-1 ring-current`
+2. **Search row** — `flex gap-2`: input `flex-1` + ปุ่มเสริม (ส่งออก/นำเข้า/เพิ่ม)
+3. **Filter row** — `flex flex-wrap items-center gap-3`: label + select ทีละ filter (หมวดหมู่, สถานะ, เรียงลำดับ)
+4. **Active filter chips** — แสดงเฉพาะเมื่อ `hasFilters` — chip `chipBase` ต่อ filter + ปุ่ม "ล้างทั้งหมด"
+5. **Selection bar** — แสดงเมื่อเลือก ≥ 1 — count + ส่งออกที่เลือก + ยกเลิก
+6. **Table** — `overflow-hidden rounded-2xl border border-border bg-surface`
+
+Constants ที่ทุก list client ควรมี:
+```js
+const inputCls  = "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft placeholder:text-muted";
+const selectCls = "rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft";
+const labelCls  = "text-xs font-medium text-foreground";
+const chipBase  = "inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-primary hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors";
+```
+
+### Icon มาตรฐานสำหรับปุ่ม import/export (ทุกโมดูล)
+ใช้ Heroicons 20px solid เหมือนกันทุกที่ — **ห้ามใช้ icon อื่น**:
+```jsx
+{/* Export (ส่งออก CSV) — arrow ชี้ขึ้น */}
+<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+  <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
+</svg>
+
+{/* Import (นำเข้า CSV) — arrow ชี้ลง */}
+<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+  <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+</svg>
+```
+Selection bar ใช้ `h-3.5 w-3.5` แทน `h-4 w-4` (เพราะปุ่มเล็กกว่า) — icon path เดิม
 - **Timeline/ประวัติเรียงตามเวลา** (student enrollments, alumni employment history): แสดง **ล่าสุดอยู่บนสุด เก่าสุดอยู่ล่างสุด** เสมอ — ข้อมูลจริงใน state/DB ยังเก็บเรียงเก่า→ใหม่ตาม `order` เหมือนเดิม แค่ reverse ตอน render เท่านั้น ตัวเลข badge ให้นับตามลำดับเวลาจริง ไม่ใช่ตำแหน่งที่แสดงผล:
   ```js
   const displayed = [...items].reverse();
@@ -334,6 +366,35 @@ const data = Object.fromEntries(
 - Arrows: `h-14 w-14 text-3xl` hover สีขาว → primary
 - Dots: `bottom-4`, `h-3 w-8 bg-white` active, `h-3 w-3 bg-white/40` inactive
 - Animation: 400ms `translate-x-4 opacity-0` → `translate-x-0 opacity-100`
+
+## FAQ (`/admin/information/faq`)
+- CRUD ผ่าน `FaqContext` → `/api/faq`
+- ID รูปแบบ `FAQ001`, `FAQ002`, ... — auto-generate ฝั่ง client (`nextId(faqs)`)
+- ตาราง: ☐ | ลำดับ (▲▼ reorder) | คำถาม / คำตอบ | หมวดหมู่ | สถานะ | จัดการ
+- **คำตอบแสดงตรงในตาราง** (ไม่ต้องกด) — `line-clamp-4 whitespace-pre-wrap text-xs text-muted`
+- Status pills: ทั้งหมด / เผยแพร่ / แบบร่าง — count นับจาก `statusCounts` useMemo ที่ respect filterCat + search แต่ไม่ filter status ตัวเอง
+- Filter: หมวดหมู่ dropdown เท่านั้น (ไม่มี sort dropdown เพราะลำดับมาจาก manual reorder)
+- `sessionStorage` key: `faq-list-filters` (ยังไม่ได้ implement — TODO)
+- Import CSV: `question`, `answer` บังคับ — รองรับ merge/replace mode
+- Export CSV: columns `id`, `question`, `answer`, `category`, `status`, `order`
+
+## Documents (`/admin/information/documents`)
+- CRUD ผ่าน `DocumentContext` → `/api/documents`
+- ID รูปแบบ `D001`, `D002`, ... — auto-generate
+- Status: `published` | `scheduled` | `draft` — `effectiveStatus()` ดูวันที่เผยแพร่ด้วย
+- `formatDateTime` จาก `lib/utils/newsUtils` — ใช้แสดงวันที่เหมือน News (ไม่ใช่ `toThaiDateTime` custom)
+- Filter: หมวดหมู่ + ชนิดไฟล์ (`FILE_TYPES` จาก `lib/data/documentsData`) + สถานะ + เรียงลำดับ
+- `sessionStorage` key: `doc-list-filters`
+
+## Splash Config (`/admin/information/splash`, `SplashConfigClient.js`)
+- Config เดียวใน DB (`SplashConfig` model) — `GET/PUT /api/splash`
+- **Prisma enum radius**: `r2xl` (`@map("2xl")`), `r3xl` (`@map("3xl")`) — UI ส่ง `"2xl"`/`"3xl"` ตรงๆ → API แปลงด้วย `RADIUS_TO_PRISMA` ก่อนบันทึก, แปลงกลับด้วย `RADIUS_FROM_PRISMA` ใน `toClient()` ก่อน return
+- **Field whitelist**: `PUT /api/splash` ใช้ `SPLASH_FIELDS` array กรองก่อนส่ง Prisma (เหมือน Banner)
+- **Layout**: 2 คอลัมน์ `grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)]` — ซ้าย settings, ขวา sticky preview
+- **Interactive preview**: ปุ่ม drag handle เปลี่ยน width (sm/md/lg snap ทุก 80px), badge วนเปลี่ยน radius
+- **Delay**: เก็บใน DB หน่วย ms (`delayMs`) แต่ UI แสดง/รับหน่วย วินาที — slider `min=0 max=3 step=0.5`, `onChange: v * 1000`
+- **Library tab**: thumbnail `grid-cols-5 gap-1.5 aspect-square` — ไม่มี mini strip preview แยก (แสดงเส้น path text เท่านั้น)
+- **Rules of Hooks**: ทุก `useState`/`useRef`/`useEffect` ต้องอยู่ก่อน `if (!ready || !form) return` เสมอ
 
 ## ยังไม่ได้ทำ (Remaining)
 - API Authentication (ทุก route ยังไม่ได้ protect)
