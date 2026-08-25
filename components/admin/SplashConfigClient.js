@@ -73,16 +73,17 @@ const TrashIcon = () => (
 );
 
 // ── Image thumbnail (shared) ──────────────────────────────────
-function ImgThumb({ src, selected, onClick, onDelete, deleting }) {
+// aspectCls: "aspect-square" (default, คลัง) หรือ "aspect-video" (preset)
+function ImgThumb({ src, selected, onClick, onDelete, deleting, aspectCls = "aspect-square" }) {
   return (
     <div className={`group relative overflow-hidden rounded-lg border-2 transition-all ${selected ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary"}`}>
-      <button type="button" onClick={onClick} className="block w-full">
+      <button type="button" onClick={onClick} className={`block w-full ${aspectCls} overflow-hidden`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt="" className="block w-full object-cover aspect-video" />
+        <img src={src} alt="" className="block h-full w-full object-cover" />
       </button>
       {selected && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-primary/30">
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-white">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-white shadow">
             <CheckIcon />
           </span>
         </div>
@@ -93,10 +94,10 @@ function ImgThumb({ src, selected, onClick, onDelete, deleting }) {
           onClick={(e) => { e.stopPropagation(); onDelete(); }}
           disabled={deleting}
           title="ลบรูปนี้"
-          className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-600 disabled:opacity-50"
+          className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-600 disabled:opacity-50"
         >
           {deleting
-            ? <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
+            ? <svg className="h-2.5 w-2.5 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
             : <TrashIcon />}
         </button>
       )}
@@ -240,7 +241,7 @@ function SplashImageUploader({ value, onChange }) {
             </div>
           ) : (
             <div className="space-y-3">
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-5 gap-1.5">
                 {library.map((f) => (
                   <ImgThumb
                     key={f.path}
@@ -249,6 +250,7 @@ function SplashImageUploader({ value, onChange }) {
                     onClick={() => onChange(f.path)}
                     onDelete={() => setConfirmDelete(f)}
                     deleting={deletingFile === f.name}
+                    aspectCls="aspect-square"
                   />
                 ))}
               </div>
@@ -296,7 +298,7 @@ function SplashImageUploader({ value, onChange }) {
       {tab === "preset" && (
         <div className="grid grid-cols-4 gap-2">
           {PRESET_IMAGES.map((img) => (
-            <ImgThumb key={img} src={img} selected={value === img} onClick={() => onChange(img)} />
+            <ImgThumb key={img} src={img} selected={value === img} onClick={() => onChange(img)} aspectCls="aspect-video" />
           ))}
         </div>
       )}
@@ -310,13 +312,11 @@ function SplashImageUploader({ value, onChange }) {
         </div>
       )}
 
-      {/* Mini strip preview — แสดงตามสัดส่วนจริงเหมือน SplashOverlay */}
+      {/* รูปที่เลือกปัจจุบัน — แสดงแค่ใน Live Preview ด้านล่าง */}
       {value && (
-        <div className="overflow-hidden rounded-lg border border-border bg-surface-muted">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={value} alt="preview" className="block w-full" />
-          <p className="px-2 py-1 font-mono text-[10px] text-muted truncate">{value}</p>
-        </div>
+        <p className="truncate font-mono text-[11px] text-muted">
+          <span className="text-primary font-semibold">✓ เลือกแล้ว:</span> {value}
+        </p>
       )}
     </div>
   );
