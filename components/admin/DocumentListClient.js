@@ -3,19 +3,12 @@
 import { useState, useMemo, useEffect } from "react";
 import { useDocuments } from "./contexts/DocumentContext";
 import { DOCUMENT_CATEGORIES, FILE_TYPES } from "@/lib/data/documentsData";
+import { formatDateTime } from "@/lib/utils/newsUtils";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-const THAI_MONTHS = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
-
-function toThaiDateTime(iso) {
-  if (!iso) return "";
-  const [datePart, timePart] = iso.split("T");
-  const [y, m, d] = datePart.split("-").map(Number);
-  const dateStr = `${d} ${THAI_MONTHS[m - 1]} ${y + 543}`;
-  if (!timePart || timePart === "00:00") return dateStr;
-  return `${dateStr} เวลา ${timePart} น.`;
-}
+// alias ให้ชื่อตรงกับที่ใช้ใน codebase นี้
+const toThaiDateTime = formatDateTime;
 
 function nowISO() {
   const d = new Date();
