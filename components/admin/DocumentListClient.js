@@ -702,7 +702,7 @@ export default function DocumentListClient() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-surface-muted">
-                {["ชื่อเอกสาร / คำอธิบาย", "หมวดหมู่", "ไฟล์", "วันที่เผยแพร่", "สถานะ", ""].map((h) => (
+                {["ชื่อเอกสาร / คำอธิบาย", "หมวดหมู่", "ไฟล์", "วันที่เผยแพร่", "สถานะ", "จัดการ"].map((h) => (
                   <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-muted whitespace-nowrap">{h}</th>
                 ))}
               </tr>
