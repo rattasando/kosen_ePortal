@@ -24,10 +24,10 @@ const MOU_STATUSES = ["มี MOU", "ไม่มี MOU"];
 const TYPES        = ["บริษัทจำกัด", "บริษัทมหาชนจำกัด", "รัฐวิสาหกิจ", "หน่วยงานวิจัย"];
 
 const STATUS_CONFIG = {
-  ร่วมมือ:              { badge: "bg-emerald-100 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
-  รอดำเนินการ:          { badge: "bg-amber-100 text-amber-700 border-amber-200",      dot: "bg-amber-500"   },
-  อยู่ระหว่างพิจารณา:  { badge: "bg-blue-100 text-blue-700 border-blue-200",         dot: "bg-blue-400"    },
-  ระงับ:                { badge: "bg-red-100 text-red-700 border-red-200",            dot: "bg-red-500"     },
+  ร่วมมือ:              { color: "bg-emerald-100 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
+  รอดำเนินการ:          { color: "bg-amber-100 text-amber-700 border-amber-200",       dot: "bg-amber-500"   },
+  อยู่ระหว่างพิจารณา:  { color: "bg-blue-100 text-blue-700 border-blue-200",          dot: "bg-blue-400"    },
+  ระงับ:                { color: "bg-red-100 text-red-700 border-red-200",             dot: "bg-red-500"     },
 };
 const MOU_CONFIG = {
   "มี MOU":    "bg-blue-100 text-blue-700 border-blue-200",
@@ -131,7 +131,7 @@ function CompanyHeroCard({ d, editing }) {
           {d.nameEn && <p className="text-sm text-muted">{d.nameEn}</p>}
           <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
             {stCfg && (
-              <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${stCfg.badge} border-current/20`}>
+              <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${stCfg.color}`}>
                 <span className={`h-1.5 w-1.5 rounded-full ${stCfg.dot}`} />
                 {d.status}
               </span>

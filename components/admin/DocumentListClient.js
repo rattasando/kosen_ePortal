@@ -636,16 +636,21 @@ export default function DocumentListClient() {
       {/* ── Status pills ── */}
       <div className="flex flex-wrap gap-2">
         {[
-          { key: "",          label: "ทั้งหมด",        count: statusCounts.all,       pill: "bg-surface-muted border-border text-foreground" },
-          { key: "published", label: "เผยแพร่",        count: statusCounts.published, pill: "bg-emerald-50 border-emerald-200 text-emerald-700" },
-          { key: "scheduled", label: "กำหนดเผยแพร่",  count: statusCounts.scheduled, pill: "bg-blue-50 border-blue-200 text-blue-700" },
-          { key: "draft",     label: "แบบร่าง",        count: statusCounts.draft,     pill: "bg-amber-50 border-amber-200 text-amber-700" },
-        ].map(({ key, label, count, pill }) => (
+          { key: "",          label: "ทั้งหมด",        count: statusCounts.all,       color: "bg-surface-muted border-border text-foreground",         dot: "bg-gray-400"    },
+          { key: "published", label: "เผยแพร่",        count: statusCounts.published, color: "bg-emerald-100 text-emerald-700 border-emerald-200",     dot: "bg-emerald-500" },
+          { key: "scheduled", label: "กำหนดเผยแพร่",  count: statusCounts.scheduled, color: "bg-blue-100 text-blue-700 border-blue-200",              dot: "bg-blue-400"    },
+          { key: "draft",     label: "แบบร่าง",        count: statusCounts.draft,     color: "bg-amber-100 text-amber-700 border-amber-200",           dot: "bg-amber-400"   },
+        ].map(({ key, label, count, color, dot }) => (
           <button key={key}
             onClick={() => setFilterStatus(filterStatus === key ? "" : key)}
-            className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium transition-all ${pill} ${filterStatus === key ? "ring-2 ring-primary/30 ring-offset-1" : "opacity-80 hover:opacity-100"}`}>
+            className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-semibold transition-all ${
+              filterStatus === key
+                ? `${color} ring-2 ring-offset-1 ring-current`
+                : "border-border bg-surface text-muted hover:border-primary hover:text-primary"
+            }`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
             {label}
-            <span className={`rounded-full px-1.5 py-0.5 text-xs font-semibold ${filterStatus === key ? "bg-primary/10" : "bg-border"}`}>{count}</span>
+            <span className="rounded-full bg-black/10 px-1.5 py-0.5 text-[10px] font-bold">{count}</span>
           </button>
         ))}
       </div>

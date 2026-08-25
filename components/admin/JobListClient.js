@@ -516,10 +516,10 @@ export default function JobListClient() {
     return jobs;
   }, [jobs, activeTab]);
 
-  const statusSummary = useMemo(() =>
-    JOB_STATUSES.map(s => ({ label: s, count: tabScoped.filter(j => j.status === s).length, cfg: STATUS_CONFIG[s] })),
-    [tabScoped]
-  );
+  const statusSummary = useMemo(() => [
+    { label: "ทั้งหมด", count: tabScoped.length, cfg: { color: "bg-surface-muted border-border text-foreground", dot: "bg-gray-400" } },
+    ...JOB_STATUSES.map(s => ({ label: s, count: tabScoped.filter(j => j.status === s).length, cfg: STATUS_CONFIG[s] })),
+  ], [tabScoped]);
 
   // ── Checkbox multi-select (เหมือน student) ──
   const pageIds = paginated.map(j => j.id);

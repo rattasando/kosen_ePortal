@@ -104,9 +104,9 @@ function computeDiff(incoming, existing) {
 // ── Import Modal ─────────────────────────────────────────────────────────────
 
 const TYPE_CFG = {
-  new:       { pill: "bg-emerald-100 text-emerald-700 border-emerald-200", label: "ใหม่" },
-  update:    { pill: "bg-blue-100 text-blue-700 border-blue-200",          label: "อัปเดต" },
-  unchanged: { pill: "bg-gray-100 text-gray-500 border-gray-200",          label: "ไม่เปลี่ยน" },
+  new:       { color: "bg-emerald-100 text-emerald-700 border-emerald-200", label: "ใหม่" },
+  update:    { color: "bg-blue-100 text-blue-700 border-blue-200",          label: "อัปเดต" },
+  unchanged: { color: "bg-gray-100 text-gray-500 border-gray-200",          label: "ไม่เปลี่ยน" },
 };
 
 function ImportModal({ existingAlumni, onClose, onConfirm }) {
@@ -247,7 +247,7 @@ function ImportModal({ existingAlumni, onClose, onConfirm }) {
                     <div key={row.id} className="rounded-xl border border-border overflow-hidden">
                       <button type="button" onClick={() => hasDetail && toggleExpand(row.id)}
                         className={`w-full flex items-center gap-3 px-4 py-2.5 text-left ${hasDetail ? "hover:bg-surface-muted/50 cursor-pointer" : "cursor-default"}`}>
-                        <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold ${cfg.pill}`}>{cfg.label}</span>
+                        <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold ${cfg.color}`}>{cfg.label}</span>
                         <span className="flex-1 text-sm font-medium text-foreground">{row.prefix}{row.name} {row.lastname}</span>
                         <span className="text-xs text-muted font-mono">{row.university || "-"}</span>
                         {type === "update" && <span className="text-xs text-blue-600 shrink-0">{changes.length} field เปลี่ยน</span>}
@@ -346,15 +346,6 @@ function DeleteModal({ alumni, onConfirm, onCancel }) {
   );
 }
 
-function StatCard({ label, value, sub, color }) {
-  return (
-    <div className={`rounded-xl border-l-4 ${color} bg-surface px-5 py-4`}>
-      <p className="text-2xl font-extrabold text-foreground">{value}</p>
-      <p className="text-sm font-semibold text-foreground">{label}</p>
-      {sub && <p className="text-xs text-muted mt-0.5">{sub}</p>}
-    </div>
-  );
-}
 
 const PAGE_SIZE_OPTIONS = [20, 25, 30, 50];
 
@@ -384,10 +375,10 @@ function Pagination({ page, totalPages, onPage }) {
 }
 
 function StatusBadge({ status }) {
-  const cfg = SCHOLARSHIP_STATUS_COLOR[status] ?? { badge: "bg-gray-100 text-gray-600", bar: "bg-gray-400" };
+  const cfg = SCHOLARSHIP_STATUS_COLOR[status] ?? { color: "bg-gray-100 text-gray-600 border-gray-200", dot: "bg-gray-400" };
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${cfg.badge} border-current/20 whitespace-nowrap`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${cfg.bar}`} />
+    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${cfg.color}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
       {status}
     </span>
   );
@@ -565,9 +556,6 @@ export default function AlumniPage() {
   if (!ready) return <div className="flex items-center justify-center py-24 text-muted text-sm">กำลังโหลดข้อมูล...</div>;
 
   const total = ALUMNI.length;
-  const working = ALUMNI.filter((a) => a.scholarshipStatus === "กำลังทำงาน").length;
-  const completed = ALUMNI.filter((a) => a.scholarshipStatus === "ครบตามสัญญา").length;
-  const exempted = ALUMNI.filter((a) => a.scholarshipStatus === "ได้รับยกเว้น").length;
 
   return (
     <>
@@ -578,36 +566,30 @@ export default function AlumniPage() {
 
       <div className="space-y-6 p-6">
 
-        {/* ── Stat Cards ── */}
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          <StatCard label="ศิษย์เก่าทั้งหมด"    value={total}     sub="คนในระบบ"                              color="border-primary" />
-          <StatCard label="กำลังทำงานตามสัญญา"  value={working}   sub={`${Math.round(working/total*100)}% ของทั้งหมด`}  color="border-amber-400" />
-          <StatCard label="ครบตามสัญญาแล้ว"     value={completed} sub={`${Math.round(completed/total*100)}% ของทั้งหมด`} color="border-emerald-500" />
-          <StatCard label="ได้รับการยกเว้น"     value={exempted}  sub={`${Math.round(exempted/total*100)}% ของทั้งหมด`} color="border-violet-500" />
-        </div>
-
         {/* ── Status pills ── */}
         <div className="flex flex-wrap gap-2">
-          {STATUSES.filter((s) => s !== "ทั้งหมด").map((s) => {
-            const cfg = SCHOLARSHIP_STATUS_COLOR[s];
-            const count = ALUMNI.filter((a) => a.scholarshipStatus === s).length;
-            const active = filterStatus === s;
-            return (
-              <button
-                key={s}
-                onClick={() => setFilterStatus(active ? "ทั้งหมด" : s)}
-                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
-                  active
-                    ? cfg.badge + " border-current ring-2 ring-offset-1 ring-current"
-                    : "border-border bg-surface text-muted hover:border-primary hover:text-primary"
-                }`}
-              >
-                <span className={`h-2 w-2 rounded-full ${cfg.bar}`} />
-                {s}
-                <span className="rounded-full bg-black/10 px-1.5 py-0.5 text-[10px] font-bold">{count}</span>
-              </button>
-            );
-          })}
+          {[
+            { key: "ทั้งหมด", color: "bg-surface-muted border-border text-foreground", dot: "bg-gray-400", count: ALUMNI.length },
+            ...STATUSES.filter((s) => s !== "ทั้งหมด").map((s) => ({
+              key: s,
+              ...SCHOLARSHIP_STATUS_COLOR[s],
+              count: ALUMNI.filter((a) => a.scholarshipStatus === s).length,
+            })),
+          ].map(({ key, color, dot, count }) => (
+            <button
+              key={key}
+              onClick={() => setFilterStatus(filterStatus === key ? "ทั้งหมด" : key)}
+              className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-semibold transition-all ${
+                filterStatus === key
+                  ? `${color} ring-2 ring-offset-1 ring-current`
+                  : "border-border bg-surface text-muted hover:border-primary hover:text-primary"
+              }`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
+              {key}
+              <span className="rounded-full bg-black/10 px-1.5 py-0.5 text-[10px] font-bold">{count}</span>
+            </button>
+          ))}
         </div>
 
         {/* ── Search + Filters ── */}

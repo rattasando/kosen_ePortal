@@ -1263,11 +1263,10 @@ export default function MappingListClient() {
     return joined;
   }, [joined, activeTab]);
 
-  const statusSummary = useMemo(() =>
-    MAPPING_STATUSES
-      .map(s => ({ label: s, count: tabScoped.filter(m => m.status === s).length, cfg: STATUS_CONFIG[s] })),
-    [tabScoped]
-  );
+  const statusSummary = useMemo(() => [
+    { label: "ทั้งหมด", count: tabScoped.length, cfg: { color: "bg-surface-muted border-border text-foreground", dot: "bg-gray-400" } },
+    ...MAPPING_STATUSES.map(s => ({ label: s, count: tabScoped.filter(m => m.status === s).length, cfg: STATUS_CONFIG[s] })),
+  ], [tabScoped]);
 
   const handleAdd = ({ studentId, jobId, status, appliedDate, note }) => {
     addMapping({ id: nextId(mappings), studentId, jobId, status, appliedDate, note });
@@ -1467,7 +1466,7 @@ export default function MappingListClient() {
       {/* ── Status pills ── */}
       <div className="flex flex-wrap gap-2">
         {statusSummary.map(({ label, count, cfg }) => {
-          const statusLabelKey = { "สมัครแล้ว": "status.applied", "ผ่านการคัดเลือก": "status.passed", "ไม่ผ่านการคัดเลือก": "status.failed" }[label];
+          const statusLabelKey = { "ทั้งหมด": "common.all", "สมัครแล้ว": "status.applied", "ผ่านการคัดเลือก": "status.passed", "ไม่ผ่านการคัดเลือก": "status.failed" }[label];
           return (
             <button key={label}
               onClick={() => { setFilterStatus(filterStatus === label ? "ทั้งหมด" : label); setPage(1); }}

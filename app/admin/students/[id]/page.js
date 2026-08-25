@@ -764,9 +764,9 @@ function EditHeroCard({ form, setForm, student, isValid, saving, onCancel }) {
 
 // ── History Section ───────────────────────────────────────────
 const EVENT_TYPE_CONFIG = {
-    create: { label: "สร้างข้อมูล", pill: "bg-emerald-100 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
-    update: { label: "แก้ไขข้อมูล", pill: "bg-blue-100 text-blue-700 border-blue-200",          dot: "bg-blue-400" },
-    delete: { label: "ลบข้อมูล",   pill: "bg-red-100 text-red-700 border-red-200",              dot: "bg-red-500" },
+    create: { label: "สร้างข้อมูล", color: "bg-emerald-100 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
+    update: { label: "แก้ไขข้อมูล", color: "bg-blue-100 text-blue-700 border-blue-200",          dot: "bg-blue-400" },
+    delete: { label: "ลบข้อมูล",   color: "bg-red-100 text-red-700 border-red-200",              dot: "bg-red-500" },
 };
 
 const SHOW_STEP = 5;
@@ -796,7 +796,7 @@ function HistorySection({ history }) {
                             </div>
                             <div className="flex-1 min-w-0 rounded-xl border border-border bg-surface-muted/50 p-4">
                                 <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                                    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${cfg.pill}`}>
+                                    <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${cfg.color}`}>
                                         {cfg.label}
                                     </span>
                                     <time className="text-xs text-muted tabular-nums">{formatHistoryDate(evt.at)}</time>

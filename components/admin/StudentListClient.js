@@ -313,9 +313,9 @@ function ImportModal({ onClose, onConfirm, existingStudents }) {
   });
 
   const TYPE_CFG = {
-    new:       { pill: "bg-emerald-100 text-emerald-700 border-emerald-200", label: "ใหม่" },
-    update:    { pill: "bg-blue-100 text-blue-700 border-blue-200",          label: "อัปเดต" },
-    unchanged: { pill: "bg-gray-100 text-gray-500 border-gray-200",          label: "ไม่เปลี่ยน" },
+    new:       { color: "bg-emerald-100 text-emerald-700 border-emerald-200", label: "ใหม่" },
+    update:    { color: "bg-blue-100 text-blue-700 border-blue-200",          label: "อัปเดต" },
+    unchanged: { color: "bg-gray-100 text-gray-500 border-gray-200",          label: "ไม่เปลี่ยน" },
   };
 
   return (
@@ -422,7 +422,7 @@ function ImportModal({ onClose, onConfirm, existingStudents }) {
                         onClick={() => hasDetail && toggleExpand(rowKey)}
                         className={`w-full flex items-center gap-3 px-4 py-2.5 text-left ${hasDetail ? "hover:bg-surface-muted/50 cursor-pointer" : "cursor-default"}`}
                       >
-                        <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold ${cfg.pill}`}>{cfg.label}</span>
+                        <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold ${cfg.color}`}>{cfg.label}</span>
                         <span className="flex-1 text-sm font-medium text-foreground">{row.prefix}{row.name} {row.lastname}</span>
                         <span className="text-xs text-muted font-mono">{row.university || "-"}</span>
                         {type === "update" && <span className="text-xs text-blue-600 shrink-0">{changes.length} field เปลี่ยน</span>}
@@ -1259,12 +1259,14 @@ export default function StudentListClient() {
   const selectedStudents = students.filter((s) => selectedIds.has(s.id));
 
   const statusSummary = useMemo(
-    () =>
-      Object.keys(STATUS_CONFIG).map((s) => ({
+    () => [
+      { label: "ทั้งหมด", count: students.length, cfg: { color: "bg-surface-muted border-border text-foreground", dot: "bg-gray-400" } },
+      ...Object.keys(STATUS_CONFIG).map((s) => ({
         label: s,
         count: students.filter((st) => st.status === s).length,
         cfg: STATUS_CONFIG[s],
       })),
+    ],
     [students],
   );
 
@@ -1460,9 +1462,7 @@ export default function StudentListClient() {
         {statusSummary.map(({ label, count, cfg }) => (
           <button
             key={label}
-            onClick={() =>
-              setFilterStatus(filterStatus === label ? "ทั้งหมด" : label)
-            }
+            onClick={() => { setFilterStatus(label); setPage(1); }}
             className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-semibold transition-all ${
               filterStatus === label
                 ? cfg.color + " ring-2 ring-offset-1 ring-current"

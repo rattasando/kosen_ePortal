@@ -94,8 +94,8 @@ const ChevronDown = ({ open }) => (
 
 // ── Status config ────────────────────────────────────────────
 const STATUS_CONFIG = {
-  published: { label: "เผยแพร่", pill: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-  draft:     { label: "แบบร่าง", pill: "bg-amber-100 text-amber-700 border-amber-200" },
+  published: { label: "เผยแพร่", color: "bg-emerald-100 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
+  draft:     { label: "แบบร่าง", color: "bg-amber-100 text-amber-700 border-amber-200",       dot: "bg-amber-400"  },
 };
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -121,9 +121,9 @@ function HighlightText({ text = "", terms = [] }) {
 
 // ── Import Modal ─────────────────────────────────────────────
 const DIFF_CFG = {
-  new:       { pill: "bg-emerald-100 text-emerald-700 border-emerald-200", label: "ใหม่" },
-  update:    { pill: "bg-blue-100 text-blue-700 border-blue-200",          label: "อัปเดต" },
-  unchanged: { pill: "bg-gray-100 text-gray-500 border-gray-200",          label: "ไม่เปลี่ยน" },
+  new:       { color: "bg-emerald-100 text-emerald-700 border-emerald-200", label: "ใหม่" },
+  update:    { color: "bg-blue-100 text-blue-700 border-blue-200",          label: "อัปเดต" },
+  unchanged: { color: "bg-gray-100 text-gray-500 border-gray-200",          label: "ไม่เปลี่ยน" },
 };
 
 function ImportModal({ existingFaqs, onClose, onConfirm }) {
@@ -239,7 +239,7 @@ function ImportModal({ existingFaqs, onClose, onConfirm }) {
                     <div key={rowId} className="rounded-xl border border-border overflow-hidden">
                       <button type="button" onClick={() => hasDetail && toggle(rowId)}
                         className={`w-full flex items-center gap-3 px-4 py-2.5 text-left ${hasDetail ? "hover:bg-surface-muted/50 cursor-pointer" : "cursor-default"}`}>
-                        <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold ${cfg.pill}`}>{cfg.label}</span>
+                        <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold ${cfg.color}`}>{cfg.label}</span>
                         <span className="flex-1 text-sm font-medium text-foreground line-clamp-1">{row.question}</span>
                         <span className="text-xs text-muted shrink-0">{row.category || "—"}</span>
                         {type === "update" && <span className="text-xs text-blue-600 shrink-0">{changes.length} field เปลี่ยน</span>}
@@ -778,7 +778,8 @@ export default function FaqListClient() {
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         <button onClick={() => handleToggleStatus(faq)}
                           title={faq.status === "published" ? "คลิกเพื่อย้ายเป็นแบบร่าง" : "คลิกเพื่อเผยแพร่"}
-                          className={`rounded-full border px-2.5 py-1 text-xs font-semibold transition-all hover:opacity-70 whitespace-nowrap ${st.pill}`}>
+                          className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-all hover:opacity-70 whitespace-nowrap ${st.color}`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${st.dot}`} />
                           {st.label}
                         </button>
                       </td>

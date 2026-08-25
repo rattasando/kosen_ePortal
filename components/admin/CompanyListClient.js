@@ -18,9 +18,9 @@ const TYPES         = ["บริษัทจำกัด", "บริษัท�
 const PAGE_SIZE_OPTIONS = [10, 20, 30, 50];
 
 const STATUS_CONFIG = {
-  ร่วมมือ:     { badge: "bg-emerald-100 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
-  รอดำเนินการ: { badge: "bg-amber-100 text-amber-700 border-amber-200",      dot: "bg-amber-500"   },
-  ระงับ:       { badge: "bg-red-100 text-red-700 border-red-200",            dot: "bg-red-500"     },
+  ร่วมมือ:     { color: "bg-emerald-100 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
+  รอดำเนินการ: { color: "bg-amber-100 text-amber-700 border-amber-200",       dot: "bg-amber-500"   },
+  ระงับ:       { color: "bg-red-100 text-red-700 border-red-200",             dot: "bg-red-500"     },
 };
 const MOU_CONFIG = {
   "มี MOU":    "bg-blue-100 text-blue-700 border-blue-200",
@@ -586,25 +586,22 @@ export default function CompanyListClient() {
 
       {/* ── Status pills ── */}
       <div className="flex flex-wrap gap-2">
-        {STATUSES.map((s) => {
-          const count = companies.filter((c) => c.status === s).length;
-          const cfg   = STATUS_CONFIG[s];
-          return (
-            <button key={s}
-              onClick={() => { setFilterStatus(filterStatus === s ? "ทั้งหมด" : s); resetPage(); }}
-              className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-all ${
-                filterStatus === s ? cfg.badge + " ring-2 ring-offset-1 ring-current" : "border-border bg-surface text-muted hover:border-primary hover:text-primary"
-              }`}>
-              <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
-              {s}
-              <span className="rounded-full bg-black/10 px-1.5 py-0.5 text-[10px] font-bold">{count}</span>
-            </button>
-          );
-        })}
-        <div className="ml-auto flex items-center gap-1 rounded-full border border-border bg-surface px-3 py-1.5 text-xs text-muted">
-          <span className="font-bold text-foreground">{companies.length}</span>
-          <span>บริษัทในระบบ</span>
-        </div>
+        {[
+          { key: "ทั้งหมด", label: "ทั้งหมด", count: companies.length, color: "bg-surface-muted border-border text-foreground", dot: "bg-gray-400" },
+          ...STATUSES.map((s) => ({ key: s, label: s, count: companies.filter((c) => c.status === s).length, ...STATUS_CONFIG[s] })),
+        ].map(({ key, label, count, color, dot }) => (
+          <button key={key}
+            onClick={() => { setFilterStatus(filterStatus === key ? "ทั้งหมด" : key); resetPage(); }}
+            className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-semibold transition-all ${
+              filterStatus === key
+                ? `${color} ring-2 ring-offset-1 ring-current`
+                : "border-border bg-surface text-muted hover:border-primary hover:text-primary"
+            }`}>
+            <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
+            {label}
+            <span className="rounded-full bg-black/10 px-1.5 py-0.5 text-[10px] font-bold">{count}</span>
+          </button>
+        ))}
       </div>
 
       {/* ── Search + Action buttons ── */}
@@ -827,7 +824,7 @@ export default function CompanyListClient() {
 
               // ── สถานะ ──
               stCfg ? (
-                <span key="status" className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold whitespace-nowrap ${stCfg.badge}`}>
+                <span key="status" className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${stCfg.color}`}>
                   <span className={`h-1.5 w-1.5 rounded-full ${stCfg.dot}`} />
                   {c.status}
                 </span>
