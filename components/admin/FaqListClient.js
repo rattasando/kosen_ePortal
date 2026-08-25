@@ -401,7 +401,8 @@ function DeleteModal({ faq, onClose, onConfirm }) {
 export default function FaqListClient() {
   const { faqs, ready, addFaq, updateFaq, deleteFaq, reorder } = useFaq();
 
-  const [search, setSearch]             = useState("");
+  const [searchInput, setSearchInput]   = useState("");
+  const [keywords, setKeywords]         = useState([]);
   const [filterCat, setFilterCat]       = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [modal, setModal]               = useState(null);       // null | {} | { item }
@@ -411,7 +412,24 @@ export default function FaqListClient() {
   const [showImport, setShowImport]     = useState(false);
   const [importDone, setImportDone]     = useState(null);
 
-  const activeTerms = [search.trim()].filter(Boolean);
+  const addKeyword = (kw) => {
+    const trimmed = kw.trim();
+    if (!trimmed) return;
+    setKeywords((prev) => (prev.includes(trimmed) ? prev : [...prev, trimmed]));
+    setSearchInput("");
+    setPage(1);
+  };
+  const removeKeyword = (kw) => { setKeywords((prev) => prev.filter((k) => k !== kw)); setPage(1); };
+
+  const activeTerms = useMemo(
+    () => [...keywords, searchInput.trim()].filter(Boolean),
+    [keywords, searchInput],
+  );
+
+  const matchFaq = (f, kw) => {
+    const q = kw.toLowerCase();
+    return f.question.toLowerCase().includes(q) || f.answer.toLowerCase().includes(q) || f.category.toLowerCase().includes(q);
+  };
 
   // sorted + filtered list
   const filtered = useMemo(() => {
@@ -419,13 +437,11 @@ export default function FaqListClient() {
     return sorted.filter((f) => {
       if (filterCat    && f.category !== filterCat)    return false;
       if (filterStatus && f.status   !== filterStatus) return false;
-      if (search.trim()) {
-        const q = search.toLowerCase();
-        if (!f.question.toLowerCase().includes(q) && !f.answer.toLowerCase().includes(q)) return false;
-      }
+      if (keywords.length > 0 && !keywords.every((kw) => matchFaq(f, kw))) return false;
+      if (searchInput.trim() && !matchFaq(f, searchInput.trim())) return false;
       return true;
     });
-  }, [faqs, search, filterCat, filterStatus]);
+  }, [faqs, searchInput, keywords, filterCat, filterStatus]);
 
   const totalPages  = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -507,14 +523,12 @@ export default function FaqListClient() {
     setTimeout(() => setImportDone(null), 4000);
   };
 
-  // Status counts — respect cat+search filters but not the status filter itself
+  // Status counts — respect cat+keyword+search filters but not the status filter itself
   const statusCounts = useMemo(() => {
     const base = faqs.filter((f) => {
       if (filterCat && f.category !== filterCat) return false;
-      if (search.trim()) {
-        const q = search.toLowerCase();
-        if (!f.question.toLowerCase().includes(q) && !f.answer.toLowerCase().includes(q)) return false;
-      }
+      if (keywords.length > 0 && !keywords.every((kw) => matchFaq(f, kw))) return false;
+      if (searchInput.trim() && !matchFaq(f, searchInput.trim())) return false;
       return true;
     });
     return {
@@ -522,10 +536,10 @@ export default function FaqListClient() {
       published: base.filter((f) => f.status === "published").length,
       draft:     base.filter((f) => f.status === "draft").length,
     };
-  }, [faqs, filterCat, search]);
+  }, [faqs, filterCat, keywords, searchInput]);
 
-  const hasFilters = !!(filterCat || filterStatus || search.trim());
-  const clearAll   = () => { setFilterCat(""); setFilterStatus(""); setSearch(""); setPage(1); };
+  const hasFilters = !!(filterCat || filterStatus || keywords.length > 0 || searchInput.trim());
+  const clearAll   = () => { setFilterCat(""); setFilterStatus(""); setKeywords([]); setSearchInput(""); setPage(1); };
 
   const selectedList = faqs.filter((f) => selectedIds.has(f.id));
 
@@ -583,13 +597,22 @@ export default function FaqListClient() {
       {/* ── Search row ── */}
       <div className="flex gap-2">
         <div className="relative flex-1">
-          <svg xmlns="http://www.w3.org/2000/svg" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" viewBox="0 0 20 20" fill="currentColor">
+          <svg xmlns="http://www.w3.org/2000/svg" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted pointer-events-none" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
           </svg>
-          <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            placeholder="ค้นหาคำถามหรือคำตอบ..."
+          <input value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addKeyword(searchInput); } }}
+            placeholder="ค้นหาคำถาม คำตอบ หมวดหมู่... (Enter เพื่อล็อก)"
             className={`${inputCls} pl-9`} />
         </div>
+        <button onClick={() => addKeyword(searchInput)} disabled={!searchInput.trim()}
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted hover:border-primary hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+          </svg>
+          ค้นหา
+        </button>
         <button onClick={() => exportCSV(faqs, `faq_${new Date().toISOString().slice(0,10)}.csv`)}
           className="inline-flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted hover:text-foreground transition-colors whitespace-nowrap">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -632,11 +655,11 @@ export default function FaqListClient() {
               สถานะ: {STATUS_CONFIG[filterStatus]?.label} <XIcon />
             </button>
           )}
-          {search.trim() && (
-            <button className={chipBase} onClick={() => { setSearch(""); setPage(1); }}>
-              ค้นหา: &ldquo;{search.trim()}&rdquo; <XIcon />
+          {keywords.map((kw) => (
+            <button key={kw} className={chipBase} onClick={() => removeKeyword(kw)}>
+              🔍 &ldquo;{kw}&rdquo; <XIcon />
             </button>
-          )}
+          ))}
           <button onClick={clearAll} className="text-xs text-muted underline hover:text-foreground transition-colors">ล้างทั้งหมด</button>
         </div>
       )}

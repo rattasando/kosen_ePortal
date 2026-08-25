@@ -513,6 +513,7 @@ export default function DocumentListClient() {
   const { documents, ready, addDocument, updateDocument, deleteDocument } = useDocuments();
 
   const [searchInput,    setSearchInput]    = useState("");
+  const [keywords,       setKeywords]       = useState([]);
   const [filterCat,      setFilterCat]      = useState("");
   const [filterStatus,   setFilterStatus]   = useState("");
   const [filterFileType, setFilterFileType] = useState("");
@@ -524,6 +525,20 @@ export default function DocumentListClient() {
   const [modal,     setModal]     = useState(null);
   const [detail,    setDetail]    = useState(null);
   const [delTarget, setDelTarget] = useState(null);
+
+  const addKeyword = (kw) => {
+    const trimmed = kw.trim();
+    if (!trimmed) return;
+    setKeywords((prev) => (prev.includes(trimmed) ? prev : [...prev, trimmed]));
+    setSearchInput("");
+    setPage(1);
+  };
+  const removeKeyword = (kw) => { setKeywords((prev) => prev.filter((k) => k !== kw)); setPage(1); };
+
+  const activeTerms = useMemo(
+    () => [...keywords, searchInput.trim()].filter(Boolean),
+    [keywords, searchInput],
+  );
 
   // Restore filters
   useEffect(() => {
@@ -543,16 +558,20 @@ export default function DocumentListClient() {
     setPage(1);
   }, [searchInput, filterCat, filterStatus, filterFileType, sortBy, pageSize, hydrated]);
 
+  const matchDoc = (d, kw) => {
+    const q = kw.toLowerCase();
+    return d.title.toLowerCase().includes(q) || (d.description ?? "").toLowerCase().includes(q);
+  };
+
   // Filtered + sorted
   const filtered = useMemo(() => {
-    const q = searchInput.trim().toLowerCase();
     let list = documents.filter((d) => {
-      const matchSearch   = !q || d.title.toLowerCase().includes(q) || d.description?.toLowerCase().includes(q);
-      const matchCat      = !filterCat      || d.category === filterCat;
-      const matchFileType = !filterFileType || d.fileType  === filterFileType;
-      const es = effectiveStatus(d);
-      const matchStatus   = !filterStatus   || es === filterStatus;
-      return matchSearch && matchCat && matchFileType && matchStatus;
+      if (filterCat      && d.category !== filterCat)      return false;
+      if (filterFileType && d.fileType  !== filterFileType) return false;
+      if (filterStatus   && effectiveStatus(d) !== filterStatus) return false;
+      if (keywords.length > 0 && !keywords.every((kw) => matchDoc(d, kw))) return false;
+      if (searchInput.trim() && !matchDoc(d, searchInput.trim())) return false;
+      return true;
     });
     switch (sortBy) {
       case "newest":   list = [...list].sort((a, b) => (b.rawDate ?? "").localeCompare(a.rawDate ?? "")); break;
@@ -561,16 +580,16 @@ export default function DocumentListClient() {
       default: break;
     }
     return list;
-  }, [documents, searchInput, filterCat, filterFileType, filterStatus, sortBy]);
+  }, [documents, searchInput, keywords, filterCat, filterFileType, filterStatus, sortBy]);
 
-  // Status counts (before status filter, but after search/cat/fileType)
+  // Status counts (before status filter, but after search/keyword/cat/fileType)
   const statusCounts = useMemo(() => {
-    const q = searchInput.trim().toLowerCase();
     const base = documents.filter((d) => {
-      const matchSearch   = !q || d.title.toLowerCase().includes(q) || d.description?.toLowerCase().includes(q);
-      const matchCat      = !filterCat      || d.category === filterCat;
-      const matchFileType = !filterFileType || d.fileType  === filterFileType;
-      return matchSearch && matchCat && matchFileType;
+      if (filterCat      && d.category !== filterCat)      return false;
+      if (filterFileType && d.fileType  !== filterFileType) return false;
+      if (keywords.length > 0 && !keywords.every((kw) => matchDoc(d, kw))) return false;
+      if (searchInput.trim() && !matchDoc(d, searchInput.trim())) return false;
+      return true;
     });
     return {
       all:       base.length,
@@ -578,15 +597,15 @@ export default function DocumentListClient() {
       scheduled: base.filter((d) => effectiveStatus(d) === "scheduled").length,
       draft:     base.filter((d) => d.status === "draft").length,
     };
-  }, [documents, searchInput, filterCat, filterFileType]);
+  }, [documents, searchInput, keywords, filterCat, filterFileType]);
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage   = Math.min(page, totalPages);
   const pageSlice  = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
 
-  const hasFilters = filterCat || filterFileType || filterStatus || sortBy !== "default";
-  const clearAll = () => { setFilterCat(""); setFilterFileType(""); setFilterStatus(""); setSortBy("default"); };
+  const hasFilters = !!(filterCat || filterFileType || filterStatus || sortBy !== "default" || keywords.length > 0 || searchInput.trim());
+  const clearAll = () => { setFilterCat(""); setFilterFileType(""); setFilterStatus(""); setSortBy("default"); setKeywords([]); setSearchInput(""); setPage(1); };
 
   const handleSave = (form) => {
     if (modal?.mode === "edit") {
@@ -634,13 +653,22 @@ export default function DocumentListClient() {
       {/* ── Search row ── */}
       <div className="flex gap-2">
         <div className="relative flex-1">
-          <svg xmlns="http://www.w3.org/2000/svg" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" viewBox="0 0 20 20" fill="currentColor">
+          <svg xmlns="http://www.w3.org/2000/svg" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted pointer-events-none" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
           </svg>
-          <input type="text" value={searchInput} onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="ค้นหาชื่อเอกสาร หรือคำอธิบาย..."
+          <input type="text" value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addKeyword(searchInput); } }}
+            placeholder="ค้นหาชื่อเอกสาร คำอธิบาย... (Enter เพื่อล็อก)"
             className={`${inputCls} pl-9`} />
         </div>
+        <button onClick={() => addKeyword(searchInput)} disabled={!searchInput.trim()}
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted hover:border-primary hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+          </svg>
+          ค้นหา
+        </button>
         <button onClick={() => setModal({ mode: "add" })} className="btn-primary whitespace-nowrap">+ เพิ่มเอกสาร</button>
       </div>
 
@@ -692,6 +720,11 @@ export default function DocumentListClient() {
               เรียง: {sortLabel} <XIcon />
             </button>
           )}
+          {keywords.map((kw) => (
+            <button key={kw} className={chipBase} onClick={() => removeKeyword(kw)}>
+              🔍 &ldquo;{kw}&rdquo; <XIcon />
+            </button>
+          ))}
           <button onClick={clearAll} className="text-xs text-muted underline hover:text-foreground transition-colors">ล้างทั้งหมด</button>
         </div>
       )}
