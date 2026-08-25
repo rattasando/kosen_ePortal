@@ -5,7 +5,9 @@ import { useFaq } from "./contexts/FaqContext";
 import { FAQ_CATEGORIES } from "@/lib/data/faqData";
 
 const inputCls  = "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft placeholder:text-muted";
+const selectCls = "rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft";
 const labelCls  = "text-xs font-medium text-foreground";
+const chipBase  = "inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-primary hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors";
 const PAGE_SIZE = 20;
 
 // ── CSV helpers ──────────────────────────────────────────────
@@ -505,9 +507,27 @@ export default function FaqListClient() {
     setTimeout(() => setImportDone(null), 4000);
   };
 
-  const publishedCount = faqs.filter((f) => f.status === "published").length;
-  const draftCount     = faqs.filter((f) => f.status === "draft").length;
-  const selectedList   = faqs.filter((f) => selectedIds.has(f.id));
+  // Status counts — respect cat+search filters but not the status filter itself
+  const statusCounts = useMemo(() => {
+    const base = faqs.filter((f) => {
+      if (filterCat && f.category !== filterCat) return false;
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        if (!f.question.toLowerCase().includes(q) && !f.answer.toLowerCase().includes(q)) return false;
+      }
+      return true;
+    });
+    return {
+      all:       base.length,
+      published: base.filter((f) => f.status === "published").length,
+      draft:     base.filter((f) => f.status === "draft").length,
+    };
+  }, [faqs, filterCat, search]);
+
+  const hasFilters = !!(filterCat || filterStatus || search.trim());
+  const clearAll   = () => { setFilterCat(""); setFilterStatus(""); setSearch(""); setPage(1); };
+
+  const selectedList = faqs.filter((f) => selectedIds.has(f.id));
 
   if (!ready) {
     return (
@@ -538,87 +558,81 @@ export default function FaqListClient() {
         </div>
       )}
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
+      {/* ── Status pills ── */}
+      <div className="flex flex-wrap gap-2">
         {[
-          { label: "FAQ ทั้งหมด", count: faqs.length,    cls: "border-border bg-surface-muted text-foreground" },
-          { label: "เผยแพร่",     count: publishedCount, cls: "border-emerald-200 bg-emerald-50 text-emerald-700" },
-          { label: "แบบร่าง",     count: draftCount,     cls: "border-amber-200 bg-amber-50 text-amber-700" },
-        ].map((s) => (
-          <div key={s.label} className={`rounded-2xl border p-4 ${s.cls}`}>
-            <p className="text-2xl font-extrabold">{s.count}</p>
-            <p className="text-xs mt-0.5">{s.label}</p>
-          </div>
+          { key: "",          label: "ทั้งหมด", count: statusCounts.all,       color: "bg-surface-muted border-border text-foreground",         dot: "bg-gray-400"   },
+          { key: "published", label: "เผยแพร่", count: statusCounts.published, color: "bg-emerald-100 text-emerald-700 border-emerald-200",     dot: "bg-emerald-500" },
+          { key: "draft",     label: "แบบร่าง", count: statusCounts.draft,     color: "bg-amber-100 text-amber-700 border-amber-200",           dot: "bg-amber-400"  },
+        ].map(({ key, label, count, color, dot }) => (
+          <button key={key}
+            onClick={() => { setFilterStatus(filterStatus === key ? "" : key); setPage(1); }}
+            className={`inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-semibold transition-all ${
+              filterStatus === key
+                ? `${color} ring-2 ring-offset-1 ring-current`
+                : "border-border bg-surface text-muted hover:border-primary hover:text-primary"
+            }`}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
+            {label}
+            <span className="rounded-full bg-black/10 px-1.5 py-0.5 text-[10px] font-bold">{count}</span>
+          </button>
         ))}
       </div>
 
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Search */}
-        <div className="relative flex-1 min-w-48">
-          <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      {/* ── Search row ── */}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <svg xmlns="http://www.w3.org/2000/svg" className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
           </svg>
           <input value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             placeholder="ค้นหาคำถามหรือคำตอบ..."
-            className="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft placeholder:text-muted" />
+            className={`${inputCls} pl-9`} />
         </div>
-        {/* Category filter */}
-        <select value={filterCat} onChange={(e) => { setFilterCat(e.target.value); setPage(1); }}
-          className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft">
-          <option value="">หมวดหมู่ทั้งหมด</option>
-          {FAQ_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
-        {/* Status filter */}
-        <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
-          className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft">
-          <option value="">สถานะทั้งหมด</option>
-          <option value="published">เผยแพร่</option>
-          <option value="draft">แบบร่าง</option>
-        </select>
         <button onClick={() => exportCSV(faqs, `faq_${new Date().toISOString().slice(0,10)}.csv`)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:border-primary hover:text-primary transition-colors whitespace-nowrap">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-          </svg>
+          className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted hover:text-foreground transition-colors whitespace-nowrap">
           ส่งออก CSV
         </button>
         <button onClick={() => setShowImport(true)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-foreground hover:border-primary hover:text-primary transition-colors whitespace-nowrap">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
-          </svg>
+          className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted hover:text-foreground transition-colors whitespace-nowrap">
           นำเข้า CSV
         </button>
         <button onClick={() => setModal({})} className="btn-primary whitespace-nowrap">+ เพิ่ม FAQ</button>
       </div>
 
-      {/* Category pills */}
-      <div className="flex flex-wrap gap-2">
-        <button onClick={() => { setFilterCat(""); setPage(1); }}
-          className={`rounded-full border px-2.5 py-1 text-xs font-semibold transition-all ${filterCat === "" ? "border-primary bg-accent-soft text-primary" : "border-border text-muted hover:text-foreground"}`}>
-          ทั้งหมด ({faqs.length})
-        </button>
-        {FAQ_CATEGORIES.map((cat) => {
-          const count = faqs.filter((f) => f.category === cat).length;
-          if (!count) return null;
-          return (
-            <button key={cat} onClick={() => { setFilterCat(filterCat === cat ? "" : cat); setPage(1); }}
-              className={`rounded-full border px-2.5 py-1 text-xs font-semibold transition-all ${filterCat === cat ? "border-primary bg-accent-soft text-primary" : "border-border text-muted hover:text-foreground"}`}>
-              {cat} ({count})
-            </button>
-          );
-        })}
+      {/* ── Filter row ── */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col gap-0.5">
+          <label className={labelCls}>หมวดหมู่</label>
+          <select value={filterCat} onChange={(e) => { setFilterCat(e.target.value); setPage(1); }} className={selectCls}>
+            <option value="">หมวดหมู่ทั้งหมด</option>
+            {FAQ_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
       </div>
 
-      {/* Result info */}
-      {(search || filterCat || filterStatus) && (
-        <p className="text-xs text-muted">
-          พบ {filtered.length} รายการ
-          {search      && <span> · ค้นหา &ldquo;{search}&rdquo;</span>}
-          {filterCat   && <span> · หมวด {filterCat}</span>}
-          {filterStatus && <span> · {STATUS_CONFIG[filterStatus]?.label}</span>}
-        </p>
+      {/* ── Active filter chips ── */}
+      {hasFilters && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-xs text-muted">กรอง:</span>
+          {filterCat && (
+            <button className={chipBase} onClick={() => { setFilterCat(""); setPage(1); }}>
+              หมวด: {filterCat} <XIcon />
+            </button>
+          )}
+          {filterStatus && (
+            <button className={chipBase} onClick={() => { setFilterStatus(""); setPage(1); }}>
+              สถานะ: {STATUS_CONFIG[filterStatus]?.label} <XIcon />
+            </button>
+          )}
+          {search.trim() && (
+            <button className={chipBase} onClick={() => { setSearch(""); setPage(1); }}>
+              ค้นหา: &ldquo;{search.trim()}&rdquo; <XIcon />
+            </button>
+          )}
+          <button onClick={clearAll} className="text-xs text-muted underline hover:text-foreground transition-colors">ล้างทั้งหมด</button>
+        </div>
       )}
 
       {/* Selection bar */}
