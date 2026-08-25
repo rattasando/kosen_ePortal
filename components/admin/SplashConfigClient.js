@@ -323,14 +323,38 @@ function SplashImageUploader({ value, onChange }) {
 }
 
 // ── Main export ───────────────────────────────────────────────
+const WIDTH_ORDER  = ["sm", "md", "lg"];
+const RADIUS_ORDER = ["none", "lg", "2xl", "3xl"];
+
 export default function SplashConfigClient() {
   const { config, ready, updateConfig } = useSplash();
-  const [form, setForm] = useState(null);
-  const [saved, setSaved] = useState(false);
+  const [form, setForm]           = useState(null);
+  const [saved, setSaved]         = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef({ startX: 0, startWidth: "md" });
 
   useEffect(() => {
     if (ready && !form) setForm({ ...config });
   }, [ready, config, form]);
+
+  // ── Width drag — document-level listeners ────────────────────
+  useEffect(() => {
+    if (!isDragging) return;
+    const onMove = (e) => {
+      const delta    = e.clientX - dragRef.current.startX;
+      const offset   = Math.round(delta / 80);
+      const startIdx = WIDTH_ORDER.indexOf(dragRef.current.startWidth);
+      const newIdx   = Math.max(0, Math.min(2, startIdx + offset));
+      setForm((f) => f ? { ...f, width: WIDTH_ORDER[newIdx] } : f);
+    };
+    const onUp = () => setIsDragging(false);
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+    return () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+  }, [isDragging]);
 
   if (!ready || !form) {
     return (
@@ -357,37 +381,14 @@ export default function SplashConfigClient() {
   const widthMaxW = WIDTH_OPTIONS.find((w) => w.value === form.width)?.maxW ?? "max-w-md";
   const radiusCls = RADIUS_MAP_PREVIEW[form.radius ?? "2xl"] ?? "rounded-2xl";
 
-  // ── Width drag handle ────────────────────────────────────────
-  const [isDragging, setIsDragging]   = useState(false);
-  const dragRef = useRef({ startX: 0, startWidth: "md" });
-  const WIDTH_ORDER = ["sm", "md", "lg"];
-
-  const handleWidthDragStart = useCallback((e) => {
+  // ── Width drag start ─────────────────────────────────────────
+  const handleWidthDragStart = (e) => {
     e.preventDefault();
     dragRef.current = { startX: e.clientX, startWidth: form.width };
     setIsDragging(true);
-  }, [form.width]);
-
-  useEffect(() => {
-    if (!isDragging) return;
-    const onMove = (e) => {
-      const delta  = e.clientX - dragRef.current.startX;
-      const offset = Math.round(delta / 80);
-      const startIdx = WIDTH_ORDER.indexOf(dragRef.current.startWidth);
-      const newIdx   = Math.max(0, Math.min(2, startIdx + offset));
-      set("width", WIDTH_ORDER[newIdx]);
-    };
-    const onUp = () => setIsDragging(false);
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
-    return () => {
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
-    };
-  }, [isDragging]); // eslint-disable-line react-hooks/exhaustive-deps
+  };
 
   // ── Radius cycle ─────────────────────────────────────────────
-  const RADIUS_ORDER = ["none", "lg", "2xl", "3xl"];
   const cycleRadius = () => {
     const idx = RADIUS_ORDER.indexOf(form.radius ?? "2xl");
     set("radius", RADIUS_ORDER[(idx + 1) % RADIUS_ORDER.length]);
