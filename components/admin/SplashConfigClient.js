@@ -395,180 +395,171 @@ export default function SplashConfigClient() {
   };
   const currentRadiusLabel = RADIUS_OPTIONS.find((o) => o.value === (form.radius ?? "2xl"))?.label ?? "มน";
 
-  return (
-    <div className="space-y-6 p-6">
+  // Toggle helper
+  const Toggle = ({ on, onToggle }) => (
+    <button type="button" onClick={onToggle}
+      className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 transition-colors duration-200 focus:outline-none ${on ? "border-primary bg-primary" : "border-border bg-surface-muted"}`}>
+      <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${on ? "translate-x-5" : "translate-x-0.5"}`} />
+    </button>
+  );
 
-      {/* ── Master toggle ── */}
-      <div className={`flex items-center justify-between rounded-2xl border-2 p-5 transition-all ${form.enabled ? "border-primary bg-accent-soft" : "border-border bg-surface"}`}>
+  return (
+    <div className="space-y-5 p-6">
+
+      {/* ── Master toggle — full width ── */}
+      <div className={`flex items-center justify-between rounded-2xl border-2 p-4 transition-all ${form.enabled ? "border-primary bg-accent-soft" : "border-border bg-surface"}`}>
         <div>
-          <p className="text-sm font-bold text-foreground">เปิดใช้งาน Splash</p>
+          <p className="text-sm font-bold text-foreground">เปิดใช้งาน Splash Screen</p>
           <p className="text-xs text-muted mt-0.5">
-            {form.enabled ? "Splash จะแสดงในหน้า Home ตามการตั้งค่าด้านล่าง" : "Splash ถูกปิดอยู่ — ผู้เยี่ยมชมจะไม่เห็น"}
+            {form.enabled ? "Splash จะแสดงเมื่อผู้เยี่ยมชมเข้าหน้า Home" : "ปิดอยู่ — ผู้เยี่ยมชมจะไม่เห็น Splash"}
           </p>
         </div>
-        <button type="button" onClick={() => set("enabled", !form.enabled)}
-          className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 transition-colors duration-200 focus:outline-none ${form.enabled ? "border-primary bg-primary" : "border-border bg-surface-muted"}`}>
-          <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${form.enabled ? "translate-x-5" : "translate-x-0.5"}`} />
-        </button>
+        <Toggle on={form.enabled} onToggle={() => set("enabled", !form.enabled)} />
       </div>
 
-      <div className={`space-y-6 transition-opacity ${form.enabled ? "opacity-100" : "opacity-40 pointer-events-none select-none"}`}>
+      {/* ── 2-column: Settings | Preview ── */}
+      <div className={`grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] gap-5 transition-opacity duration-200 ${form.enabled ? "opacity-100" : "opacity-40 pointer-events-none select-none"}`}>
 
-        {/* ── Image ── */}
-        <div className="rounded-2xl border border-border bg-surface p-5">
-          <SplashImageUploader value={form.image} onChange={(v) => set("image", v)} />
-        </div>
+        {/* ══ LEFT: Settings ══ */}
+        <div className="space-y-4">
 
-        {/* ── Content ── */}
-        <div className="rounded-2xl border border-border bg-surface p-5 space-y-4">
-          <p className="text-sm font-bold text-foreground">เนื้อหา</p>
-          <div>
-            <label className={`mb-1 block ${labelCls}`}>หัวข้อ (Title)</label>
-            <input type="text" value={form.title} onChange={(e) => set("title", e.target.value)}
-              placeholder="เช่น ประกาศสำคัญ, ยินดีต้อนรับ" className={inputCls} />
+          {/* รูปภาพ */}
+          <div className="rounded-2xl border border-border bg-surface p-4">
+            <p className="mb-3 text-xs font-bold uppercase tracking-wide text-muted">รูปภาพ</p>
+            <SplashImageUploader value={form.image} onChange={(v) => set("image", v)} />
           </div>
-          <div>
-            <label className={`mb-1 block ${labelCls}`}>รายละเอียด (Body) — ไม่บังคับ</label>
-            <textarea value={form.body} onChange={(e) => set("body", e.target.value)}
-              rows={3} placeholder="ข้อความอธิบายเพิ่มเติม..." className={textareaCls} />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
+
+          {/* เนื้อหา */}
+          <div className="rounded-2xl border border-border bg-surface p-4 space-y-3">
+            <p className="text-xs font-bold uppercase tracking-wide text-muted">เนื้อหา <span className="font-normal normal-case text-muted/60">(ไม่บังคับ)</span></p>
             <div>
-              <label className={`mb-1 block ${labelCls}`}>ข้อความปุ่ม — ไม่บังคับ</label>
-              <input type="text" value={form.ctaLabel} onChange={(e) => set("ctaLabel", e.target.value)}
-                placeholder="อ่านเพิ่มเติม" className={inputCls} />
+              <label className={`mb-1 block ${labelCls}`}>หัวข้อ</label>
+              <input type="text" value={form.title} onChange={(e) => set("title", e.target.value)}
+                placeholder="เช่น ประกาศสำคัญ, ยินดีต้อนรับ" className={inputCls} />
             </div>
             <div>
-              <label className={`mb-1 block ${labelCls}`}>URL ปุ่ม</label>
-              <input type="text" value={form.ctaHref} onChange={(e) => set("ctaHref", e.target.value)}
-                placeholder="/news หรือ https://..." className={inputCls} />
+              <label className={`mb-1 block ${labelCls}`}>รายละเอียด</label>
+              <textarea value={form.body} onChange={(e) => set("body", e.target.value)}
+                rows={2} placeholder="ข้อความเพิ่มเติม..." className={textareaCls} />
             </div>
-          </div>
-        </div>
-
-        {/* ── Display settings ── */}
-        <div className="rounded-2xl border border-border bg-surface p-5 space-y-5">
-          <p className="text-sm font-bold text-foreground">การแสดงผล</p>
-
-          <div>
-            <label className={`mb-2 block ${labelCls}`}>ความถี่การแสดง</label>
-            <div className="space-y-2">
-              {FREQ_OPTIONS.map((opt) => (
-                <label key={opt.value}
-                  className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition-all ${form.showFrequency === opt.value ? "border-primary bg-accent-soft" : "border-border hover:border-primary/50"}`}>
-                  <input type="radio" name="freq" value={opt.value} checked={form.showFrequency === opt.value}
-                    onChange={() => set("showFrequency", opt.value)} className="mt-0.5 accent-primary shrink-0" />
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">{opt.label}</p>
-                    <p className="text-xs text-muted mt-0.5">{opt.desc}</p>
-                  </div>
-                </label>
-              ))}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={`mb-1 block ${labelCls}`}>ข้อความปุ่ม</label>
+                <input type="text" value={form.ctaLabel} onChange={(e) => set("ctaLabel", e.target.value)}
+                  placeholder="อ่านเพิ่มเติม" className={inputCls} />
+              </div>
+              <div>
+                <label className={`mb-1 block ${labelCls}`}>URL ปุ่ม</label>
+                <input type="text" value={form.ctaHref} onChange={(e) => set("ctaHref", e.target.value)}
+                  placeholder="/news หรือ https://..." className={inputCls} />
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center justify-between rounded-xl border border-border bg-surface-muted px-4 py-3">
+          {/* การแสดงผล */}
+          <div className="rounded-2xl border border-border bg-surface p-4 space-y-4">
+            <p className="text-xs font-bold uppercase tracking-wide text-muted">การแสดงผล</p>
+
+            {/* ความถี่ — compact list */}
             <div>
-              <p className="text-sm font-semibold text-foreground">แสดงขอบ Popup</p>
-              <p className="text-xs text-muted mt-0.5">
-                {form.border !== false ? "มีเส้นขอบรอบ popup" : "ไม่มีเส้นขอบ — ดูกลมกลืนกว่าเมื่อรูปเต็มขอบ"}
-              </p>
+              <p className={`mb-2 ${labelCls}`}>ความถี่การแสดง</p>
+              <div className="space-y-1.5">
+                {FREQ_OPTIONS.map((opt) => (
+                  <button key={opt.value} type="button" onClick={() => set("showFrequency", opt.value)}
+                    className={`w-full flex items-start gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-all ${form.showFrequency === opt.value ? "border-primary bg-accent-soft" : "border-border hover:border-primary/40"}`}>
+                    <span className={`mt-0.5 h-3.5 w-3.5 shrink-0 rounded-full border-2 transition-colors ${form.showFrequency === opt.value ? "border-primary bg-primary" : "border-border"}`} />
+                    <div className="min-w-0">
+                      <p className={`text-xs font-semibold leading-snug ${form.showFrequency === opt.value ? "text-primary" : "text-foreground"}`}>{opt.label}</p>
+                      <p className="mt-0.5 text-[11px] text-muted leading-snug">{opt.desc}</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
-            <button type="button" onClick={() => set("border", form.border === false ? true : false)}
-              className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 transition-colors duration-200 focus:outline-none ${form.border !== false ? "border-primary bg-primary" : "border-border bg-surface-muted"}`}>
-              <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${form.border !== false ? "translate-x-5" : "translate-x-0.5"}`} />
-            </button>
-          </div>
 
-          <div>
-            <label className={`mb-1 block ${labelCls}`}>หน่วงเวลาก่อนแสดง</label>
-            <div className="flex items-center gap-3">
-              <input type="range" min="0" max="3" step="0.5"
-                value={(form.delayMs ?? 0) / 1000}
-                onChange={(e) => set("delayMs", Math.round(Number(e.target.value) * 1000))}
-                className="flex-1 accent-primary" />
-              <span className="w-16 rounded-lg border border-border bg-surface px-2 py-1 text-center text-sm font-mono">
-                {((form.delayMs ?? 0) / 1000).toFixed(1)} วิ
-              </span>
+            {/* ขอบ + หน่วงเวลา — 2 row */}
+            <div className="space-y-3 border-t border-border pt-3">
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-foreground">ขอบ Popup</p>
+                  <p className="text-[11px] text-muted">{form.border !== false ? "มีเส้นขอบรอบ popup" : "ไม่มีขอบ — กลมกลืนกว่าเมื่อรูปเต็มขอบ"}</p>
+                </div>
+                <Toggle on={form.border !== false} onToggle={() => set("border", form.border === false ? true : false)} />
+              </div>
+
+              <div>
+                <div className="mb-1.5 flex items-center justify-between">
+                  <p className="text-sm font-semibold text-foreground">หน่วงเวลาก่อนแสดง</p>
+                  <span className="rounded-lg border border-border bg-surface-muted px-2 py-0.5 font-mono text-sm">
+                    {((form.delayMs ?? 0) / 1000).toFixed(1)} วิ
+                  </span>
+                </div>
+                <input type="range" min="0" max="3" step="0.5"
+                  value={(form.delayMs ?? 0) / 1000}
+                  onChange={(e) => set("delayMs", Math.round(Number(e.target.value) * 1000))}
+                  className="w-full accent-primary" />
+                <div className="mt-1 flex justify-between text-[10px] text-muted">
+                  <span>ทันที</span><span>1.5 วิ</span><span>3 วิ</span>
+                </div>
+              </div>
             </div>
-            <p className="mt-1 text-xs text-muted">0 วิ = แสดงทันที · สูงสุด 3 วินาที</p>
           </div>
         </div>
 
-        {/* ── Live preview — interactive size + radius ── */}
-        <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
+        {/* ══ RIGHT: Preview (sticky) ══ */}
+        <div className="sticky top-6 self-start space-y-2">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-bold text-foreground">
-              ตัวอย่าง Popup{" "}
-              <span className="text-xs font-normal text-muted">(ตรงกับที่แสดงในหน้า Home)</span>
-            </p>
-            <p className="text-xs text-muted">ลากขอบขวาเพื่อปรับขนาด · กดมุมเพื่อเปลี่ยนความมน</p>
+            <p className="text-sm font-bold text-foreground">ตัวอย่าง</p>
+            <p className="text-[11px] text-muted">ลากขอบขวา · กดมุมเพื่อเปลี่ยนความมน</p>
           </div>
 
           {/* Backdrop */}
-          <div className="relative flex items-center justify-center rounded-xl py-10 px-4 select-none"
-            style={{ backgroundColor: "rgba(0,0,0,0.55)", backdropFilter: "blur(2px)" }}>
+          <div className="relative flex items-center justify-center rounded-2xl py-10 px-4 select-none"
+            style={{ backgroundColor: "rgba(0,0,0,0.55)", backdropFilter: "blur(2px)", minHeight: "200px" }}>
 
             {/* Popup */}
             <div className={`relative w-full ${widthMaxW} ${radiusCls} overflow-hidden bg-surface shadow-2xl transition-all duration-200 ${form.border !== false ? "border border-border" : ""}`}>
 
-              {/* Close button */}
+              {/* Close */}
               <span className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white text-xs pointer-events-none">✕</span>
 
               {/* Image */}
-              {form.image && (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={form.image} alt="preview" className="block w-full pointer-events-none" />
-              )}
+              {form.image
+                ? <img src={form.image} alt="" className="block w-full pointer-events-none" /> // eslint-disable-line @next/next/no-img-element
+                : <div className="flex h-32 items-center justify-center bg-surface-muted text-xs text-muted pointer-events-none">ยังไม่ได้เลือกรูป</div>
+              }
 
               {/* Content */}
               {(form.title || form.body || (form.ctaLabel && form.ctaHref)) && (
-                <div className="p-5 pointer-events-none">
+                <div className="p-4 pointer-events-none">
                   {form.title && <p className="text-base font-extrabold leading-snug text-foreground">{form.title}</p>}
-                  {form.body  && <p className="mt-2 text-sm text-muted leading-relaxed">{form.body}</p>}
+                  {form.body  && <p className="mt-1.5 text-sm text-muted leading-relaxed">{form.body}</p>}
                   {form.ctaLabel && form.ctaHref && (
-                    <div className="mt-4">
+                    <div className="mt-3">
                       <span className="inline-flex items-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white">{form.ctaLabel}</span>
                     </div>
                   )}
                 </div>
               )}
 
-              {/* ── Radius badge — กดเพื่อ cycle ── */}
-              <button
-                type="button"
-                onClick={cycleRadius}
-                title="กดเพื่อเปลี่ยนความมนของขอบ"
-                className="absolute bottom-2 left-2 z-20 flex items-center gap-1 rounded-full border border-white/30 bg-black/50 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-sm hover:bg-primary/80 transition-colors"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 00-2 2v4a2 2 0 002 2h8a2 2 0 002-2v-4a2 2 0 00-2-2H6z" clipRule="evenodd" />
-                </svg>
-                {currentRadiusLabel}
+              {/* Radius badge */}
+              <button type="button" onClick={cycleRadius} title="กดเพื่อเปลี่ยนความมน"
+                className="absolute bottom-2 left-2 z-20 flex items-center gap-1 rounded-full border border-white/30 bg-black/50 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-primary/80 transition-colors">
+                ◌ {currentRadiusLabel}
               </button>
 
-              {/* ── Width drag handle — ขอบขวา ── */}
-              <div
-                onMouseDown={handleWidthDragStart}
-                className={`absolute right-0 top-0 bottom-0 z-20 flex w-5 cursor-ew-resize flex-col items-center justify-center gap-1 transition-opacity ${isDragging ? "opacity-100" : "opacity-0 hover:opacity-100"}`}
-              >
+              {/* Width drag handle */}
+              <div onMouseDown={handleWidthDragStart}
+                className={`absolute right-0 top-0 bottom-0 z-20 flex w-5 cursor-ew-resize items-center justify-center transition-opacity ${isDragging ? "opacity-100" : "opacity-0 hover:opacity-100"}`}>
                 <div className="h-10 w-1 rounded-full bg-primary/70 shadow" />
               </div>
             </div>
 
-            {/* Width indicator + buttons — ใต้ popup ในพื้นที่ backdrop */}
+            {/* Width pills */}
             <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
               {WIDTH_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => set("width", opt.value)}
-                  className={`rounded-full border px-3 py-0.5 text-[11px] font-semibold transition-all ${
-                    form.width === opt.value
-                      ? "border-white bg-white text-gray-900"
-                      : "border-white/30 bg-black/30 text-white/70 hover:border-white/60 hover:text-white"
-                  }`}
-                >
+                <button key={opt.value} type="button" onClick={() => set("width", opt.value)}
+                  className={`rounded-full border px-3 py-0.5 text-[11px] font-semibold transition-all ${form.width === opt.value ? "border-white bg-white text-gray-900" : "border-white/30 bg-black/30 text-white/70 hover:border-white/60 hover:text-white"}`}>
                   {opt.label}
                 </button>
               ))}
@@ -580,7 +571,7 @@ export default function SplashConfigClient() {
 
       {/* ── Save bar ── */}
       <div className="flex items-center justify-between rounded-2xl border border-border bg-surface px-5 py-4">
-        <p className="text-xs text-muted">การเปลี่ยนแปลงจะมีผลในหน้า Home ทันทีหลังบันทึก</p>
+        <p className="text-xs text-muted">บันทึกเพื่อให้มีผลในหน้า Home</p>
         <div className="flex gap-2">
           <button onClick={handleReset}
             className="rounded-lg border border-border px-4 py-2 text-sm text-muted hover:text-foreground transition-colors">
