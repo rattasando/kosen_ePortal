@@ -189,7 +189,7 @@ Strip `id` จาก blocks ก่อน create เช่นกัน
 
 ## Git Branches
 - `main` → localStorage version (Vercel deploy)
-- `dev` → PostgreSQL version (พัฒนาต่อบนนี้)
+- `dev` → PostgreSQL version (พัฒนาต่อบนนี้) — **ปิด Vercel auto-deploy** ด้วย `vercel.json` แล้ว (dev ใช้ Prisma+PG ไม่มี DATABASE_URL ใน Vercel → deploy fail ทุกครั้ง)
 
 ## Environment Variables (.env)
 ```
