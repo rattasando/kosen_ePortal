@@ -15,13 +15,13 @@ const STATUS_CONFIG = {
 };
 
 const SORT_OPTIONS = [
-  { value: "default",     label: "⇅ ค่าเริ่มต้น" },
-  { value: "newest",      label: "📅 วันเผยแพร่ ใหม่สุดก่อน" },
-  { value: "oldest",      label: "📅 วันเผยแพร่ เก่าสุดก่อน" },
-  { value: "created_new", label: "🕐 วันสร้าง ใหม่สุดก่อน" },
-  { value: "created_old", label: "🕐 วันสร้าง เก่าสุดก่อน" },
+  { value: "default",     label: "ค่าเริ่มต้น" },
+  { value: "newest",      label: "วันเผยแพร่ ใหม่สุดก่อน" },
+  { value: "oldest",      label: "วันเผยแพร่ เก่าสุดก่อน" },
+  { value: "created_new", label: "วันสร้าง ใหม่สุดก่อน" },
+  { value: "created_old", label: "วันสร้าง เก่าสุดก่อน" },
   { value: "title_az",    label: "ก–ฮ (หัวข้อ)" },
-  { value: "views",       label: "👁 ยอดวิวมากสุด" },
+  { value: "views",       label: "ยอดวิวมากสุด" },
 ];
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
@@ -522,7 +522,7 @@ export default function NewsListClient() {
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") addKeyword(); }}
-            placeholder="ค้นหาหัวข้อ ผู้เขียน หมวดหมู่ แท็ก… (Enter เพื่อล็อก)"
+            placeholder="หัวข้อ ผู้เขียน หมวดหมู่ แท็ก (Enter เพื่อค้นหา)"
             maxLength={80}
             className={`${inputCls} pl-9`}
           />

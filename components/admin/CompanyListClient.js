@@ -608,14 +608,14 @@ export default function CompanyListClient() {
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-2">
           {/* Search */}
-          <div className="relative w-80 shrink-0">
+          <div className="relative flex-1">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted pointer-events-none"
               xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
             </svg>
             <input type="text" value={searchInput} onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addKeyword(searchInput); } }}
-              placeholder="ชื่อบริษัท อุตสาหกรรม จังหวัด ผู้ประสานงาน… (Enter เพื่อล็อก)"
+              placeholder="ชื่อบริษัท อุตสาหกรรม จังหวัด (Enter เพื่อค้นหา)"
               className="w-full rounded-lg border border-border bg-surface pl-9 pr-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft placeholder:text-muted" />
           </div>
           <button onClick={() => addKeyword(searchInput)} disabled={!searchInput.trim()}
@@ -758,7 +758,7 @@ export default function CompanyListClient() {
             { label: "ที่ตั้ง",           width: "10%" },
             { label: "ผู้ประสานงาน",     width: "13%" },
             { label: "ข้อมูลติดต่อ",     width: "16%" },
-            { label: "เปิดรับ",          align: "center", width: "60px" },
+            { label: "เปิดรับ",          align: "center", width: "60px", noWrap: true },
             { label: "MOU",              width: "90px"  },
             { label: "สถานะ",            width: "100px" },
             { label: "จัดการ",           align: "center", width: "115px" },

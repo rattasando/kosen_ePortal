@@ -566,7 +566,7 @@ export default function JobListClient() {
     { label: "สาขา",             width: "130px" },
     { label: "เงินเดือน",        width: "110px" },
     { label: "บริษัท / ที่ตั้ง", width: "175px" },
-    { label: "ประเภท / ระยะเวลา", width: "120px" },
+    { label: "ประเภท / ระยะเวลา", width: "120px", noWrap: true },
     { label: "สมัคร/รับ", align: "center", width: "96px" },
     { label: "ปิดรับ",           width: "102px" },
     { label: "สถานะ", align: "center", width: "108px" },
@@ -748,7 +748,7 @@ export default function JobListClient() {
       <div className="flex flex-col gap-3">
         {/* Row 1: search + actions */}
         <div className="flex items-center gap-2">
-          <div className="relative w-80 shrink-0">
+          <div className="relative flex-1">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted pointer-events-none"
               xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
@@ -756,7 +756,7 @@ export default function JobListClient() {
             <input type="text" value={searchInput}
               onChange={e => setSearchInput(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addKeyword(searchInput); } }}
-              placeholder="ชื่อตำแหน่ง บริษัท สาขา ที่ตั้ง… (Enter เพื่อล็อก)"
+              placeholder="ตำแหน่ง บริษัท สาขา ที่ตั้ง (Enter เพื่อค้นหา)"
               className="w-full rounded-lg border border-border bg-surface pl-9 pr-4 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft" />
           </div>
           <button onClick={() => addKeyword(searchInput)} disabled={!searchInput.trim()}
@@ -801,7 +801,7 @@ export default function JobListClient() {
             <div className="flex flex-col gap-0.5">
               <label className={labelCls}>ประเภท</label>
               <select value={filterType} onChange={e => { setFilterType(e.target.value); setPage(1); }} className={selectCls}>
-                <option value="ทั้งหมด">💼 ประเภททั้งหมด</option>
+                <option value="ทั้งหมด">ประเภททั้งหมด</option>
                 {JOB_TYPES.map(t => <option key={t}>{t}</option>)}
               </select>
             </div>
@@ -809,18 +809,18 @@ export default function JobListClient() {
           <div className="flex flex-col gap-0.5">
             <label className={labelCls}>สาขา</label>
             <select value={filterField} onChange={e => { setFilterField(e.target.value); setPage(1); }} className={selectCls}>
-              <option value="ทั้งหมด">🔬 สาขาทั้งหมด</option>
+              <option value="ทั้งหมด">สาขาทั้งหมด</option>
               {JOB_FIELDS.map(f => <option key={f}>{f}</option>)}
             </select>
           </div>
           <div className="flex flex-col gap-0.5">
             <label className={labelCls}>เรียงลำดับ</label>
             <select value={sortBy} onChange={e => { setSortBy(e.target.value); setPage(1); }} className={selectCls}>
-              <option value="default">⇅ ค่าเริ่มต้น</option>
-              <option value="title-asc">🔤 ชื่อตำแหน่ง A-Z</option>
-              <option value="deadline-asc">📅 ปิดรับเร็วสุดก่อน</option>
-              <option value="deadline-desc">📅 ปิดรับล่าสุดก่อน</option>
-              <option value="applications">👥 ผู้สมัครมากสุด</option>
+              <option value="default">ค่าเริ่มต้น</option>
+              <option value="title-asc">ชื่อตำแหน่ง A-Z</option>
+              <option value="deadline-asc">ปิดรับเร็วสุดก่อน</option>
+              <option value="deadline-desc">ปิดรับล่าสุดก่อน</option>
+              <option value="applications">ผู้สมัครมากสุด</option>
             </select>
           </div>
         </div>

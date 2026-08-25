@@ -17,7 +17,7 @@ export default function AdminTable({ columns, rows, onRowClick, onCellClick }) {
               {cols.map((col, i) => (
                 <th
                   key={i}
-                  className={`px-4 py-3 font-semibold text-muted ${col.align === "center" ? "text-center" : "text-left"}`}
+                  className={`px-4 py-3 font-semibold text-muted ${col.align === "center" ? "text-center" : "text-left"}${col.noWrap ? " whitespace-nowrap" : ""}`}
                 >
                   {col.label}
                 </th>

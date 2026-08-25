@@ -664,7 +664,7 @@ export default function DocumentListClient() {
           <input type="text" value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addKeyword(searchInput); } }}
-            placeholder="ค้นหาชื่อเอกสาร คำอธิบาย... (Enter เพื่อล็อก)"
+            placeholder="ชื่อเอกสาร คำอธิบาย (Enter เพื่อค้นหา)"
             className={`${inputCls} pl-9`} />
         </div>
         <button onClick={() => addKeyword(searchInput)} disabled={!searchInput.trim()}

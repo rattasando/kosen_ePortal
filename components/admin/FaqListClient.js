@@ -603,7 +603,7 @@ export default function FaqListClient() {
           <input value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addKeyword(searchInput); } }}
-            placeholder="ค้นหาคำถาม คำตอบ หมวดหมู่... (Enter เพื่อล็อก)"
+            placeholder="คำถาม คำตอบ หมวดหมู่ (Enter เพื่อค้นหา)"
             className={`${inputCls} pl-9`} />
         </div>
         <button onClick={() => addKeyword(searchInput)} disabled={!searchInput.trim()}

@@ -32,7 +32,7 @@ const STATUS_CONFIG = {
 };
 
 const SORT_OPTIONS = [
-  { value: "default",  label: "⇅ ลำดับที่กำหนด" },
+  { value: "default",  label: "ลำดับที่กำหนด" },
   { value: "name_az",  label: "ก–ฮ (ชื่อทุน)" },
   { value: "count_hi", label: "💰 จำนวนทุนมากสุด" },
   { value: "count_lo", label: "💰 จำนวนทุนน้อยสุด" },
@@ -553,7 +553,7 @@ export default function ScholarshipTypesListClient() {
           </svg>
           <input type="text" value={searchInput} onChange={(e) => setSearchInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") addKeyword(); }}
-            placeholder="ค้นหาชื่อทุน ความคุ้มครอง มูลค่า คุณสมบัติ… (Enter เพื่อล็อก)"
+            placeholder="ชื่อทุน ความคุ้มครอง มูลค่า คุณสมบัติ (Enter เพื่อค้นหา)"
             maxLength={80} className={`${inputCls} pl-9`} />
         </div>
         <button onClick={addKeyword} className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted hover:text-foreground transition-colors">ค้นหา</button>

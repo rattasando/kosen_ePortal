@@ -1487,14 +1487,14 @@ export default function MappingListClient() {
       <div className="flex flex-col gap-3">
         {/* Row 1 */}
         <div className="flex items-center gap-2">
-          <div className="relative w-80 shrink-0">
+          <div className="relative flex-1">
             <svg className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted pointer-events-none"
               xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
             </svg>
             <input type="text" value={searchInput} onChange={e => setSearchInput(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addKeyword(searchInput); } }}
-              placeholder="ชื่อนักเรียน ตำแหน่งงาน บริษัท มหาวิทยาลัย… (Enter เพื่อล็อก)"
+              placeholder="ชื่อนักเรียน ตำแหน่งงาน บริษัท (Enter เพื่อค้นหา)"
               className="w-full rounded-lg border border-border bg-surface pl-9 pr-4 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft" />
           </div>
           <button onClick={() => addKeyword(searchInput)} disabled={!searchInput.trim()}
@@ -1541,7 +1541,7 @@ export default function MappingListClient() {
           <div className="flex flex-col gap-0.5">
             <label className={labelCls}>{t("common.university")}</label>
             <select value={filterUniv} onChange={e => { setFilterUniv(e.target.value); setPage(1); }} className={selectCls}>
-              <option value="ทั้งหมด">🏫 {t("common.university")} — {t("common.all")}</option>
+              <option value="ทั้งหมด">{t("common.university")} — {t("common.all")}</option>
               {UNIVERSITIES.map(u => <option key={u}>{u}</option>)}
             </select>
           </div>
@@ -1549,7 +1549,7 @@ export default function MappingListClient() {
             <div className="flex flex-col gap-0.5">
               <label className={labelCls}>{t("common.jobType")}</label>
               <select value={filterType} onChange={e => { setFilterType(e.target.value); setPage(1); }} className={selectCls}>
-                <option value="ทั้งหมด">💼 {t("common.jobType")} — {t("common.all")}</option>
+                <option value="ทั้งหมด">{t("common.jobType")} — {t("common.all")}</option>
                 {JOB_TYPES.map(jt => <option key={jt}>{jt}</option>)}
               </select>
             </div>
@@ -1557,18 +1557,18 @@ export default function MappingListClient() {
           <div className="flex flex-col gap-0.5">
             <label className={labelCls}>{t("common.field")}</label>
             <select value={filterField} onChange={e => { setFilterField(e.target.value); setPage(1); }} className={selectCls}>
-              <option value="ทั้งหมด">🔬 {t("common.field")} — {t("common.all")}</option>
+              <option value="ทั้งหมด">{t("common.field")} — {t("common.all")}</option>
               {JOB_FIELDS.map(f => <option key={f}>{f}</option>)}
             </select>
           </div>
           <div className="flex flex-col gap-0.5">
             <label className={labelCls}>{t("common.sortBy")}</label>
             <select value={sortBy} onChange={e => { setSortBy(e.target.value); setPage(1); }} className={selectCls}>
-              <option value="default">⇅ {t("common.sortBy")}</option>
-              <option value="date-desc">📅 {t("mapping.sort.dateDesc")}</option>
-              <option value="date-asc">📅 {t("mapping.sort.dateAsc")}</option>
-              <option value="student">👤 {t("mapping.sort.student")}</option>
-              <option value="job-asc">🔤 {t("mapping.sort.jobAsc")}</option>
+              <option value="default">{t("common.sortBy")}</option>
+              <option value="date-desc">{t("mapping.sort.dateDesc")}</option>
+              <option value="date-asc">{t("mapping.sort.dateAsc")}</option>
+              <option value="student">{t("mapping.sort.student")}</option>
+              <option value="job-asc">{t("mapping.sort.jobAsc")}</option>
             </select>
           </div>
         </div>

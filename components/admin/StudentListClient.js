@@ -1482,7 +1482,7 @@ export default function StudentListClient() {
       <div className="flex flex-col gap-3">
         {/* Row 1: Search + Actions */}
         <div className="flex items-center gap-2">
-          <div className="relative w-80 shrink-0">
+          <div className="relative flex-1">
             <svg
               className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted pointer-events-none"
               xmlns="http://www.w3.org/2000/svg"
@@ -1505,7 +1505,7 @@ export default function StudentListClient() {
                   addKeyword(searchInput);
                 }
               }}
-              placeholder="ชื่อ นามสกุล ชื่อเล่น มหาวิทยาลัย สาขา… (Enter เพื่อล็อก)"
+              placeholder="ชื่อ นามสกุล มหาวิทยาลัย สาขา (Enter เพื่อค้นหา)"
               className="w-full rounded-lg border border-border bg-surface pl-9 pr-4 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft"
             />
           </div>
@@ -1608,14 +1608,14 @@ export default function StudentListClient() {
             <label className={labelCls}>สถานะ</label>
             <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }} className={selectCls}>
               {ALL_STATUSES.map((s) => (
-                <option key={s} value={s}>{s === "ทั้งหมด" ? "🎓 สถานะทั้งหมด" : s}</option>
+                <option key={s} value={s}>{s === "ทั้งหมด" ? "สถานะทั้งหมด" : s}</option>
               ))}
             </select>
           </div>
           <div className="flex flex-col gap-0.5">
             <label className={labelCls}>ชั้นปี</label>
             <select value={filterYear} onChange={(e) => { setFilterYear(e.target.value); setPage(1); }} className={selectCls}>
-              <option value="ทั้งหมด">📚 ชั้นปีทั้งหมด</option>
+              <option value="ทั้งหมด">ชั้นปีทั้งหมด</option>
               {["1", "2", "3", "4", "5"].map((y) => (
                 <option key={y} value={y}>ปีที่ {y}</option>
               ))}
@@ -1625,7 +1625,7 @@ export default function StudentListClient() {
             <label className={labelCls}>มหาวิทยาลัย</label>
             <select value={filterUniversity} onChange={(e) => { setFilterUniversity(e.target.value); setPage(1); }} className={selectCls}>
               {universities.map((u) => (
-                <option key={u} value={u}>{u === "ทั้งหมด" ? "🏫 มหาวิทยาลัยทั้งหมด" : u}</option>
+                <option key={u} value={u}>{u === "ทั้งหมด" ? "มหาวิทยาลัยทั้งหมด" : u}</option>
               ))}
             </select>
           </div>
@@ -1633,7 +1633,7 @@ export default function StudentListClient() {
             <label className={labelCls}>ทุน</label>
             <select value={filterScholarship} onChange={(e) => { setFilterScholarship(e.target.value); setPage(1); }} className={selectCls}>
               {scholarships.map((s) => (
-                <option key={s} value={s}>{s === "ทั้งหมด" ? "🏆 ทุนทั้งหมด" : scholarshipLabel(s)}</option>
+                <option key={s} value={s}>{s === "ทั้งหมด" ? "ทุนทั้งหมด" : scholarshipLabel(s)}</option>
               ))}
             </select>
           </div>
@@ -1648,15 +1648,15 @@ export default function StudentListClient() {
                   : "border-border bg-surface text-foreground hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700"
               }`}
             >
-              💰 จ่ายเอง
+              จ่ายเอง
             </button>
           </div>
           <div className="flex flex-col gap-0.5">
             <label className={labelCls}>ประเทศ</label>
             <select value={filterCountry} onChange={(e) => { setFilterCountry(e.target.value); setPage(1); }} className={selectCls}>
-              <option value="ทั้งหมด">📍 ประเทศที่อาศัยอยู่</option>
-              <option value="ไทย">🇹🇭 อาศัยอยู่ในไทย</option>
-              <option value="ญี่ปุ่น">🇯🇵 อาศัยอยู่ในญี่ปุ่น</option>
+              <option value="ทั้งหมด">ประเทศที่อาศัยอยู่</option>
+              <option value="ไทย">อาศัยอยู่ในไทย</option>
+              <option value="ญี่ปุ่น">อาศัยอยู่ในญี่ปุ่น</option>
             </select>
           </div>
           <div className="flex flex-col gap-0.5">
@@ -1704,7 +1704,7 @@ export default function StudentListClient() {
               onClick={() => { setFilterSelfFunded(false); setPage(1); }}
               className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors"
             >
-              💰 จ่ายเอง<XIcon />
+              จ่ายเอง<XIcon />
             </button>
           )}
           {filterCountry !== "ทั้งหมด" && (
@@ -1876,7 +1876,7 @@ export default function StudentListClient() {
                 )}
                 {s.selfFunded && (
                   <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[10px] font-semibold text-amber-700 whitespace-nowrap">
-                    💰 จ่ายเอง
+                    จ่ายเอง
                   </span>
                 )}
               </div>,

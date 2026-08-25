@@ -24,11 +24,11 @@ const STATUS_CONFIG = {
 };
 
 const SORT_OPTIONS = [
-  { value: "newest",   label: "🕐 วันจัดล่าสุด" },
-  { value: "oldest",   label: "🕐 วันจัดเก่าสุด" },
-  { value: "created",  label: "📅 สร้างล่าสุด" },
+  { value: "newest",   label: "วันจัดล่าสุด" },
+  { value: "oldest",   label: "วันจัดเก่าสุด" },
+  { value: "created",  label: "สร้างล่าสุด" },
   { value: "title_az", label: "ก–ฮ (ชื่อ)" },
-  { value: "views",    label: "👁 ยอดวิวมากสุด" },
+  { value: "views",    label: "ยอดวิวมากสุด" },
 ];
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
@@ -649,7 +649,7 @@ export default function ActivitiesListClient() {
           </svg>
           <input type="text" value={searchInput} onChange={(e) => setSearchInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") addKeyword(); }}
-            placeholder="ค้นหาชื่อ ผู้จัดงาน ประเภท สถานที่… (Enter เพื่อล็อก)"
+            placeholder="ชื่อกิจกรรม ผู้จัดงาน สถานที่ (Enter เพื่อค้นหา)"
             maxLength={80} className={`${inputCls} pl-9`} />
         </div>
         <button onClick={addKeyword} className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted hover:text-foreground transition-colors">ค้นหา</button>
