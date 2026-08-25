@@ -481,15 +481,17 @@ export default function SplashConfigClient() {
           </div>
 
           <div>
-            <label className={`mb-1 block ${labelCls}`}>หน่วงเวลาก่อนแสดง (มิลลิวินาที)</label>
+            <label className={`mb-1 block ${labelCls}`}>หน่วงเวลาก่อนแสดง</label>
             <div className="flex items-center gap-3">
-              <input type="range" min="0" max="3000" step="100" value={form.delayMs}
-                onChange={(e) => set("delayMs", Number(e.target.value))} className="flex-1 accent-primary" />
+              <input type="range" min="0" max="3" step="0.5"
+                value={(form.delayMs ?? 0) / 1000}
+                onChange={(e) => set("delayMs", Math.round(Number(e.target.value) * 1000))}
+                className="flex-1 accent-primary" />
               <span className="w-16 rounded-lg border border-border bg-surface px-2 py-1 text-center text-sm font-mono">
-                {form.delayMs}ms
+                {((form.delayMs ?? 0) / 1000).toFixed(1)} วิ
               </span>
             </div>
-            <p className="mt-1 text-xs text-muted">0 = แสดงทันที, 500 = หน่วง 0.5 วินาที</p>
+            <p className="mt-1 text-xs text-muted">0 วิ = แสดงทันที · สูงสุด 3 วินาที</p>
           </div>
         </div>
 
