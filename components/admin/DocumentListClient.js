@@ -512,13 +512,14 @@ function DocumentModal({ doc, onSave, onClose }) {
 export default function DocumentListClient() {
   const { documents, ready, addDocument, updateDocument, deleteDocument } = useDocuments();
 
-  const [searchInput, setSearchInput] = useState("");
-  const [filterCat,   setFilterCat]   = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
-  const [sortBy,      setSortBy]      = useState("default");
-  const [pageSize,    setPageSize]    = useState(10);
-  const [page,        setPage]        = useState(1);
-  const [hydrated,    setHydrated]    = useState(false);
+  const [searchInput,    setSearchInput]    = useState("");
+  const [filterCat,      setFilterCat]      = useState("");
+  const [filterStatus,   setFilterStatus]   = useState("");
+  const [filterFileType, setFilterFileType] = useState("");
+  const [sortBy,         setSortBy]         = useState("default");
+  const [pageSize,       setPageSize]       = useState(10);
+  const [page,           setPage]           = useState(1);
+  const [hydrated,       setHydrated]       = useState(false);
 
   const [modal,     setModal]     = useState(null);
   const [detail,    setDetail]    = useState(null);
@@ -527,29 +528,31 @@ export default function DocumentListClient() {
   // Restore filters
   useEffect(() => {
     const f = loadFilters();
-    if (f.searchInput  !== undefined) setSearchInput(f.searchInput);
-    if (f.filterCat    !== undefined) setFilterCat(f.filterCat);
-    if (f.filterStatus !== undefined) setFilterStatus(f.filterStatus);
-    if (f.sortBy       !== undefined) setSortBy(f.sortBy);
-    if (f.pageSize     !== undefined) setPageSize(f.pageSize);
+    if (f.searchInput    !== undefined) setSearchInput(f.searchInput);
+    if (f.filterCat      !== undefined) setFilterCat(f.filterCat);
+    if (f.filterStatus   !== undefined) setFilterStatus(f.filterStatus);
+    if (f.filterFileType !== undefined) setFilterFileType(f.filterFileType);
+    if (f.sortBy         !== undefined) setSortBy(f.sortBy);
+    if (f.pageSize       !== undefined) setPageSize(f.pageSize);
     setHydrated(true);
   }, []);
 
   useEffect(() => {
     if (!hydrated) return;
-    saveFilters({ searchInput, filterCat, filterStatus, sortBy, pageSize });
+    saveFilters({ searchInput, filterCat, filterStatus, filterFileType, sortBy, pageSize });
     setPage(1);
-  }, [searchInput, filterCat, filterStatus, sortBy, pageSize, hydrated]);
+  }, [searchInput, filterCat, filterStatus, filterFileType, sortBy, pageSize, hydrated]);
 
   // Filtered + sorted
   const filtered = useMemo(() => {
     const q = searchInput.trim().toLowerCase();
     let list = documents.filter((d) => {
-      const matchSearch = !q || d.title.toLowerCase().includes(q) || d.description?.toLowerCase().includes(q);
-      const matchCat = !filterCat || d.category === filterCat;
+      const matchSearch   = !q || d.title.toLowerCase().includes(q) || d.description?.toLowerCase().includes(q);
+      const matchCat      = !filterCat      || d.category === filterCat;
+      const matchFileType = !filterFileType || d.fileType  === filterFileType;
       const es = effectiveStatus(d);
-      const matchStatus = !filterStatus || es === filterStatus;
-      return matchSearch && matchCat && matchStatus;
+      const matchStatus   = !filterStatus   || es === filterStatus;
+      return matchSearch && matchCat && matchFileType && matchStatus;
     });
     switch (sortBy) {
       case "newest":   list = [...list].sort((a, b) => (b.rawDate ?? "").localeCompare(a.rawDate ?? "")); break;
@@ -558,15 +561,16 @@ export default function DocumentListClient() {
       default: break;
     }
     return list;
-  }, [documents, searchInput, filterCat, filterStatus, sortBy]);
+  }, [documents, searchInput, filterCat, filterFileType, filterStatus, sortBy]);
 
-  // Status counts (before status filter)
+  // Status counts (before status filter, but after search/cat/fileType)
   const statusCounts = useMemo(() => {
+    const q = searchInput.trim().toLowerCase();
     const base = documents.filter((d) => {
-      const q = searchInput.trim().toLowerCase();
-      const matchSearch = !q || d.title.toLowerCase().includes(q) || d.description?.toLowerCase().includes(q);
-      const matchCat = !filterCat || d.category === filterCat;
-      return matchSearch && matchCat;
+      const matchSearch   = !q || d.title.toLowerCase().includes(q) || d.description?.toLowerCase().includes(q);
+      const matchCat      = !filterCat      || d.category === filterCat;
+      const matchFileType = !filterFileType || d.fileType  === filterFileType;
+      return matchSearch && matchCat && matchFileType;
     });
     return {
       all:       base.length,
@@ -574,15 +578,15 @@ export default function DocumentListClient() {
       scheduled: base.filter((d) => effectiveStatus(d) === "scheduled").length,
       draft:     base.filter((d) => d.status === "draft").length,
     };
-  }, [documents, searchInput, filterCat]);
+  }, [documents, searchInput, filterCat, filterFileType]);
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage   = Math.min(page, totalPages);
   const pageSlice  = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
 
-  const hasFilters = filterCat || filterStatus || sortBy !== "default";
-  const clearAll = () => { setFilterCat(""); setFilterStatus(""); setSortBy("default"); };
+  const hasFilters = filterCat || filterFileType || filterStatus || sortBy !== "default";
+  const clearAll = () => { setFilterCat(""); setFilterFileType(""); setFilterStatus(""); setSortBy("default"); };
 
   const handleSave = (form) => {
     if (modal?.mode === "edit") {
@@ -650,6 +654,13 @@ export default function DocumentListClient() {
           </select>
         </div>
         <div className="flex flex-col gap-0.5">
+          <label className={labelCls}>ชนิดไฟล์</label>
+          <select value={filterFileType} onChange={(e) => setFilterFileType(e.target.value)} className={selectCls}>
+            <option value="">ทุกชนิด</option>
+            {FILE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+        <div className="flex flex-col gap-0.5">
           <label className={labelCls}>เรียงลำดับ</label>
           <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className={selectCls}>
             {SORT_OPTIONS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
@@ -664,6 +675,11 @@ export default function DocumentListClient() {
           {filterCat && (
             <button className={chipBase} onClick={() => setFilterCat("")}>
               หมวด: {catLabel} <XIcon />
+            </button>
+          )}
+          {filterFileType && (
+            <button className={chipBase} onClick={() => setFilterFileType("")}>
+              ชนิดไฟล์: {filterFileType} <XIcon />
             </button>
           )}
           {filterStatus && (
