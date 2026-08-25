@@ -46,7 +46,9 @@ const TYPE_BADGE = {
 };
 
 const inputCls  = "w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft placeholder:text-muted";
-const selectCls = "w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft";
+const selectCls = "rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft";
+const labelCls  = "text-xs font-medium text-foreground";
+const chipBase  = "inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-primary hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors";
 
 // ── CSV helpers ───────────────────────────────────────────────
 const CSV_HEADERS = ["id", "studentId", "jobId", "status", "appliedDate", "note"];
@@ -1529,37 +1531,47 @@ export default function MappingListClient() {
         </div>
 
         {/* Row 2: dropdowns */}
-        <div className="flex flex-wrap items-center gap-2">
-          <select value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setPage(1); }}
-            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft">
-            <option value="ทั้งหมด">📋 {t("common.status")} — {t("common.all")}</option>
-            {MAPPING_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
-          <select value={filterUniv} onChange={e => { setFilterUniv(e.target.value); setPage(1); }}
-            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft">
-            <option value="ทั้งหมด">🏫 {t("common.university")} — {t("common.all")}</option>
-            {UNIVERSITIES.map(u => <option key={u}>{u}</option>)}
-          </select>
-          {activeTab === "ทั้งหมด" && (
-            <select value={filterType} onChange={e => { setFilterType(e.target.value); setPage(1); }}
-              className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft">
-              <option value="ทั้งหมด">💼 {t("common.jobType")} — {t("common.all")}</option>
-              {JOB_TYPES.map(jt => <option key={jt}>{jt}</option>)}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-col gap-0.5">
+            <label className={labelCls}>{t("common.status")}</label>
+            <select value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setPage(1); }} className={selectCls}>
+              <option value="ทั้งหมด">📋 {t("common.status")} — {t("common.all")}</option>
+              {MAPPING_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className={labelCls}>{t("common.university")}</label>
+            <select value={filterUniv} onChange={e => { setFilterUniv(e.target.value); setPage(1); }} className={selectCls}>
+              <option value="ทั้งหมด">🏫 {t("common.university")} — {t("common.all")}</option>
+              {UNIVERSITIES.map(u => <option key={u}>{u}</option>)}
+            </select>
+          </div>
+          {activeTab === "ทั้งหมด" && (
+            <div className="flex flex-col gap-0.5">
+              <label className={labelCls}>{t("common.jobType")}</label>
+              <select value={filterType} onChange={e => { setFilterType(e.target.value); setPage(1); }} className={selectCls}>
+                <option value="ทั้งหมด">💼 {t("common.jobType")} — {t("common.all")}</option>
+                {JOB_TYPES.map(jt => <option key={jt}>{jt}</option>)}
+              </select>
+            </div>
           )}
-          <select value={filterField} onChange={e => { setFilterField(e.target.value); setPage(1); }}
-            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft">
-            <option value="ทั้งหมด">🔬 {t("common.field")} — {t("common.all")}</option>
-            {JOB_FIELDS.map(f => <option key={f}>{f}</option>)}
-          </select>
-          <select value={sortBy} onChange={e => { setSortBy(e.target.value); setPage(1); }}
-            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft">
-            <option value="default">⇅ {t("common.sortBy")}</option>
-            <option value="date-desc">📅 {t("mapping.sort.dateDesc")}</option>
-            <option value="date-asc">📅 {t("mapping.sort.dateAsc")}</option>
-            <option value="student">👤 {t("mapping.sort.student")}</option>
-            <option value="job-asc">🔤 {t("mapping.sort.jobAsc")}</option>
-          </select>
+          <div className="flex flex-col gap-0.5">
+            <label className={labelCls}>{t("common.field")}</label>
+            <select value={filterField} onChange={e => { setFilterField(e.target.value); setPage(1); }} className={selectCls}>
+              <option value="ทั้งหมด">🔬 {t("common.field")} — {t("common.all")}</option>
+              {JOB_FIELDS.map(f => <option key={f}>{f}</option>)}
+            </select>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className={labelCls}>{t("common.sortBy")}</label>
+            <select value={sortBy} onChange={e => { setSortBy(e.target.value); setPage(1); }} className={selectCls}>
+              <option value="default">⇅ {t("common.sortBy")}</option>
+              <option value="date-desc">📅 {t("mapping.sort.dateDesc")}</option>
+              <option value="date-asc">📅 {t("mapping.sort.dateAsc")}</option>
+              <option value="student">👤 {t("mapping.sort.student")}</option>
+              <option value="job-asc">🔤 {t("mapping.sort.jobAsc")}</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -1568,38 +1580,32 @@ export default function MappingListClient() {
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium text-muted">{t("common.filter")}:</span>
           {filterStatus !== "ทั้งหมด" && (
-            <button onClick={() => { setFilterStatus("ทั้งหมด"); setPage(1); }}
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-primary hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+            <button onClick={() => { setFilterStatus("ทั้งหมด"); setPage(1); }} className={chipBase}>
               📋 {filterStatus}<XIcon />
             </button>
           )}
           {filterUniv !== "ทั้งหมด" && (
-            <button onClick={() => { setFilterUniv("ทั้งหมด"); setPage(1); }}
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-primary hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+            <button onClick={() => { setFilterUniv("ทั้งหมด"); setPage(1); }} className={chipBase}>
               🏫 {filterUniv}<XIcon />
             </button>
           )}
           {filterType !== "ทั้งหมด" && (
-            <button onClick={() => { setFilterType("ทั้งหมด"); setPage(1); }}
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-primary hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+            <button onClick={() => { setFilterType("ทั้งหมด"); setPage(1); }} className={chipBase}>
               💼 {filterType}<XIcon />
             </button>
           )}
           {filterField !== "ทั้งหมด" && (
-            <button onClick={() => { setFilterField("ทั้งหมด"); setPage(1); }}
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-primary hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+            <button onClick={() => { setFilterField("ทั้งหมด"); setPage(1); }} className={chipBase}>
               🔬 {filterField}<XIcon />
             </button>
           )}
           {sortBy !== "default" && (
-            <button onClick={() => { setSortBy("default"); setPage(1); }}
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-primary hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+            <button onClick={() => { setSortBy("default"); setPage(1); }} className={chipBase}>
               ⇅ {{"job-asc": t("mapping.sort.jobAsc"), "date-desc": t("mapping.sort.dateDesc"), "date-asc": t("mapping.sort.dateAsc"), "student": t("mapping.sort.student")}[sortBy]}<XIcon />
             </button>
           )}
           {keywords.map(kw => (
-            <button key={kw} onClick={() => removeKeyword(kw)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-primary hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+            <button key={kw} onClick={() => removeKeyword(kw)} className={chipBase}>
               🔍 &ldquo;{kw}&rdquo;<XIcon />
             </button>
           ))}

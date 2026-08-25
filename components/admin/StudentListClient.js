@@ -948,6 +948,18 @@ function Pagination({ page, totalPages, onPage }) {
 // ── Filter persistence ───────────────────────────────────────
 const FILTER_KEY = "student-list-filters";
 
+const selectCls = "rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft";
+const labelCls  = "text-xs font-medium text-foreground";
+const chipBase  = "inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-primary hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors";
+
+function XIcon() {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+    </svg>
+  );
+}
+
 function loadFilters() {
   if (typeof window === "undefined") return {};
   try {
@@ -1591,115 +1603,75 @@ export default function StudentListClient() {
         </div>
 
         {/* Row 2: Filter dropdowns + Sort */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Filter group */}
-          <span className="text-xs font-medium text-muted shrink-0">กรอง:</span>
-          <select
-            value={filterStatus}
-            onChange={(e) => {
-              setFilterStatus(e.target.value);
-              setPage(1);
-            }}
-            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft"
-          >
-            {ALL_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s === "ทั้งหมด" ? "🎓 สถานะทั้งหมด" : s}
-              </option>
-            ))}
-          </select>
-          <select
-            value={filterYear}
-            onChange={(e) => {
-              setFilterYear(e.target.value);
-              setPage(1);
-            }}
-            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft"
-          >
-            <option value="ทั้งหมด">📚 ชั้นปีทั้งหมด</option>
-            {["1", "2", "3", "4", "5"].map((y) => (
-              <option key={y} value={y}>
-                ปีที่ {y}
-              </option>
-            ))}
-          </select>
-          <select
-            value={filterUniversity}
-            onChange={(e) => {
-              setFilterUniversity(e.target.value);
-              setPage(1);
-            }}
-            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft"
-          >
-            {universities.map((u) => (
-              <option key={u} value={u}>
-                {u === "ทั้งหมด" ? "🏫 มหาวิทยาลัยทั้งหมด" : u}
-              </option>
-            ))}
-          </select>
-          <select
-            value={filterScholarship}
-            onChange={(e) => {
-              setFilterScholarship(e.target.value);
-              setPage(1);
-            }}
-            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft"
-          >
-            {scholarships.map((s) => (
-              <option key={s} value={s}>
-                {s === "ทั้งหมด" ? "🏆 ทุนทั้งหมด" : scholarshipLabel(s)}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            onClick={() => { setFilterSelfFunded((v) => !v); setPage(1); }}
-            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-              filterSelfFunded
-                ? "border-amber-300 bg-amber-50 text-amber-700"
-                : "border-border bg-surface text-foreground hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700"
-            }`}
-          >
-            💰 จ่ายเอง
-          </button>
-          <select
-            value={filterCountry}
-            onChange={(e) => {
-              setFilterCountry(e.target.value);
-              setPage(1);
-            }}
-            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft"
-          >
-            <option value="ทั้งหมด">📍 ประเทศที่อาศัยอยู่</option>
-            <option value="ไทย">🇹🇭 อาศัยอยู่ในไทย</option>
-            <option value="ญี่ปุ่น">🇯🇵 อาศัยอยู่ในญี่ปุ่น</option>
-          </select>
-
-          {/* Divider */}
-          <span className="h-5 w-px bg-border shrink-0" />
-
-          {/* Sort group */}
-          <span className="text-xs font-medium text-muted shrink-0">
-            เรียง:
-          </span>
-          <select
-            value={sortBy}
-            onChange={(e) => {
-              setSortBy(e.target.value);
-              setPage(1);
-            }}
-            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft"
-          >
-            <option value="default">ค่าเริ่มต้น</option>
-            <option value="newest">เพิ่มล่าสุดก่อน</option>
-            <option value="oldest">เพิ่มเก่าสุดก่อน</option>
-            <option value="updated">แก้ไขล่าสุดก่อน</option>
-            <option value="th_az">ก–ฮ (ชื่อไทย)</option>
-            <option value="th_za">ฮ–ก (ชื่อไทย)</option>
-            <option value="en_az">A–Z (English name)</option>
-            <option value="en_za">Z–A (English name)</option>
-          </select>
-
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-col gap-0.5">
+            <label className={labelCls}>สถานะ</label>
+            <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }} className={selectCls}>
+              {ALL_STATUSES.map((s) => (
+                <option key={s} value={s}>{s === "ทั้งหมด" ? "🎓 สถานะทั้งหมด" : s}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className={labelCls}>ชั้นปี</label>
+            <select value={filterYear} onChange={(e) => { setFilterYear(e.target.value); setPage(1); }} className={selectCls}>
+              <option value="ทั้งหมด">📚 ชั้นปีทั้งหมด</option>
+              {["1", "2", "3", "4", "5"].map((y) => (
+                <option key={y} value={y}>ปีที่ {y}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className={labelCls}>มหาวิทยาลัย</label>
+            <select value={filterUniversity} onChange={(e) => { setFilterUniversity(e.target.value); setPage(1); }} className={selectCls}>
+              {universities.map((u) => (
+                <option key={u} value={u}>{u === "ทั้งหมด" ? "🏫 มหาวิทยาลัยทั้งหมด" : u}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className={labelCls}>ทุน</label>
+            <select value={filterScholarship} onChange={(e) => { setFilterScholarship(e.target.value); setPage(1); }} className={selectCls}>
+              {scholarships.map((s) => (
+                <option key={s} value={s}>{s === "ทั้งหมด" ? "🏆 ทุนทั้งหมด" : scholarshipLabel(s)}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className={labelCls}>จ่ายเอง</label>
+            <button
+              type="button"
+              onClick={() => { setFilterSelfFunded((v) => !v); setPage(1); }}
+              className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                filterSelfFunded
+                  ? "border-amber-300 bg-amber-50 text-amber-700"
+                  : "border-border bg-surface text-foreground hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700"
+              }`}
+            >
+              💰 จ่ายเอง
+            </button>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className={labelCls}>ประเทศ</label>
+            <select value={filterCountry} onChange={(e) => { setFilterCountry(e.target.value); setPage(1); }} className={selectCls}>
+              <option value="ทั้งหมด">📍 ประเทศที่อาศัยอยู่</option>
+              <option value="ไทย">🇹🇭 อาศัยอยู่ในไทย</option>
+              <option value="ญี่ปุ่น">🇯🇵 อาศัยอยู่ในญี่ปุ่น</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className={labelCls}>เรียงลำดับ</label>
+            <select value={sortBy} onChange={(e) => { setSortBy(e.target.value); setPage(1); }} className={selectCls}>
+              <option value="default">ค่าเริ่มต้น</option>
+              <option value="newest">เพิ่มล่าสุดก่อน</option>
+              <option value="oldest">เพิ่มเก่าสุดก่อน</option>
+              <option value="updated">แก้ไขล่าสุดก่อน</option>
+              <option value="th_az">ก–ฮ (ชื่อไทย)</option>
+              <option value="th_za">ฮ–ก (ชื่อไทย)</option>
+              <option value="en_az">A–Z (English name)</option>
+              <option value="en_za">Z–A (English name)</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -1708,95 +1680,23 @@ export default function StudentListClient() {
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium text-muted">กรองด้วย:</span>
           {filterStatus !== "ทั้งหมด" && (
-            <button
-              onClick={() => {
-                setFilterStatus("ทั้งหมด");
-                setPage(1);
-              }}
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-primary hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors"
-            >
-              🎓 {filterStatus}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-3.5 w-3.5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                  clipRule="evenodd"
-                />
-              </svg>
+            <button onClick={() => { setFilterStatus("ทั้งหมด"); setPage(1); }} className={chipBase}>
+              🎓 {filterStatus}<XIcon />
             </button>
           )}
           {filterUniversity !== "ทั้งหมด" && (
-            <button
-              onClick={() => {
-                setFilterUniversity("ทั้งหมด");
-                setPage(1);
-              }}
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-primary hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors"
-            >
-              🏫 {filterUniversity}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-3.5 w-3.5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                  clipRule="evenodd"
-                />
-              </svg>
+            <button onClick={() => { setFilterUniversity("ทั้งหมด"); setPage(1); }} className={chipBase}>
+              🏫 {filterUniversity}<XIcon />
             </button>
           )}
           {filterYear !== "ทั้งหมด" && (
-            <button
-              onClick={() => {
-                setFilterYear("ทั้งหมด");
-                setPage(1);
-              }}
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-primary hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors"
-            >
-              📚 ปีที่ {filterYear}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-3.5 w-3.5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                  clipRule="evenodd"
-                />
-              </svg>
+            <button onClick={() => { setFilterYear("ทั้งหมด"); setPage(1); }} className={chipBase}>
+              📚 ปีที่ {filterYear}<XIcon />
             </button>
           )}
           {filterScholarship !== "ทั้งหมด" && (
-            <button
-              onClick={() => {
-                setFilterScholarship("ทั้งหมด");
-                setPage(1);
-              }}
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-primary hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors"
-            >
-              🏆 {scholarshipLabel(filterScholarship)}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-3.5 w-3.5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                  clipRule="evenodd"
-                />
-              </svg>
+            <button onClick={() => { setFilterScholarship("ทั้งหมด"); setPage(1); }} className={chipBase}>
+              🏆 {scholarshipLabel(filterScholarship)}<XIcon />
             </button>
           )}
           {filterSelfFunded && (
@@ -1804,84 +1704,22 @@ export default function StudentListClient() {
               onClick={() => { setFilterSelfFunded(false); setPage(1); }}
               className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors"
             >
-              💰 จ่ายเอง
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
+              💰 จ่ายเอง<XIcon />
             </button>
           )}
           {filterCountry !== "ทั้งหมด" && (
-            <button
-              onClick={() => {
-                setFilterCountry("ทั้งหมด");
-                setPage(1);
-              }}
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-primary hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors"
-            >
-              {filterCountry === "ญี่ปุ่น"
-                ? "🇯🇵 อาศัยอยู่ในญี่ปุ่น"
-                : "🇹🇭 อาศัยอยู่ในไทย"}
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-3.5 w-3.5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                  clipRule="evenodd"
-                />
-              </svg>
+            <button onClick={() => { setFilterCountry("ทั้งหมด"); setPage(1); }} className={chipBase}>
+              {filterCountry === "ญี่ปุ่น" ? "🇯🇵 อาศัยอยู่ในญี่ปุ่น" : "🇹🇭 อาศัยอยู่ในไทย"}<XIcon />
             </button>
           )}
           {sortBy !== "default" && (
-            <button
-              onClick={() => {
-                setSortBy("default");
-                setPage(1);
-              }}
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-primary hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors"
-            >
-              ⇅{" "}
-              {
-                { newest: "เพิ่มล่าสุด", oldest: "เพิ่มเก่าสุด", updated: "แก้ไขล่าสุด", th_az: "ก–ฮ", th_za: "ฮ–ก", en_az: "A–Z", en_za: "Z–A" }[
-                  sortBy
-                ]
-              }
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-3.5 w-3.5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                  clipRule="evenodd"
-                />
-              </svg>
+            <button onClick={() => { setSortBy("default"); setPage(1); }} className={chipBase}>
+              ⇅ {{ newest: "เพิ่มล่าสุด", oldest: "เพิ่มเก่าสุด", updated: "แก้ไขล่าสุด", th_az: "ก–ฮ", th_za: "ฮ–ก", en_az: "A–Z", en_za: "Z–A" }[sortBy]}<XIcon />
             </button>
           )}
           {keywords.map((kw) => (
-            <button
-              key={kw}
-              onClick={() => removeKeyword(kw)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-primary hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors"
-            >
-              🔍 &ldquo;{kw}&rdquo;
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-3.5 w-3.5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                  clipRule="evenodd"
-                />
-              </svg>
+            <button key={kw} onClick={() => removeKeyword(kw)} className={chipBase}>
+              🔍 &ldquo;{kw}&rdquo;<XIcon />
             </button>
           ))}
           <button

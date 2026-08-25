@@ -27,6 +27,10 @@ const MOU_CONFIG = {
   "ไม่มี MOU": "bg-gray-100 text-gray-500 border-gray-200",
 };
 
+const selectCls = "rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft";
+const labelCls  = "text-xs font-medium text-foreground";
+const chipBase  = "inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-primary hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors";
+
 // ── CSV helpers ────────────────────────────────────────────────────────────────
 
 const CSV_HEADERS = [
@@ -647,22 +651,28 @@ export default function CompanyListClient() {
         </div>
 
         {/* Filter dropdowns */}
-        <div className="flex flex-wrap items-center gap-2">
-          <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); resetPage(); }}
-            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft">
-            <option value="ทั้งหมด">📋 สถานะทั้งหมด</option>
-            {STATUSES.map((s) => <option key={s}>{s}</option>)}
-          </select>
-          <select value={filterIndustry} onChange={(e) => { setFilterIndustry(e.target.value); resetPage(); }}
-            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft">
-            <option value="ทั้งหมด">🏭 อุตสาหกรรมทั้งหมด</option>
-            {INDUSTRIES.map((i) => <option key={i}>{i}</option>)}
-          </select>
-          <select value={filterMOU} onChange={(e) => { setFilterMOU(e.target.value); resetPage(); }}
-            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft">
-            <option value="ทั้งหมด">📄 MOU ทั้งหมด</option>
-            {MOU_STATUSES.map((s) => <option key={s}>{s}</option>)}
-          </select>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-col gap-0.5">
+            <label className={labelCls}>สถานะ</label>
+            <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); resetPage(); }} className={selectCls}>
+              <option value="ทั้งหมด">📋 สถานะทั้งหมด</option>
+              {STATUSES.map((s) => <option key={s}>{s}</option>)}
+            </select>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className={labelCls}>อุตสาหกรรม</label>
+            <select value={filterIndustry} onChange={(e) => { setFilterIndustry(e.target.value); resetPage(); }} className={selectCls}>
+              <option value="ทั้งหมด">🏭 อุตสาหกรรมทั้งหมด</option>
+              {INDUSTRIES.map((i) => <option key={i}>{i}</option>)}
+            </select>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className={labelCls}>MOU</label>
+            <select value={filterMOU} onChange={(e) => { setFilterMOU(e.target.value); resetPage(); }} className={selectCls}>
+              <option value="ทั้งหมด">📄 MOU ทั้งหมด</option>
+              {MOU_STATUSES.map((s) => <option key={s}>{s}</option>)}
+            </select>
+          </div>
         </div>
       </div>
 
@@ -671,26 +681,22 @@ export default function CompanyListClient() {
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium text-muted">กรองด้วย:</span>
           {filterStatus !== "ทั้งหมด" && (
-            <button onClick={() => { setFilterStatus("ทั้งหมด"); resetPage(); }}
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-primary hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+            <button onClick={() => { setFilterStatus("ทั้งหมด"); resetPage(); }} className={chipBase}>
               📋 {filterStatus} <XIcon />
             </button>
           )}
           {filterIndustry !== "ทั้งหมด" && (
-            <button onClick={() => { setFilterIndustry("ทั้งหมด"); resetPage(); }}
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-primary hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+            <button onClick={() => { setFilterIndustry("ทั้งหมด"); resetPage(); }} className={chipBase}>
               🏭 {filterIndustry} <XIcon />
             </button>
           )}
           {filterMOU !== "ทั้งหมด" && (
-            <button onClick={() => { setFilterMOU("ทั้งหมด"); resetPage(); }}
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-primary hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+            <button onClick={() => { setFilterMOU("ทั้งหมด"); resetPage(); }} className={chipBase}>
               📄 {filterMOU} <XIcon />
             </button>
           )}
           {keywords.map((kw) => (
-            <button key={kw} onClick={() => removeKeyword(kw)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-primary hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+            <button key={kw} onClick={() => removeKeyword(kw)} className={chipBase}>
               🔍 &ldquo;{kw}&rdquo; <XIcon />
             </button>
           ))}

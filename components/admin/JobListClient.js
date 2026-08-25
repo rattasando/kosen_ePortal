@@ -17,6 +17,10 @@ const JOB_FIELDS = [
 const JOB_STATUSES = ["เปิดรับ", "เต็มแล้ว", "ปิดรับ"];
 const PAGE_SIZE_OPTIONS = [10, 20, 30, 50];
 
+const selectCls = "rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft";
+const labelCls  = "text-xs font-medium text-foreground";
+const chipBase  = "inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-primary hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors";
+
 const STATUS_CONFIG = {
   เปิดรับ:  { color: "bg-emerald-100 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
   เต็มแล้ว: { color: "bg-blue-100 text-blue-700 border-blue-200",          dot: "bg-blue-500"   },
@@ -785,32 +789,40 @@ export default function JobListClient() {
         </div>
 
         {/* Row 2: filter dropdowns */}
-        <div className="flex flex-wrap items-center gap-2">
-          <select value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setPage(1); }}
-            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft">
-            <option value="ทั้งหมด">📋 สถานะทั้งหมด</option>
-            {JOB_STATUSES.map(s => <option key={s}>{s}</option>)}
-          </select>
-          {activeTab === "ทั้งหมด" && (
-            <select value={filterType} onChange={e => { setFilterType(e.target.value); setPage(1); }}
-              className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft">
-              <option value="ทั้งหมด">💼 ประเภททั้งหมด</option>
-              {JOB_TYPES.map(t => <option key={t}>{t}</option>)}
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-col gap-0.5">
+            <label className={labelCls}>สถานะ</label>
+            <select value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setPage(1); }} className={selectCls}>
+              <option value="ทั้งหมด">📋 สถานะทั้งหมด</option>
+              {JOB_STATUSES.map(s => <option key={s}>{s}</option>)}
             </select>
+          </div>
+          {activeTab === "ทั้งหมด" && (
+            <div className="flex flex-col gap-0.5">
+              <label className={labelCls}>ประเภท</label>
+              <select value={filterType} onChange={e => { setFilterType(e.target.value); setPage(1); }} className={selectCls}>
+                <option value="ทั้งหมด">💼 ประเภททั้งหมด</option>
+                {JOB_TYPES.map(t => <option key={t}>{t}</option>)}
+              </select>
+            </div>
           )}
-          <select value={filterField} onChange={e => { setFilterField(e.target.value); setPage(1); }}
-            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft">
-            <option value="ทั้งหมด">🔬 สาขาทั้งหมด</option>
-            {JOB_FIELDS.map(f => <option key={f}>{f}</option>)}
-          </select>
-          <select value={sortBy} onChange={e => { setSortBy(e.target.value); setPage(1); }}
-            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft">
-            <option value="default">⇅ ค่าเริ่มต้น</option>
-            <option value="title-asc">🔤 ชื่อตำแหน่ง A-Z</option>
-            <option value="deadline-asc">📅 ปิดรับเร็วสุดก่อน</option>
-            <option value="deadline-desc">📅 ปิดรับล่าสุดก่อน</option>
-            <option value="applications">👥 ผู้สมัครมากสุด</option>
-          </select>
+          <div className="flex flex-col gap-0.5">
+            <label className={labelCls}>สาขา</label>
+            <select value={filterField} onChange={e => { setFilterField(e.target.value); setPage(1); }} className={selectCls}>
+              <option value="ทั้งหมด">🔬 สาขาทั้งหมด</option>
+              {JOB_FIELDS.map(f => <option key={f}>{f}</option>)}
+            </select>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className={labelCls}>เรียงลำดับ</label>
+            <select value={sortBy} onChange={e => { setSortBy(e.target.value); setPage(1); }} className={selectCls}>
+              <option value="default">⇅ ค่าเริ่มต้น</option>
+              <option value="title-asc">🔤 ชื่อตำแหน่ง A-Z</option>
+              <option value="deadline-asc">📅 ปิดรับเร็วสุดก่อน</option>
+              <option value="deadline-desc">📅 ปิดรับล่าสุดก่อน</option>
+              <option value="applications">👥 ผู้สมัครมากสุด</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -819,32 +831,27 @@ export default function JobListClient() {
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-xs font-medium text-muted">กรองด้วย:</span>
           {filterStatus !== "ทั้งหมด" && (
-            <button onClick={() => { setFilterStatus("ทั้งหมด"); setPage(1); }}
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-primary hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+            <button onClick={() => { setFilterStatus("ทั้งหมด"); setPage(1); }} className={chipBase}>
               📋 {filterStatus}<XIcon />
             </button>
           )}
           {activeTab === "ทั้งหมด" && filterType !== "ทั้งหมด" && (
-            <button onClick={() => { setFilterType("ทั้งหมด"); setPage(1); }}
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-primary hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+            <button onClick={() => { setFilterType("ทั้งหมด"); setPage(1); }} className={chipBase}>
               💼 {filterType}<XIcon />
             </button>
           )}
           {filterField !== "ทั้งหมด" && (
-            <button onClick={() => { setFilterField("ทั้งหมด"); setPage(1); }}
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-primary hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+            <button onClick={() => { setFilterField("ทั้งหมด"); setPage(1); }} className={chipBase}>
               🔬 {filterField}<XIcon />
             </button>
           )}
           {sortBy !== "default" && (
-            <button onClick={() => { setSortBy("default"); setPage(1); }}
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-primary hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+            <button onClick={() => { setSortBy("default"); setPage(1); }} className={chipBase}>
               ⇅ {{ "title-asc": "ชื่อตำแหน่ง A-Z", "deadline-asc": "ปิดรับเร็วสุดก่อน", "deadline-desc": "ปิดรับล่าสุดก่อน", applications: "ผู้สมัครมากสุด" }[sortBy]}<XIcon />
             </button>
           )}
           {keywords.map(kw => (
-            <button key={kw} onClick={() => removeKeyword(kw)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-primary hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+            <button key={kw} onClick={() => removeKeyword(kw)} className={chipBase}>
               🔍 &ldquo;{kw}&rdquo;<XIcon />
             </button>
           ))}
