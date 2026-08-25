@@ -623,7 +623,7 @@ export default function AlumniPage() {
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addKeyword(searchInput); } }}
-                placeholder="ชื่อ / รหัส / บริษัท แล้วกด Enter หรือค้นหา"
+                placeholder="ชื่อ นามสกุล บริษัท มหาวิทยาลัย ปีจบ… (Enter เพื่อล็อก)"
                 className="w-full rounded-lg border border-border bg-surface pl-9 pr-4 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft"
               />
             </div>

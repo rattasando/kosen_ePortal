@@ -618,7 +618,7 @@ export default function CompanyListClient() {
             </svg>
             <input type="text" value={searchInput} onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addKeyword(searchInput); } }}
-              placeholder="ชื่อบริษัท / จังหวัด / คีย์เวิร์ด แล้วกด Enter"
+              placeholder="ชื่อบริษัท อุตสาหกรรม จังหวัด ผู้ประสานงาน… (Enter เพื่อล็อก)"
               className="w-full rounded-lg border border-border bg-surface pl-9 pr-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft placeholder:text-muted" />
           </div>
           <button onClick={() => addKeyword(searchInput)} disabled={!searchInput.trim()}

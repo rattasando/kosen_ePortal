@@ -2,6 +2,61 @@
 
 # KOSEN ePortal — Project Guide
 
+## ⚠️ กฎสำคัญ — ต้องถามก่อนเสมอ
+**ห้าม commit หรือ push โดยไม่ได้รับอนุญาตจากผู้ใช้ก่อนทุกครั้ง**
+ทำงาน/แก้โค้ดได้เลย แต่เมื่อจะ commit/push ต้องถามก่อนว่า "พร้อม commit ได้เลยไหม?"
+
+## โมดูลทั้งหมดในระบบ (Admin)
+
+### 👨‍🎓 Students
+| โมดูล | Path | Client Component | สถานะ |
+|-------|------|-----------------|-------|
+| รายชื่อนักเรียน | `/admin/students/list` | `StudentListClient.js` | ✅ ใช้งานได้ |
+| รายละเอียดนักเรียน | `/admin/students/[id]` | — (inline) | ✅ |
+| แก้ไขนักเรียน | `/admin/students/[id]/edit` | — | ✅ |
+| เพิ่มนักเรียนใหม่ | `/admin/students/new` | — | ✅ |
+| ศิษย์เก่า (Alumni) | `/admin/students/alumni` | `alumni/page.js` (inline) | ✅ |
+| รายละเอียดศิษย์เก่า | `/admin/students/alumni/[id]` | — | ✅ |
+| เอกสารนักเรียน | `/admin/students/documents` | — | 🔧 ยังไม่สมบูรณ์ |
+| ติดตามผลการเรียน | `/admin/students/academic-tracking` | — | 🔧 |
+| ทุนการศึกษา | `/admin/students/scholarship` | — | 🔧 |
+
+### 🏢 Companies
+| โมดูล | Path | Client Component | สถานะ |
+|-------|------|-----------------|-------|
+| รายชื่อบริษัท | `/admin/companies/list` | `CompanyListClient.js` | ✅ |
+| รายละเอียดบริษัท | `/admin/companies/[id]` | `CompanyDetailClient.js` | ✅ |
+
+### 💼 Marketplace
+| โมดูล | Path | Client Component | สถานะ |
+|-------|------|-----------------|-------|
+| ตำแหน่งงาน (Job Positions) | `/admin/marketplace/job-positions` | `JobListClient.js` | ✅ |
+| รายละเอียดตำแหน่งงาน | `/admin/marketplace/job-positions/[id]` | — | ✅ |
+| เพิ่มตำแหน่งงาน | `/admin/marketplace/job-positions/new` | — | ✅ |
+| การสมัครงาน (Applications/Mapping) | `/admin/marketplace/applications` | `MappingListClient.js` | ✅ |
+| รายละเอียดการสมัคร | `/admin/marketplace/applications/[id]` | — | ✅ |
+| ติดตามการฝึกงาน | `/admin/marketplace/internship-tracking` | — | 🔧 |
+
+### 📢 Information
+| โมดูล | Path | Client Component | สถานะ |
+|-------|------|-----------------|-------|
+| ข่าวสาร (News) | `/admin/information/news` | `NewsListClient.js` | ✅ |
+| กิจกรรม (Activities) | `/admin/information/activities` | — | 🔧 |
+| คำถามที่พบบ่อย (FAQ) | `/admin/information/faq` | `FaqListClient.js` | ✅ |
+| เอกสาร (Documents) | `/admin/information/documents` | `DocumentListClient.js` | ✅ |
+| แบนเนอร์ (Banner) | `/admin/information/banner` | — (BannerContext) | ✅ |
+| Splash Screen | `/admin/information/splash` | `SplashConfigClient.js` | ✅ |
+| ติดต่อเรา (Contact) | `/admin/information/contact` | — | 🔧 |
+| หมวดหมู่ข่าว | `/admin/information/news-categories` | — | 🔧 |
+| ประเภททุน | `/admin/information/scholarship-types` | — | 🔧 |
+
+### ⚙️ System
+| โมดูล | Path | สถานะ |
+|-------|------|-------|
+| จัดการผู้ใช้ | `/admin/users` | 🔧 |
+
+> ✅ = มี Client Component + ทำงานได้เต็มที่ · 🔧 = อยู่ระหว่างพัฒนา / stub
+
 ## Stack
 - **Next.js 16** (App Router) + **React 19**
 - **Prisma v7** + **PostgreSQL** (via `@prisma/adapter-pg`)

@@ -1495,7 +1495,7 @@ export default function MappingListClient() {
             </svg>
             <input type="text" value={searchInput} onChange={e => setSearchInput(e.target.value)}
               onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); addKeyword(searchInput); } }}
-              placeholder={t("common.search")}
+              placeholder="ชื่อนักเรียน ตำแหน่งงาน บริษัท มหาวิทยาลัย… (Enter เพื่อล็อก)"
               className="w-full rounded-lg border border-border bg-surface pl-9 pr-4 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft" />
           </div>
           <button onClick={() => addKeyword(searchInput)} disabled={!searchInput.trim()}

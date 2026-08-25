@@ -1505,7 +1505,7 @@ export default function StudentListClient() {
                   addKeyword(searchInput);
                 }
               }}
-              placeholder="ชื่อ / รหัส / คีย์เวิร์ด แล้วกด Enter หรือค้นหา"
+              placeholder="ชื่อ นามสกุล ชื่อเล่น มหาวิทยาลัย สาขา… (Enter เพื่อล็อก)"
               className="w-full rounded-lg border border-border bg-surface pl-9 pr-4 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-accent-soft"
             />
           </div>
