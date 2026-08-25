@@ -404,7 +404,6 @@ export default function FaqListClient() {
   const [filterStatus, setFilterStatus] = useState("");
   const [modal, setModal]               = useState(null);       // null | {} | { item }
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [expandedIds, setExpandedIds]   = useState(new Set());
   const [selectedIds, setSelectedIds]   = useState(new Set());
   const [page, setPage]                 = useState(1);
   const [showImport, setShowImport]     = useState(false);
@@ -444,11 +443,6 @@ export default function FaqListClient() {
       setSelectedIds((prev) => { const next = new Set(prev); paged.forEach((f) => next.add(f.id)); return next; });
     }
   };
-
-  // Expand row (show full answer)
-  const toggleExpand = (id) => setExpandedIds((prev) => {
-    const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next;
-  });
 
   // FAQ actions
   const handleSave = (form) => {
@@ -688,15 +682,12 @@ export default function FaqListClient() {
                   const totalSorted = sortedAll.length;
                   const isFirst   = sortedAll[0]?.id === faq.id;
                   const isLast    = sortedAll[totalSorted - 1]?.id === faq.id;
-                  const isExpanded = expandedIds.has(faq.id);
                   const isSelected = selectedIds.has(faq.id);
                   const st = STATUS_CONFIG[faq.status] ?? STATUS_CONFIG.draft;
 
-                  return [
-                    /* Main row */
+                  return (
                     <tr key={faq.id}
-                      onClick={() => toggleExpand(faq.id)}
-                      className={`border-b border-border cursor-pointer transition-colors hover:bg-accent-soft/50 ${isSelected ? "bg-accent-soft/30" : ""} ${isExpanded ? "bg-accent-soft/20" : ""}`}>
+                      className={`border-b border-border transition-colors hover:bg-accent-soft/30 ${isSelected ? "bg-accent-soft/20" : ""}`}>
 
                       {/* Checkbox */}
                       <td className="px-3 py-3 text-center" onClick={(e) => { e.stopPropagation(); toggleSelect(faq.id); }}>
@@ -722,20 +713,15 @@ export default function FaqListClient() {
                         </div>
                       </td>
 
-                      {/* Question + answer preview */}
+                      {/* Question + answer */}
                       <td className="px-4 py-3 min-w-0">
-                        <div className="flex items-start gap-2 min-w-0">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-foreground leading-snug line-clamp-2">
-                              <HighlightText text={faq.question} terms={activeTerms} />
-                            </p>
-                            <p className="mt-0.5 text-xs text-muted line-clamp-1">
-                              <HighlightText text={faq.answer} terms={activeTerms} />
-                            </p>
-                            <p className="mt-1 font-mono text-[10px] text-muted/60">{faq.id}</p>
-                          </div>
-                          <ChevronDown open={isExpanded} />
-                        </div>
+                        <p className="text-sm font-semibold text-foreground leading-snug line-clamp-2">
+                          <HighlightText text={faq.question} terms={activeTerms} />
+                        </p>
+                        <p className="mt-1 text-xs text-muted leading-relaxed line-clamp-4 whitespace-pre-wrap">
+                          <HighlightText text={faq.answer} terms={activeTerms} />
+                        </p>
+                        <p className="mt-1 font-mono text-[10px] text-muted/50">{faq.id}</p>
                       </td>
 
                       {/* Category */}
@@ -767,25 +753,8 @@ export default function FaqListClient() {
                           </button>
                         </div>
                       </td>
-                    </tr>,
-
-                    /* Expanded answer row */
-                    isExpanded && (
-                      <tr key={`${faq.id}-expanded`} className="border-b border-border bg-surface-muted/30">
-                        <td colSpan={6} className="px-6 py-4">
-                          <div className="flex gap-3">
-                            <div className="mt-0.5 h-full w-0.5 shrink-0 rounded-full bg-primary/30 self-stretch min-h-4" />
-                            <div className="space-y-1 min-w-0">
-                              <p className="text-xs font-semibold text-muted uppercase tracking-wide">คำตอบ</p>
-                              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-                                <HighlightText text={faq.answer} terms={activeTerms} />
-                              </p>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    ),
-                  ];
+                    </tr>
+                  );
                 })}
               </tbody>
             </table>
