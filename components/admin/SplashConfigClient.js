@@ -354,8 +354,45 @@ export default function SplashConfigClient() {
 
   const handleReset = () => setForm({ ...config });
 
-  const widthMaxW   = WIDTH_OPTIONS.find((w) => w.value === form.width)?.maxW ?? "max-w-md";
-  const radiusCls   = RADIUS_MAP_PREVIEW[form.radius ?? "2xl"] ?? "rounded-2xl";
+  const widthMaxW = WIDTH_OPTIONS.find((w) => w.value === form.width)?.maxW ?? "max-w-md";
+  const radiusCls = RADIUS_MAP_PREVIEW[form.radius ?? "2xl"] ?? "rounded-2xl";
+
+  // ── Width drag handle ────────────────────────────────────────
+  const [isDragging, setIsDragging]   = useState(false);
+  const dragRef = useRef({ startX: 0, startWidth: "md" });
+  const WIDTH_ORDER = ["sm", "md", "lg"];
+
+  const handleWidthDragStart = useCallback((e) => {
+    e.preventDefault();
+    dragRef.current = { startX: e.clientX, startWidth: form.width };
+    setIsDragging(true);
+  }, [form.width]);
+
+  useEffect(() => {
+    if (!isDragging) return;
+    const onMove = (e) => {
+      const delta  = e.clientX - dragRef.current.startX;
+      const offset = Math.round(delta / 80);
+      const startIdx = WIDTH_ORDER.indexOf(dragRef.current.startWidth);
+      const newIdx   = Math.max(0, Math.min(2, startIdx + offset));
+      set("width", WIDTH_ORDER[newIdx]);
+    };
+    const onUp = () => setIsDragging(false);
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+    return () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+  }, [isDragging]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Radius cycle ─────────────────────────────────────────────
+  const RADIUS_ORDER = ["none", "lg", "2xl", "3xl"];
+  const cycleRadius = () => {
+    const idx = RADIUS_ORDER.indexOf(form.radius ?? "2xl");
+    set("radius", RADIUS_ORDER[(idx + 1) % RADIUS_ORDER.length]);
+  };
+  const currentRadiusLabel = RADIUS_OPTIONS.find((o) => o.value === (form.radius ?? "2xl"))?.label ?? "มน";
 
   return (
     <div className="space-y-6 p-6">
@@ -429,18 +466,6 @@ export default function SplashConfigClient() {
             </div>
           </div>
 
-          <div>
-            <label className={`mb-2 block ${labelCls}`}>ขนาด Popup</label>
-            <div className="flex gap-2">
-              {WIDTH_OPTIONS.map((opt) => (
-                <button key={opt.value} type="button" onClick={() => set("width", opt.value)}
-                  className={`flex-1 rounded-xl border py-2.5 text-sm font-medium transition-all ${form.width === opt.value ? "border-primary bg-accent-soft text-primary" : "border-border text-muted hover:border-primary"}`}>
-                  {opt.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
           <div className="flex items-center justify-between rounded-xl border border-border bg-surface-muted px-4 py-3">
             <div>
               <p className="text-sm font-semibold text-foreground">แสดงขอบ Popup</p>
@@ -452,18 +477,6 @@ export default function SplashConfigClient() {
               className={`relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full border-2 transition-colors duration-200 focus:outline-none ${form.border !== false ? "border-primary bg-primary" : "border-border bg-surface-muted"}`}>
               <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${form.border !== false ? "translate-x-5" : "translate-x-0.5"}`} />
             </button>
-          </div>
-
-          <div>
-            <label className={`mb-2 block ${labelCls}`}>ความมนของขอบ</label>
-            <div className="flex gap-2">
-              {RADIUS_OPTIONS.map((opt) => (
-                <button key={opt.value} type="button" onClick={() => set("radius", opt.value)}
-                  className={`flex-1 rounded-xl border py-2.5 text-sm font-medium transition-all ${(form.radius ?? "2xl") === opt.value ? "border-primary bg-accent-soft text-primary" : "border-border text-muted hover:border-primary"}`}>
-                  {opt.label}
-                </button>
-              ))}
-            </div>
           </div>
 
           <div>
@@ -479,38 +492,83 @@ export default function SplashConfigClient() {
           </div>
         </div>
 
-        {/* ── Live preview — ตรงกับ SplashOverlay จริง ── */}
+        {/* ── Live preview — interactive size + radius ── */}
         <div className="rounded-2xl border border-border bg-surface p-5 space-y-3">
-          <p className="text-sm font-bold text-foreground">ตัวอย่าง Popup <span className="text-xs font-normal text-muted">(ตรงกับที่แสดงในหน้า Home)</span></p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-bold text-foreground">
+              ตัวอย่าง Popup{" "}
+              <span className="text-xs font-normal text-muted">(ตรงกับที่แสดงในหน้า Home)</span>
+            </p>
+            <p className="text-xs text-muted">ลากขอบขวาเพื่อปรับขนาด · กดมุมเพื่อเปลี่ยนความมน</p>
+          </div>
 
-          {/* Simulate backdrop */}
-          <div className="flex items-center justify-center rounded-xl py-8 px-4"
+          {/* Backdrop */}
+          <div className="relative flex items-center justify-center rounded-xl py-10 px-4 select-none"
             style={{ backgroundColor: "rgba(0,0,0,0.55)", backdropFilter: "blur(2px)" }}>
-            <div className={`relative w-full ${widthMaxW} ${radiusCls} overflow-hidden bg-surface shadow-2xl ${form.border !== false ? "border border-border" : ""}`}>
 
-              {/* Close button — เหมือน SplashOverlay */}
-              <span className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white text-xs">✕</span>
+            {/* Popup */}
+            <div className={`relative w-full ${widthMaxW} ${radiusCls} overflow-hidden bg-surface shadow-2xl transition-all duration-200 ${form.border !== false ? "border border-border" : ""}`}>
 
-              {/* Image — ใช้ <img> แบบเดียวกับ SplashOverlay ให้ยืดตามสัดส่วนจริง */}
+              {/* Close button */}
+              <span className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white text-xs pointer-events-none">✕</span>
+
+              {/* Image */}
               {form.image && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={form.image} alt="preview" className="block w-full" />
+                <img src={form.image} alt="preview" className="block w-full pointer-events-none" />
               )}
 
               {/* Content */}
               {(form.title || form.body || (form.ctaLabel && form.ctaHref)) && (
-                <div className="p-5">
+                <div className="p-5 pointer-events-none">
                   {form.title && <p className="text-base font-extrabold leading-snug text-foreground">{form.title}</p>}
                   {form.body  && <p className="mt-2 text-sm text-muted leading-relaxed">{form.body}</p>}
                   {form.ctaLabel && form.ctaHref && (
                     <div className="mt-4">
-                      <span className="inline-flex items-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white">
-                        {form.ctaLabel}
-                      </span>
+                      <span className="inline-flex items-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white">{form.ctaLabel}</span>
                     </div>
                   )}
                 </div>
               )}
+
+              {/* ── Radius badge — กดเพื่อ cycle ── */}
+              <button
+                type="button"
+                onClick={cycleRadius}
+                title="กดเพื่อเปลี่ยนความมนของขอบ"
+                className="absolute bottom-2 left-2 z-20 flex items-center gap-1 rounded-full border border-white/30 bg-black/50 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-sm hover:bg-primary/80 transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 00-2 2v4a2 2 0 002 2h8a2 2 0 002-2v-4a2 2 0 00-2-2H6z" clipRule="evenodd" />
+                </svg>
+                {currentRadiusLabel}
+              </button>
+
+              {/* ── Width drag handle — ขอบขวา ── */}
+              <div
+                onMouseDown={handleWidthDragStart}
+                className={`absolute right-0 top-0 bottom-0 z-20 flex w-5 cursor-ew-resize flex-col items-center justify-center gap-1 transition-opacity ${isDragging ? "opacity-100" : "opacity-0 hover:opacity-100"}`}
+              >
+                <div className="h-10 w-1 rounded-full bg-primary/70 shadow" />
+              </div>
+            </div>
+
+            {/* Width indicator + buttons — ใต้ popup ในพื้นที่ backdrop */}
+            <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5">
+              {WIDTH_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => set("width", opt.value)}
+                  className={`rounded-full border px-3 py-0.5 text-[11px] font-semibold transition-all ${
+                    form.width === opt.value
+                      ? "border-white bg-white text-gray-900"
+                      : "border-white/30 bg-black/30 text-white/70 hover:border-white/60 hover:text-white"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
             </div>
           </div>
         </div>
