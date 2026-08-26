@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withErrorHandler } from "@/lib/utils/apiHandler";
 
 function toEvent(row) {
   const extra = (row.newData && typeof row.newData === "object") ? row.newData : {};
@@ -16,7 +17,7 @@ function toEvent(row) {
   };
 }
 
-export async function GET(request) {
+export const GET = withErrorHandler(async (request) => {
   const { searchParams } = new URL(request.url);
   const studentId = searchParams.get("studentId");
   const where = studentId ? { studentId } : {};
@@ -26,9 +27,9 @@ export async function GET(request) {
     take: 500,
   });
   return NextResponse.json(rows.map(toEvent));
-}
+}, "GET /api/student-history");
 
-export async function POST(request) {
+export const POST = withErrorHandler(async (request) => {
   const { studentId, type, before, after, changes, summary, by } = await request.json();
   const row = await prisma.studentHistory.create({
     data: {
@@ -40,13 +41,13 @@ export async function POST(request) {
     },
   });
   return NextResponse.json(toEvent(row), { status: 201 });
-}
+}, "POST /api/student-history");
 
-export async function DELETE(request) {
+export const DELETE = withErrorHandler(async (request) => {
   const { searchParams } = new URL(request.url);
   const studentId = searchParams.get("studentId");
   if (studentId) {
     await prisma.studentHistory.deleteMany({ where: { studentId } });
   }
   return NextResponse.json({ success: true });
-}
+}, "DELETE /api/student-history");

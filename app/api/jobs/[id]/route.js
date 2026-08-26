@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withErrorHandler } from "@/lib/utils/apiHandler";
 
-export async function GET(_, { params }) {
+export const GET = withErrorHandler(async (_, { params }) => {
   const { id } = await params;
   const job = await prisma.job.findUnique({
     where: { id },
@@ -9,9 +10,9 @@ export async function GET(_, { params }) {
   });
   if (!job) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(job);
-}
+}, "GET /api/jobs/[id]");
 
-export async function PUT(request, { params }) {
+export const PUT = withErrorHandler(async (request, { params }) => {
   const { id } = await params;
   const data = await request.json();
   const job = await prisma.job.update({
@@ -23,10 +24,10 @@ export async function PUT(request, { params }) {
     },
   });
   return NextResponse.json(job);
-}
+}, "PUT /api/jobs/[id]");
 
-export async function DELETE(_, { params }) {
+export const DELETE = withErrorHandler(async (_, { params }) => {
   const { id } = await params;
   await prisma.job.delete({ where: { id } });
   return NextResponse.json({ success: true });
-}
+}, "DELETE /api/jobs/[id]");

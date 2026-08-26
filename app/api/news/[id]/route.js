@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withErrorHandler } from "@/lib/utils/apiHandler";
 
-export async function GET(_, { params }) {
+export const GET = withErrorHandler(async (_, { params }) => {
   const { id } = await params;
   const news = await prisma.news.findUnique({
     where: { id },
@@ -9,9 +10,9 @@ export async function GET(_, { params }) {
   });
   if (!news) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(news);
-}
+}, "GET /api/news/[id]");
 
-export async function PUT(request, { params }) {
+export const PUT = withErrorHandler(async (request, { params }) => {
   const { id } = await params;
   const { blocks, ...data } = await request.json();
 
@@ -31,10 +32,10 @@ export async function PUT(request, { params }) {
     });
   });
   return NextResponse.json(news);
-}
+}, "PUT /api/news/[id]");
 
-export async function DELETE(_, { params }) {
+export const DELETE = withErrorHandler(async (_, { params }) => {
   const { id } = await params;
   await prisma.news.delete({ where: { id } });
   return NextResponse.json({ success: true });
-}
+}, "DELETE /api/news/[id]");

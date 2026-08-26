@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withErrorHandler } from "@/lib/utils/apiHandler";
 
-export async function GET() {
+export const GET = withErrorHandler(async () => {
   const types = await prisma.scholarshipType.findMany({ orderBy: { order: "asc" } });
   return NextResponse.json(types);
-}
+}, "GET /api/scholarship-types");
 
-export async function POST(request) {
+export const POST = withErrorHandler(async (request) => {
   const data = await request.json();
   const type = await prisma.scholarshipType.create({ data });
   return NextResponse.json(type, { status: 201 });
-}
+}, "POST /api/scholarship-types");

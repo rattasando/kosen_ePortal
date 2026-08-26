@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withErrorHandler } from "@/lib/utils/apiHandler";
 
-export async function PATCH(request) {
+export const PATCH = withErrorHandler(async (request) => {
   const { ids } = await request.json();
   await prisma.$transaction(
     ids.map((id, i) => prisma.faq.update({ where: { id }, data: { order: i } }))
   );
   return NextResponse.json({ success: true });
-}
+}, "PATCH /api/faq/reorder");

@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withErrorHandler } from "@/lib/utils/apiHandler";
 
-export async function GET(_, { params }) {
+export const GET = withErrorHandler(async (_, { params }) => {
   const { id } = await params;
   const activity = await prisma.activity.findUnique({
     where: { id },
@@ -9,9 +10,9 @@ export async function GET(_, { params }) {
   });
   if (!activity) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(activity);
-}
+}, "GET /api/activities/[id]");
 
-export async function PUT(request, { params }) {
+export const PUT = withErrorHandler(async (request, { params }) => {
   const { id } = await params;
   const { blocks, ...data } = await request.json();
 
@@ -30,10 +31,10 @@ export async function PUT(request, { params }) {
     });
   });
   return NextResponse.json(activity);
-}
+}, "PUT /api/activities/[id]");
 
-export async function DELETE(_, { params }) {
+export const DELETE = withErrorHandler(async (_, { params }) => {
   const { id } = await params;
   await prisma.activity.delete({ where: { id } });
   return NextResponse.json({ success: true });
-}
+}, "DELETE /api/activities/[id]");

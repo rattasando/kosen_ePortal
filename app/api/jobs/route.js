@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withErrorHandler } from "@/lib/utils/apiHandler";
 
-export async function GET(request) {
+export const GET = withErrorHandler(async (request) => {
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status");
 
@@ -14,9 +15,9 @@ export async function GET(request) {
     include: { company: { select: { id: true, name: true } } },
   });
   return NextResponse.json(jobs);
-}
+}, "GET /api/jobs");
 
-export async function POST(request) {
+export const POST = withErrorHandler(async (request) => {
   const data = await request.json();
   const job = await prisma.job.create({
     data: {
@@ -26,4 +27,4 @@ export async function POST(request) {
     },
   });
   return NextResponse.json(job, { status: 201 });
-}
+}, "POST /api/jobs");

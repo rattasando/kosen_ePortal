@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withErrorHandler } from "@/lib/utils/apiHandler";
 
-export async function GET(request) {
+export const GET = withErrorHandler(async (request) => {
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status");
   const featured = searchParams.get("featured");
@@ -16,9 +17,9 @@ export async function GET(request) {
     include: { blocks: { orderBy: { order: "asc" } } },
   });
   return NextResponse.json(activities);
-}
+}, "GET /api/activities");
 
-export async function POST(request) {
+export const POST = withErrorHandler(async (request) => {
   const { blocks, ...data } = await request.json();
 
   const activity = await prisma.activity.create({
@@ -32,4 +33,4 @@ export async function POST(request) {
     include: { blocks: { orderBy: { order: "asc" } } },
   });
   return NextResponse.json(activity, { status: 201 });
-}
+}, "POST /api/activities");

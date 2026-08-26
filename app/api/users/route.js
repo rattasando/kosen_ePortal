@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { withErrorHandler } from "@/lib/utils/apiHandler";
 
-export async function GET() {
+export const GET = withErrorHandler(async () => {
   const users = await prisma.user.findMany({
     orderBy: { createdAt: "asc" },
     select: {
@@ -13,9 +14,9 @@ export async function GET() {
     },
   });
   return NextResponse.json(users);
-}
+}, "GET /api/users");
 
-export async function POST(request) {
+export const POST = withErrorHandler(async (request) => {
   const body = await request.json();
   const { password, ...rest } = body;
 
@@ -29,4 +30,4 @@ export async function POST(request) {
     },
   });
   return NextResponse.json(user, { status: 201 });
-}
+}, "POST /api/users");

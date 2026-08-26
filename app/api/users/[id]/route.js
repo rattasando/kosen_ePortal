@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { withErrorHandler } from "@/lib/utils/apiHandler";
 
-export async function GET(_, { params }) {
+export const GET = withErrorHandler(async (_, { params }) => {
   const { id } = await params;
   const user = await prisma.user.findUnique({
     where: { id },
@@ -15,9 +16,9 @@ export async function GET(_, { params }) {
   });
   if (!user) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(user);
-}
+}, "GET /api/users/[id]");
 
-export async function PUT(request, { params }) {
+export const PUT = withErrorHandler(async (request, { params }) => {
   const { id } = await params;
   const body = await request.json();
 
@@ -30,10 +31,10 @@ export async function PUT(request, { params }) {
 
   const user = await prisma.user.update({ where: { id }, data });
   return NextResponse.json(user);
-}
+}, "PUT /api/users/[id]");
 
-export async function DELETE(_, { params }) {
+export const DELETE = withErrorHandler(async (_, { params }) => {
   const { id } = await params;
   await prisma.user.delete({ where: { id } });
   return NextResponse.json({ success: true });
-}
+}, "DELETE /api/users/[id]");
