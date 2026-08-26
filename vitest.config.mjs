@@ -9,6 +9,11 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["lib/utils/**"],
+      exclude: [
+        // React component factory — ต้องใช้ @testing-library/react จึงจะทดสอบได้
+        // hook + JSX ไม่สามารถ run ใน node environment ได้
+        "lib/utils/createResourceContext.js",
+      ],
       reporter: ["text", "html"],
     },
   },

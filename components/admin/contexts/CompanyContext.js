@@ -1,86 +1,53 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { useCallback } from "react";
+import { createResourceContext } from "@/lib/utils/createResourceContext";
 
-const CompanyContext = createContext(null);
-
-/** Parse JSON และ throw ถ้า response ไม่ ok — กัน error หายไปเงียบๆ */
-async function parseOrThrow(res) {
-  const json = await res.json();
-  if (!res.ok) throw new Error(json?.error ?? `HTTP ${res.status}`);
-  return json;
-}
+const { Provider: _CompanyProvider, useResource: _useCompanies } =
+  createResourceContext("/api/companies");
 
 export function CompanyProvider({ children }) {
-  const [companies, setCompanies] = useState([]);
-  const [ready, setReady] = useState(false);
+  return <_CompanyProvider>{children}</_CompanyProvider>;
+}
 
-  useEffect(() => {
-    fetch("/api/companies")
-      .then((r) => r.json())
-      .then(setCompanies)
-      .catch(console.error)
-      .finally(() => setReady(true));
-  }, []);
-
-  const addCompany = useCallback(async (company) => {
-    const res = await fetch("/api/companies", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(company),
-    });
-    const created = await parseOrThrow(res);
-    setCompanies((prev) => [...prev, created]);
-    return created;
-  }, []);
-
-  const updateCompany = useCallback(async (id, data) => {
-    const res = await fetch(`/api/companies/${id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    const updated = await parseOrThrow(res);
-    setCompanies((prev) => prev.map((c) => (c.id === id ? updated : c)));
-    return updated;
-  }, []);
-
-  const deleteCompany = useCallback(async (id) => {
-    await fetch(`/api/companies/${id}`, { method: "DELETE" });
-    setCompanies((prev) => prev.filter((c) => c.id !== id));
-  }, []);
+export function useCompanies() {
+  const { items: companies, ready, add, update, remove, refresh } = _useCompanies();
 
   const getCompany = useCallback(
     (id) => companies.find((c) => c.id === id) ?? null,
     [companies]
   );
 
-  const replaceAll = useCallback(async (list) => {
-    const existingIds = new Set(companies.map((c) => c.id));
-    await Promise.all(
-      list.map((item) => {
-        const opts = {
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(item),
-        };
-        return existingIds.has(item.id)
-          ? fetch(`/api/companies/${item.id}`, { method: "PUT", ...opts })
-          : fetch("/api/companies", { method: "POST", ...opts });
-      })
-    );
-    const fresh = await fetch("/api/companies").then((r) => r.json());
-    setCompanies(fresh);
-  }, [companies]);
-
-  return (
-    <CompanyContext.Provider value={{ companies, ready, addCompany, updateCompany, deleteCompany, getCompany, replaceAll }}>
-      {children}
-    </CompanyContext.Provider>
+  /**
+   * replaceAll — upsert รายการทั้งหมดในครั้งเดียว (ใช้ใน import CSV)
+   * PUT สำหรับ id ที่มีอยู่แล้ว, POST สำหรับ id ใหม่
+   */
+  const replaceAll = useCallback(
+    async (list) => {
+      const existingIds = new Set(companies.map((c) => c.id));
+      await Promise.all(
+        list.map((item) => {
+          const opts = {
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(item),
+          };
+          return existingIds.has(item.id)
+            ? fetch(`/api/companies/${item.id}`, { method: "PUT", ...opts })
+            : fetch("/api/companies", { method: "POST", ...opts });
+        })
+      );
+      await refresh();
+    },
+    [companies, refresh]
   );
-}
 
-export function useCompanies() {
-  const ctx = useContext(CompanyContext);
-  if (!ctx) throw new Error("useCompanies must be used inside <CompanyProvider>");
-  return ctx;
+  return {
+    companies,
+    ready,
+    addCompany: add,
+    updateCompany: update,
+    deleteCompany: remove,
+    getCompany,
+    replaceAll,
+  };
 }
