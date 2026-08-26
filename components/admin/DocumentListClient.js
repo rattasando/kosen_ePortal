@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useDocuments } from "./contexts/DocumentContext";
 import { DOCUMENT_CATEGORIES, FILE_TYPES } from "@/lib/data/documentsData";
 import { formatDateTime } from "@/lib/utils/newsUtils";
+import ConfirmDeleteModal from "@/components/admin/ui/ConfirmDeleteModal";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -168,38 +169,7 @@ function Pagination({ page, totalPages, onPage }) {
   );
 }
 
-// ── DeleteModal ────────────────────────────────────────────────────────────
-
-function DeleteModal({ title, onConfirm, onCancel }) {
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") onCancel(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onCancel]);
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
-      onClick={(e) => { if (e.target === e.currentTarget) onCancel(); }}>
-      <div className="w-full max-w-sm rounded-2xl border border-border bg-surface p-6 shadow-2xl">
-        <h3 className="text-base font-bold text-foreground">ยืนยันการลบ</h3>
-        <p className="mt-2 text-sm text-muted">
-          ต้องการลบเอกสาร <span className="font-semibold text-foreground">"{title}"</span> ใช่หรือไม่?
-          การกระทำนี้ไม่สามารถย้อนกลับได้
-        </p>
-        <div className="mt-5 flex justify-end gap-2">
-          <button onClick={onCancel}
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted hover:text-foreground transition-colors">
-            ยกเลิก
-          </button>
-          <button onClick={onConfirm}
-            className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-600 transition-colors">
-            ลบเอกสาร
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
+// DeleteModal ถูกแทนที่ด้วย ConfirmDeleteModal (shared)
 
 // ── Document Detail Panel ──────────────────────────────────────────────────
 
@@ -836,11 +806,15 @@ export default function DocumentListClient() {
         />
       )}
       {delTarget && (
-        <DeleteModal
-          title={delTarget.title}
+        <ConfirmDeleteModal
+          heading="ยืนยันการลบเอกสาร"
+          confirmLabel="ลบเอกสาร"
           onConfirm={() => { deleteDocument(delTarget.id); setDelTarget(null); }}
           onCancel={() => setDelTarget(null)}
-        />
+        >
+          <p className="mt-2 text-sm text-muted">ต้องการลบเอกสาร</p>
+          <p className="mt-1 font-semibold text-foreground">"{delTarget.title}"</p>
+        </ConfirmDeleteModal>
       )}
     </div>
   );

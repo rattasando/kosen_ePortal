@@ -6,6 +6,7 @@ import { useInternships } from "./contexts/InternshipContext";
 import { useStudents } from "./contexts/StudentContext";
 import { useJobs } from "./contexts/JobContext";
 import { useMappings } from "./contexts/MappingContext";
+import ConfirmDeleteModal from "@/components/admin/ui/ConfirmDeleteModal";
 
 // ── Constants ─────────────────────────────────────────────────
 const INTERNSHIP_STATUSES = ["อยู่ในระหว่างฝึกงาน", "เสร็จสิ้น", "ยกเลิก"];
@@ -806,43 +807,7 @@ function EditInternshipModal({ item, students, jobs, mappings, internships, onCl
 }
 
 // ── Delete Modal ──────────────────────────────────────────────
-function DeleteModal({ item, studentName, jobTitle, onConfirm, onCancel }) {
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") onCancel(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onCancel]);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
-      onClick={e => { if (e.target === e.currentTarget) onCancel(); }}>
-      <div className="w-full max-w-md rounded-2xl border border-border bg-surface shadow-2xl">
-        <div className="p-6 space-y-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-50 border border-red-200">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-foreground">ยืนยันการลบรายการ</p>
-              <p className="text-xs text-muted font-mono">{item.id}</p>
-            </div>
-          </div>
-          <p className="text-sm text-foreground">
-            ลบรายการฝึกงานของ <span className="font-semibold">{studentName}</span> ที่ <span className="font-semibold">{jobTitle}</span> ?
-          </p>
-          <div className="mt-3 w-full rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-xs text-red-600">⚠️ การดำเนินการนี้ไม่สามารถย้อนกลับได้</div>
-        </div>
-        <div className="flex gap-3 border-t border-border px-6 py-4">
-          <button onClick={onCancel} className="flex-1 rounded-xl border border-border px-4 py-2.5 text-sm font-semibold text-foreground hover:bg-surface-muted transition-colors">ยกเลิก</button>
-          <button onClick={onConfirm} className="flex-1 rounded-xl bg-red-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-600 transition-colors">ลบรายการ</button>
-        </div>
-      </div>
-    </div>
-  );
-}
+// DeleteModal ถูกแทนที่ด้วย ConfirmDeleteModal (shared)
 
 // ── Pagination ────────────────────────────────────────────────
 function Pagination({ page, totalPages, onPage }) {
@@ -1058,15 +1023,25 @@ export default function InternshipListClient() {
           onClose={() => setEditTarget(null)}
           onConfirm={(data) => { updateInternship(editTarget.id, data); setEditTarget(null); }} />
       )}
-      {deleteTarget && (
-        <DeleteModal
-          item={deleteTarget}
-          studentName={(() => { const s = students.find(x => x.id === deleteTarget.studentId); return s ? `${s.prefix}${s.name} ${s.lastname}` : deleteTarget.studentId; })()}
-          jobTitle={jobs.find(j => j.id === deleteTarget.jobId)?.title ?? deleteTarget.jobId}
-          onConfirm={() => { deleteInternship(deleteTarget.id); setDeleteTarget(null); }}
-          onCancel={() => setDeleteTarget(null)}
-        />
-      )}
+      {deleteTarget && (() => {
+        const s = students.find(x => x.id === deleteTarget.studentId);
+        const studentName = s ? `${s.prefix}${s.name} ${s.lastname}` : deleteTarget.studentId;
+        const jobTitle = jobs.find(j => j.id === deleteTarget.jobId)?.title ?? deleteTarget.jobId;
+        return (
+          <ConfirmDeleteModal
+            heading="ยืนยันการลบรายการฝึกงาน"
+            confirmLabel="ลบรายการ"
+            onConfirm={() => { deleteInternship(deleteTarget.id); setDeleteTarget(null); }}
+            onCancel={() => setDeleteTarget(null)}
+          >
+            <p className="mt-2 text-sm text-muted font-mono">{deleteTarget.id}</p>
+            <p className="mt-1 text-sm text-foreground">
+              ลบรายการฝึกงานของ <span className="font-semibold">{studentName}</span>
+            </p>
+            <p className="text-xs text-muted">ที่ {jobTitle}</p>
+          </ConfirmDeleteModal>
+        );
+      })()}
 
       {/* Import success */}
       {importDone && (

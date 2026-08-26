@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useFaq } from "./contexts/FaqContext";
 import { FAQ_CATEGORIES } from "@/lib/data/faqData";
+import ConfirmDeleteModal from "@/components/admin/ui/ConfirmDeleteModal";
 
 const inputCls  = "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft placeholder:text-muted";
 const selectCls = "rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft";
@@ -372,30 +373,7 @@ function FaqModal({ item, onClose, onSave }) {
 }
 
 // ── Delete Confirm Modal ──────────────────────────────────────
-function DeleteModal({ faq, onClose, onConfirm }) {
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: "rgba(0,0,0,0.45)" }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="w-full max-w-sm rounded-2xl border border-border bg-surface p-6 shadow-2xl">
-        <h3 className="text-base font-bold text-foreground">ยืนยันการลบ</h3>
-        <p className="mt-2 text-sm text-muted leading-relaxed">
-          ต้องการลบ FAQ นี้ใช่หรือไม่?
-        </p>
-        <p className="mt-1.5 rounded-lg bg-surface-muted px-3 py-2 text-sm font-medium text-foreground line-clamp-2">{faq.question}</p>
-        <div className="mt-5 flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted hover:text-foreground transition-colors">ยกเลิก</button>
-          <button onClick={() => { onConfirm(faq.id); onClose(); }} className="rounded-lg bg-red-500 px-4 py-2 text-sm font-semibold text-white hover:bg-red-600 transition-colors">ลบ FAQ</button>
-        </div>
-      </div>
-    </div>
-  );
-}
+// DeleteModal ถูกแทนที่ด้วย ConfirmDeleteModal (shared)
 
 // ── Main ──────────────────────────────────────────────────────
 export default function FaqListClient() {
@@ -827,7 +805,17 @@ export default function FaqListClient() {
         <FaqModal item={modal.item} onClose={() => setModal(null)} onSave={handleSave} />
       )}
       {deleteTarget && (
-        <DeleteModal faq={deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={deleteFaq} />
+        <ConfirmDeleteModal
+          heading="ยืนยันการลบ FAQ"
+          confirmLabel="ลบ FAQ"
+          onConfirm={() => { deleteFaq(deleteTarget.id); setDeleteTarget(null); }}
+          onCancel={() => setDeleteTarget(null)}
+        >
+          <p className="mt-2 text-sm text-muted">ต้องการลบ FAQ นี้ใช่หรือไม่?</p>
+          <p className="mt-1.5 rounded-lg bg-surface-muted px-3 py-2 text-sm font-medium text-foreground line-clamp-2">
+            {deleteTarget.question}
+          </p>
+        </ConfirmDeleteModal>
       )}
       {showImport && (
         <ImportModal existingFaqs={faqs} onClose={() => setShowImport(false)} onConfirm={handleImport} />
