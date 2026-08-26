@@ -209,6 +209,12 @@ npm run seed         # seed ข้อมูล
 npx prisma studio    # ดูข้อมูลใน browser
 npx prisma migrate dev --name <name>  # สร้าง migration ใหม่
 npx prisma generate  # regenerate client หลังแก้ schema
+
+# E2E Tests (Playwright)
+npm run e2e:ui       # เปิด Playwright UI — เลือก test รันได้ พร้อม trace/screenshot
+npm run e2e:headed   # รันทั้ง suite แบบเห็น browser จริง
+npx playwright test  # รันทั้ง suite แบบ headless
+npx playwright test <file> --headed  # รันแค่ไฟล์เดียว
 ```
 
 ## Shared Utilities (`lib/utils/`)
@@ -451,9 +457,40 @@ const data = Object.fromEntries(
 - **Library tab**: thumbnail `grid-cols-5 gap-1.5 aspect-square` — ไม่มี mini strip preview แยก (แสดงเส้น path text เท่านั้น)
 - **Rules of Hooks**: ทุก `useState`/`useRef`/`useEffect` ต้องอยู่ก่อน `if (!ready || !form) return` เสมอ
 
+## E2E Tests (Playwright)
+
+ไฟล์อยู่ที่ `e2e/tests/` — รวม **124 tests** ผ่านทั้งหมด
+
+| ไฟล์ | โมดูล | เคส | ครอบคลุม |
+|------|-------|-----|---------|
+| `01-auth` | Login/Logout | 5 | auth flow |
+| `02-student-api` | Student API | 7 | CRUD + edge cases |
+| `03-student-ui` | Student UI smoke | 4 | navigation |
+| `04-faq-api` | FAQ API | 8 | CRUD + BVA |
+| `05-news-api` | News API | 6 | CRUD |
+| `06-student-ui-crud` | Students UI | 9 | Create/Search/Edit/Delete |
+| `07-faq-ui-crud` | FAQ UI | 8 | Create/Search/Edit/Delete |
+| `08-news-ui-crud` | News UI | 7 | Create/Search/Edit/Delete |
+| `09-company-ui-crud` | Companies UI | 8 | Create/Search/Edit/Delete |
+| `10-job-ui-crud` | Job Positions UI | 8 | Create/Search/Edit/Delete |
+| `11-mapping-ui-crud` | Applications UI | 6 | smoke + modal lifecycle |
+| `12-alumni-ui-crud` | Alumni UI | 8 | Create/Search/Edit/Delete |
+
+### Pattern สำคัญใน UI tests
+- **ใช้ ASCII เท่านั้นสำหรับ dynamic test data** — `fill()` กับ Thai text ใน Chromium อาจ hang เมื่อ input มี character filter (`onlyThai`, `onlyEnglish` ฯลฯ)
+- **`waitForResponse` + `Promise.all`** — ใช้ดัก POST/PUT/DELETE ที่ context ไม่ await ก่อน assert
+- **Modal scoping** — `page.locator(".fixed.inset-0.z-50").last()` เพื่อหลีกเลี่ยง strict mode เมื่อมีปุ่มชื่อซ้ำ
+- **Live search filter** — ทุก list module กรอง `searchInput` แบบ live (ไม่ต้องกด Enter) ยกเว้น keyword chips
+
+### Bugs พบระหว่าง test และ fix แล้ว
+- `app/api/news/route.js` + `[id]/route.js` — map `author` (form) → `authorName` (Prisma), strip relations
+- `app/api/jobs/[id]/route.js` — เพิ่ม `JOB_FIELDS` whitelist กรอง `company` relation ออกก่อน PUT
+- `components/admin/FaqListClient.js` — null-safe `category` ใน `matchFaq` (กัน crash เมื่อ category เป็น null)
+
 ## ยังไม่ได้ทำ (Remaining)
 - API Authentication (ทุก route ยังไม่ได้ protect)
 - Role-based access control
 - Input validation (Zod)
 - Error handling ครบทุก route (มีแค่บางส่วน)
 - Public pages migrate จาก localStorage → API
+- E2E tests: CSV export/import (ทุกโมดูล), Applications CRUD จริง (ต้องการ seed data)
