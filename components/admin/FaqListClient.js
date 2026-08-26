@@ -406,7 +406,9 @@ export default function FaqListClient() {
 
   const matchFaq = (f, kw) => {
     const q = kw.toLowerCase();
-    return f.question.toLowerCase().includes(q) || f.answer.toLowerCase().includes(q) || f.category.toLowerCase().includes(q);
+    return (f.question ?? "").toLowerCase().includes(q)
+        || (f.answer   ?? "").toLowerCase().includes(q)
+        || (f.category ?? "").toLowerCase().includes(q);
   };
 
   // sorted + filtered list

@@ -12,9 +12,23 @@ export const GET = withErrorHandler(async (_, { params }) => {
   return NextResponse.json(job);
 }, "GET /api/jobs/[id]");
 
+/** Scalar fields ที่ Prisma รับสำหรับ Job — strip relations + auto-managed fields */
+const JOB_FIELDS = [
+  "title", "titleEn", "type", "field", "companyId", "companyName", "companyLogo",
+  "salary", "duration", "slots", "applications", "status", "featured",
+  "startDate", "deadline", "location", "description", "requirements", "benefits",
+  "skills", "tags",
+];
+
 export const PUT = withErrorHandler(async (request, { params }) => {
   const { id } = await params;
-  const data = await request.json();
+  const rawData = await request.json();
+
+  // กรอง relation + auto-managed fields ออก (เหมือน Student/News/Banner PUT)
+  const data = Object.fromEntries(
+    JOB_FIELDS.filter((k) => k in rawData).map((k) => [k, rawData[k]])
+  );
+
   const job = await prisma.job.update({
     where: { id },
     data: {

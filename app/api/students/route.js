@@ -8,6 +8,7 @@ import {
   describeTooLongFields,
 } from "@/lib/utils/studentFieldLimits";
 import { prepEnrollments } from "@/lib/utils/studentEnrollments";
+import { formatApiError } from "@/lib/utils/apiError";
 
 export async function GET(request) {
   try {
@@ -25,7 +26,8 @@ export async function GET(request) {
     return NextResponse.json(students);
   } catch (err) {
     console.error("GET /api/students:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const { body, status } = formatApiError(err);
+    return NextResponse.json(body, { status });
   }
 }
 
@@ -85,6 +87,14 @@ export async function POST(request) {
       )),
       id: flattened.id, // id ต้องเป็น string เสมอ ห้าม null
     };
+    // ตรวจ id — ถ้าส่ง "" มาชัดเจน ให้ reject; ถ้าไม่ส่งมา (undefined) ให้ auto-generate
+    if (data.id === "") {
+      return NextResponse.json({ error: "id ของนักเรียนจำเป็นต้องมีค่า" }, { status: 400 });
+    }
+    if (!data.id) {
+      data.id = `S${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`.toUpperCase().slice(0, 20);
+    }
+
     // field ที่ไม่ nullable ใน schema — ใส่ fallback ถ้า nullifyEmpty แปลง "" → null
     data.status   = data.status   ?? "กำลังศึกษา";
     data.name     = data.name     ?? "";
@@ -122,6 +132,7 @@ export async function POST(request) {
     return NextResponse.json(student, { status: 201 });
   } catch (err) {
     console.error("POST /api/students:", err);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    const { body, status } = formatApiError(err);
+    return NextResponse.json(body, { status });
   }
 }

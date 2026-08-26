@@ -251,11 +251,16 @@ export default function AddStudentPage() {
         e.preventDefault();
         if (!isValid) return;
         setSaving(true);
-        await new Promise((r) => setTimeout(r, 600));
-        const newId = addStudent({ ...form });
-        setSaving(false);
-        setSavedId(newId);
-        setSaved(true);
+        try {
+            const newId = await addStudent({ ...form });
+            setSavedId(newId ?? "");
+            setSaved(true);
+        } catch (err) {
+            console.error("เพิ่มนักเรียนไม่สำเร็จ:", err);
+            // TODO: แสดง error toast ให้ผู้ใช้
+        } finally {
+            setSaving(false);
+        }
     };
 
     const handleReset = () => {
