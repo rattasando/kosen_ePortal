@@ -10,25 +10,9 @@ import { useStudentHistory } from "@/components/admin/contexts/StudentHistoryCon
 import { diffSnapshot, buildSummary } from "@/lib/utils/studentHistoryHelpers";
 import { rowToStudent, exportCSV } from "@/lib/utils/studentCsv";
 import StudentImportModal from "@/components/admin/modals/StudentImportModal";
-
-// ── Enrollment helpers ───────────────────────────────────────
-// ถ้ามีมากกว่า 1 สถาบัน ให้ใช้ "สถาบันปัจจุบัน" (endDate ว่าง = ยังไม่จบ/ยังไม่
-// ย้ายออก) แทนสถาบันแรกที่เคยเรียน — ถ้าไม่มีอันไหนที่ endDate ว่างเลย (ข้อมูล
-// เก่าก่อนมี field นี้ หรือกรอกวันจบไว้ครบทุกอัน) ค่อย fallback ไปใช้ตัวท้ายสุด
-// ของ array (เรียงตาม order จากน้อยไปมากมาจาก API อยู่แล้ว)
-function getLatestEnrollment(s) {
-  if (s.enrollments?.length) {
-    const current = [...s.enrollments].reverse().find((e) => !e.endDate);
-    return current ?? s.enrollments[s.enrollments.length - 1];
-  }
-  return {
-    university: s.university,
-    faculty: s.faculty,
-    department: s.department,
-    major: s.major,
-    year: s.year,
-  };
-}
+import { useStudentFilters } from "@/lib/hooks/useStudentFilters";
+import { usePagination } from "@/lib/hooks/usePagination";
+import { getLatestEnrollment } from "@/lib/utils/studentFilters";
 
 // ── สถานะนักเรียน ───────────────────────────────────────────
 const STATUS_CONFIG = {
@@ -279,8 +263,7 @@ function Pagination({ page, totalPages, onPage }) {
   );
 }
 
-// ── Filter persistence ───────────────────────────────────────
-const FILTER_KEY = "student-list-filters";
+// ── Filter persistence — ย้ายไป useStudentFilters hook แล้ว ──
 
 const selectCls = "rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft";
 const labelCls  = "text-xs font-medium text-foreground";
@@ -294,76 +277,36 @@ function XIcon() {
   );
 }
 
-function loadFilters() {
-  if (typeof window === "undefined") return {};
-  try {
-    return JSON.parse(sessionStorage.getItem(FILTER_KEY)) ?? {};
-  } catch {
-    return {};
-  }
-}
-
-function saveFilters(data) {
-  try {
-    sessionStorage.setItem(FILTER_KEY, JSON.stringify(data));
-  } catch {
-    /* ignore */
-  }
-}
-
 // ── Main ─────────────────────────────────────────────────────
 export default function StudentListClient() {
   const { students, ready, replaceAll, updateStudent, addStudent, refetch } =
     useStudents();
   const { addEvent } = useStudentHistory();
   const router = useRouter();
-  const [searchInput, setSearchInput] = useState("");
-  const [keywords, setKeywords] = useState(() => loadFilters().keywords ?? []);
-  const [filterStatus, setFilterStatus] = useState(
-    () => loadFilters().filterStatus ?? "ทั้งหมด",
-  );
-  const [filterUniversity, setFilterUniversity] = useState(
-    () => loadFilters().filterUniversity ?? "ทั้งหมด",
-  );
-  const [filterYear, setFilterYear] = useState(
-    () => loadFilters().filterYear ?? "ทั้งหมด",
-  );
-  const [filterScholarship, setFilterScholarship] = useState(
-    () => loadFilters().filterScholarship ?? "ทั้งหมด",
-  );
-  const [filterSelfFunded, setFilterSelfFunded] = useState(
-    () => loadFilters().filterSelfFunded ?? false,
-  );
-  const [filterCountry, setFilterCountry] = useState(
-    () => loadFilters().filterCountry ?? "ทั้งหมด",
-  );
-  const [sortBy, setSortBy] = useState(() => loadFilters().sortBy ?? "default");
+  const {
+    searchInput, setSearchInput,
+    keywords, setKeywords,
+    addKeyword: addKeywordFromHook, removeKeyword: removeKeywordFromHook,
+    activeTerms,
+    filterStatus, setFilterStatus,
+    filterUniversity, setFilterUniversity,
+    filterYear, setFilterYear,
+    filterScholarship, setFilterScholarship,
+    filterSelfFunded, setFilterSelfFunded,
+    filterCountry, setFilterCountry,
+    sortBy, setSortBy,
+    filtered,
+    universities,
+    scholarships,
+    hasActiveFilter,
+    clearFilters: clearFiltersFromHook,
+  } = useStudentFilters(students);
 
-  useEffect(() => {
-    saveFilters({
-      keywords,
-      filterStatus,
-      filterUniversity,
-      filterYear,
-      filterScholarship,
-      filterSelfFunded,
-      filterCountry,
-      sortBy,
-    });
-  }, [
-    keywords,
-    filterStatus,
-    filterUniversity,
-    filterYear,
-    filterScholarship,
-    filterSelfFunded,
-    filterCountry,
-    sortBy,
-  ]);
+  const { page, setPage, pageSize, setPageSize, paginated, totalPages, rangeStart, rangeEnd } =
+    usePagination(filtered, 20);
+
   const [showImport, setShowImport] = useState(false);
   const [importDone, setImportDone] = useState(null);
-  const [pageSize, setPageSize] = useState(20);
-  const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [showExportMenu, setShowExportMenu] = useState(false);
   const exportMenuRef = useRef(null);
@@ -388,194 +331,10 @@ export default function StudentListClient() {
 
   const clearSelection = () => setSelectedIds(new Set());
 
-  const addKeyword = (kw) => {
-    const trimmed = kw.trim();
-    if (!trimmed) return;
-    setKeywords((prev) => (prev.includes(trimmed) ? prev : [...prev, trimmed]));
-    setSearchInput("");
-    setPage(1);
-  };
+  const addKeyword = (kw) => { addKeywordFromHook(kw); setPage(1); };
+  const removeKeyword = (kw) => { removeKeywordFromHook(kw); setPage(1); };
+  const clearFilters = () => { clearFiltersFromHook(); setPage(1); };
 
-  const removeKeyword = (kw) => {
-    setKeywords((prev) => prev.filter((k) => k !== kw));
-    setPage(1);
-  };
-
-  const universities = useMemo(() => {
-    const unique = [
-      ...new Set(
-        students.map((s) => getLatestEnrollment(s).university).filter(Boolean),
-      ),
-    ];
-    return ["ทั้งหมด", ...unique];
-  }, [students]);
-
-  const scholarships = useMemo(() => {
-    const unique = [
-      ...new Set(students.map((s) => s.scholarship).filter(Boolean)),
-    ].sort();
-    return ["ทั้งหมด", ...unique];
-  }, [students]);
-
-  const filtered = useMemo(() => {
-    const matchField = (s, q) => {
-      const telQ = q.replace(/-/g, "");
-      const str = (v) => (v || "").toLowerCase();
-      const enrollmentMatch = (s.enrollments ?? []).some(
-        (e) =>
-          str(e.university).includes(q) ||
-          str(e.faculty).includes(q) ||
-          str(e.department).includes(q) ||
-          str(e.major).includes(q) ||
-          str(e.year).includes(q) ||
-          str(e.advisor).includes(q) ||
-          str(e.project).includes(q) ||
-          str(e.studentId).includes(q) ||
-          str(e.univEmail).includes(q),
-      );
-      const addressMatch =
-        str(s.addresses?.th?.houseNo).includes(q) ||
-        str(s.addresses?.th?.subdistrict).includes(q) ||
-        str(s.addresses?.th?.district).includes(q) ||
-        str(s.addresses?.th?.province).includes(q) ||
-        str(s.addresses?.th?.postalCode).includes(q) ||
-        str(s.addresses?.jp?.postalCode).includes(q) ||
-        str(s.addresses?.jp?.prefecture).includes(q) ||
-        str(s.addresses?.jp?.city).includes(q) ||
-        str(s.addresses?.jp?.streetAddress).includes(q) ||
-        str(s.addresses?.jp?.building).includes(q);
-      return (
-        str(s.prefix).includes(q) ||
-        str(s.prefixEn).includes(q) ||
-        str(s.name).includes(q) ||
-        str(s.nameEn).includes(q) ||
-        str(s.lastname).includes(q) ||
-        str(s.lastnameEn).includes(q) ||
-        str(s.nickname).includes(q) ||
-        str(s.university).includes(q) ||
-        str(s.faculty).includes(q) ||
-        str(s.department).includes(q) ||
-        str(s.major).includes(q) ||
-        str(s.status).includes(q) ||
-        str(s.year).includes(q) ||
-        str(s.lineId).includes(q) ||
-        str(s.email).includes(q) ||
-        str(s.advisor).includes(q) ||
-        str(s.scholarship).includes(q) ||
-        str(s.project).includes(q) ||
-        str(s.prevSchool).includes(q) ||
-        str(s.country).includes(q) ||
-        str(s.address).includes(q) ||
-        str(s.nationalId).replace(/-/g, "").includes(q.replace(/-/g, "")) ||
-        str(s.passport).includes(q) ||
-        str(s.tel).replace(/-/g, "").includes(telQ) ||
-        enrollmentMatch ||
-        addressMatch
-      );
-    };
-    const base = students.filter((s) => {
-      const matchKeywords =
-        keywords.length === 0 ||
-        keywords.every((kw) => matchField(s, kw.toLowerCase()));
-      const matchLive =
-        !searchInput.trim() || matchField(s, searchInput.trim().toLowerCase());
-      const matchStatus =
-        filterStatus === "ทั้งหมด" || s.status === filterStatus;
-      const matchUniversity =
-        filterUniversity === "ทั้งหมด" ||
-        getLatestEnrollment(s).university === filterUniversity;
-      const matchYear =
-        filterYear === "ทั้งหมด" || getLatestEnrollment(s).year === filterYear;
-      const matchScholarship =
-        filterScholarship === "ทั้งหมด" || s.scholarship === filterScholarship;
-      const matchSelfFunded = !filterSelfFunded || s.selfFunded === true;
-      const studentCountry = s.country === "ญี่ปุ่น" ? "ญี่ปุ่น" : "ไทย";
-      const matchCountry =
-        filterCountry === "ทั้งหมด" || studentCountry === filterCountry;
-      return (
-        matchKeywords &&
-        matchLive &&
-        matchStatus &&
-        matchUniversity &&
-        matchYear &&
-        matchScholarship &&
-        matchSelfFunded &&
-        matchCountry
-      );
-    });
-    if (sortBy === "newest")
-      return [...base].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    if (sortBy === "oldest")
-      return [...base].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-    if (sortBy === "updated")
-      return [...base].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-    if (sortBy === "th_az")
-      return [...base].sort((a, b) =>
-        (a.name + a.lastname).localeCompare(b.name + b.lastname, "th"),
-      );
-    if (sortBy === "th_za")
-      return [...base].sort((a, b) =>
-        (b.name + b.lastname).localeCompare(a.name + a.lastname, "th"),
-      );
-    if (sortBy === "en_az")
-      return [...base].sort((a, b) =>
-        ((a.nameEn || "") + (a.lastnameEn || "")).localeCompare(
-          (b.nameEn || "") + (b.lastnameEn || ""),
-          "en",
-        ),
-      );
-    if (sortBy === "en_za")
-      return [...base].sort((a, b) =>
-        ((b.nameEn || "") + (b.lastnameEn || "")).localeCompare(
-          (a.nameEn || "") + (a.lastnameEn || ""),
-          "en",
-        ),
-      );
-    return base;
-  }, [
-    students,
-    keywords,
-    searchInput,
-    filterStatus,
-    filterUniversity,
-    filterYear,
-    filterScholarship,
-    filterSelfFunded,
-    filterCountry,
-    sortBy,
-  ]);
-
-  const clearFilters = () => {
-    setKeywords([]);
-    setSearchInput("");
-    setFilterStatus("ทั้งหมด");
-    setFilterUniversity("ทั้งหมด");
-    setFilterYear("ทั้งหมด");
-    setFilterScholarship("ทั้งหมด");
-    setFilterSelfFunded(false);
-    setFilterCountry("ทั้งหมด");
-    setSortBy("default");
-    setPage(1);
-  };
-
-  const hasActiveFilter =
-    keywords.length > 0 ||
-    filterStatus !== "ทั้งหมด" ||
-    filterUniversity !== "ทั้งหมด" ||
-    filterYear !== "ทั้งหมด" ||
-    filterScholarship !== "ทั้งหมด" ||
-    filterSelfFunded ||
-    filterCountry !== "ทั้งหมด" ||
-    sortBy !== "default";
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const safePage = Math.min(page, totalPages);
-  const paginated = filtered.slice(
-    (safePage - 1) * pageSize,
-    safePage * pageSize,
-  );
-  const rangeStart = filtered.length === 0 ? 0 : (safePage - 1) * pageSize + 1;
-  const rangeEnd = Math.min(safePage * pageSize, filtered.length);
 
   const pageIds = paginated.map((s) => s.id);
   const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedIds.has(id));
@@ -720,11 +479,6 @@ export default function StudentListClient() {
     setPage(1);
     setTimeout(() => setImportDone(null), result.errors.length > 0 ? 15000 : 4000);
   };
-
-  const activeTerms = useMemo(
-    () => [...keywords, searchInput.trim()].filter(Boolean),
-    [keywords, searchInput],
-  );
 
   if (!ready) {
     return (
@@ -1302,7 +1056,7 @@ export default function StudentListClient() {
             <span>รายการต่อหน้า</span>
           </div>
           <Pagination
-            page={safePage}
+            page={page}
             totalPages={totalPages}
             onPage={setPage}
           />

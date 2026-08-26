@@ -1,5 +1,6 @@
 "use client";
 
+import { paginateItems } from "@/lib/utils/pagination";
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AdminTable from "@/components/admin/ui/AdminTable";
@@ -511,9 +512,7 @@ export default function CompanyListClient() {
     resetPage();
   };
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const safePage   = Math.min(page, totalPages);
-  const paginated  = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const { paginated, totalPages, safePage } = paginateItems(filtered, page, pageSize);
   const rangeStart = filtered.length === 0 ? 0 : (safePage - 1) * pageSize + 1;
   const rangeEnd   = Math.min(safePage * pageSize, filtered.length);
 

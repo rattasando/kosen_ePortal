@@ -1,5 +1,6 @@
 "use client";
 
+import { paginateItems } from "@/lib/utils/pagination";
 import { useState, useMemo, useEffect } from "react";
 import { useDocuments } from "./contexts/DocumentContext";
 import { DOCUMENT_CATEGORIES, FILE_TYPES } from "@/lib/data/documentsData";
@@ -570,9 +571,7 @@ export default function DocumentListClient() {
   }, [documents, searchInput, keywords, filterCat, filterFileType]);
 
   // Pagination
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const safePage   = Math.min(page, totalPages);
-  const pageSlice  = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const { paginated: pageSlice, totalPages, safePage } = paginateItems(filtered, page, pageSize);
 
   const hasFilters = !!(filterCat || filterFileType || filterStatus || sortBy !== "default" || keywords.length > 0 || searchInput.trim());
   const clearAll = () => { setFilterCat(""); setFilterFileType(""); setFilterStatus(""); setSortBy("default"); setKeywords([]); setSearchInput(""); setPage(1); };

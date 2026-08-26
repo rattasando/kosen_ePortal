@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { paginateItems } from "@/lib/utils/pagination";
 import Image from "next/image";
 import { useNews } from "./contexts/NewsContext";
 import { useNewsCategory } from "./contexts/NewsCategoryContext";
@@ -391,9 +392,7 @@ export default function NewsListClient() {
   }, [news, keywords, searchInput, filterCat, filterStatus, sortBy]);
 
   // ── Pagination ─
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const safePage   = Math.min(page, totalPages);
-  const pageSlice  = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const { paginated: pageSlice, totalPages, safePage } = paginateItems(filtered, page, pageSize);
 
   // ── Status pill counts ─
   const statusCounts = useMemo(() => {

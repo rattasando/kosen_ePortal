@@ -1,5 +1,6 @@
 "use client";
 
+import { paginateItems } from "@/lib/utils/pagination";
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -446,9 +447,7 @@ export default function JobListClient() {
   const hasActiveFilter = keywords.length > 0 || filterStatus !== "ทั้งหมด" ||
     (activeTab === "ทั้งหมด" && filterType !== "ทั้งหมด") || filterField !== "ทั้งหมด" || sortBy !== "default";
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const safePage   = Math.min(page, totalPages);
-  const paginated  = filtered.slice((safePage - 1) * pageSize, safePage * pageSize);
+  const { paginated, totalPages, safePage } = paginateItems(filtered, page, pageSize);
   const rangeStart = filtered.length === 0 ? 0 : (safePage - 1) * pageSize + 1;
   const rangeEnd   = Math.min(safePage * pageSize, filtered.length);
 
