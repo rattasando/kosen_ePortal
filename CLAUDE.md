@@ -502,6 +502,9 @@ const data = Object.fromEntries(
 | `37-student-new-page` | Student new page | 4 | navigate/disabled/create/redirect |
 | `38-alumni-new-page` | Alumni new page | 4 | navigate/disabled/create/redirect |
 | `39-stub-pages-smoke` | Stub pages smoke | 9 | navigate ได้, ไม่ crash (1 test/หน้า) |
+| `40-contact-apis` | Contact APIs (3 กลุ่ม) | 15 | contact-info/social/universities CRUD + reorder |
+| `41-history-apis` | History APIs | 10 | student-history + alumni-history GET/POST/DELETE |
+| `42-news-categories-id-api` | News Categories [id] | 4 | PUT + DELETE (ต่อจาก 31) |
 
 ### Pattern สำคัญใน UI tests
 - **ใช้ ASCII เท่านั้นสำหรับ dynamic test data** — `fill()` กับ Thai text ใน Chromium อาจ hang เมื่อ input มี character filter (`onlyThai`, `onlyEnglish` ฯลฯ)
@@ -523,6 +526,7 @@ const data = Object.fromEntries(
 - `app/api/alumni/route.js` — migrate จาก bare `try/catch` → `withErrorHandler` (P2002 dup → 409 แทน 500)
 - `app/api/activities/route.js` + `[id]/route.js` — เพิ่ม `blockId()` + `prepBlocks()` (เหมือน News) กัน Prisma error "id is missing" ตอน create blocks
 - `app/admin/marketplace/applications/[id]/page.js` — ย้าย `useMemo` ขึ้นก่อน early return (Rules of Hooks)
+- `StudentHistory.changedBy` — FK → User (ต้องส่ง `null` หรือ user id จริง — ไม่ใช่ string ทั่วไป); `AlumniHistory.changedBy` ไม่มี FK (ส่ง string อะไรก็ได้)
 
 ## ยังไม่ได้ทำ (Remaining)
 - API Authentication (ทุก route ยังไม่ได้ protect)
