@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withErrorHandler } from "@/lib/utils/apiHandler";
 
+const blockId = () =>
+  `B${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`.slice(0, 20);
+
+const prepBlocks = (blocks) =>
+  blocks.map(({ id: _id, activityId: _aid, ...b }) => ({ ...b, id: blockId() }));
+
 export const GET = withErrorHandler(async (_, { params }) => {
   const { id } = await params;
   const activity = await prisma.activity.findUnique({
@@ -24,7 +30,7 @@ export const PUT = withErrorHandler(async (request, { params }) => {
         ...data,
         date: data.date ? new Date(data.date) : null,
         blocks: blocks?.length
-          ? { create: blocks.map(({ id: _id, ...b }) => b) }
+          ? { create: prepBlocks(blocks) }
           : undefined,
       },
       include: { blocks: { orderBy: { order: "asc" } } },
