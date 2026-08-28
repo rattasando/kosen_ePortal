@@ -22,10 +22,12 @@ export async function PUT(request, { params }) {
     const { id } = await params;
     const body = await request.json();
 
-    // กรองเฉพาะ field ที่อยู่ใน schema — ป้องกัน "Unknown argument" จาก Prisma
+    // กรองเฉพาะ field ที่อยู่ใน schema + แปลง "" → null สำหรับ relation FK
     const data = Object.fromEntries(
       BANNER_FIELDS.filter((k) => k in body).map((k) => [k, body[k]])
     );
+    if (data.newsId === "")     data.newsId     = null;
+    if (data.activityId === "") data.activityId = null;
 
     const banner = await prisma.banner.update({ where: { id }, data });
     return NextResponse.json(banner);
