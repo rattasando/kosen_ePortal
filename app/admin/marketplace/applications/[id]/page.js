@@ -201,6 +201,14 @@ export default function MappingDetailPage() {
         }
     }, [linkedInternship?.id]);
 
+    // ── useMemo ต้องอยู่ก่อน early return เสมอ (Rules of Hooks) ──
+    const studentMappings = useMemo(() =>
+        (form.studentId && mapping)
+            ? mappings.filter(m => m.studentId === form.studentId && m.id !== mapping.id)
+            : [],
+        [form.studentId, mappings, mapping?.id]
+    );
+
     if (!ready) return <div className="flex items-center justify-center py-24 text-sm text-muted">กำลังโหลดข้อมูล...</div>;
     if (!mapping) return (
         <div className="flex flex-col items-center justify-center py-24 gap-4">
@@ -221,12 +229,6 @@ export default function MappingDetailPage() {
     const duplicate = editing && form.studentId && form.jobId &&
         mappings.some(m => m.id !== mapping.id && m.studentId === form.studentId && m.jobId === form.jobId);
     const isValid = !editing || (form.studentId && form.jobId && !duplicate);
-
-    // other mappings for current student (exclude self)
-    const studentMappings = useMemo(() =>
-        form.studentId ? mappings.filter(m => m.studentId === form.studentId && m.id !== mapping.id) : [],
-        [form.studentId, mappings, mapping.id]
-    );
 
     // original refs
     const origStudent = student;
