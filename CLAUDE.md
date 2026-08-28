@@ -459,7 +459,7 @@ const data = Object.fromEntries(
 
 ## E2E Tests (Playwright)
 
-ไฟล์อยู่ที่ `e2e/tests/` — รวม **124 tests** ผ่านทั้งหมด
+ไฟล์อยู่ที่ `e2e/tests/` — รวม **191 tests** ผ่านทั้งหมด
 
 | ไฟล์ | โมดูล | เคส | ครอบคลุม |
 |------|-------|-----|---------|
@@ -473,19 +473,33 @@ const data = Object.fromEntries(
 | `08-news-ui-crud` | News UI | 7 | Create/Search/Edit/Delete |
 | `09-company-ui-crud` | Companies UI | 8 | Create/Search/Edit/Delete |
 | `10-job-ui-crud` | Job Positions UI | 8 | Create/Search/Edit/Delete |
-| `11-mapping-ui-crud` | Applications UI | 6 | smoke + modal lifecycle |
+| `11-mapping-ui-crud` | Applications UI | 10 | Create/Search/Edit/Delete |
 | `12-alumni-ui-crud` | Alumni UI | 8 | Create/Search/Edit/Delete |
+| `13-document-ui-crud` | Documents UI | 9 | Create/Search/Edit/Delete |
+| `14-banner-ui-crud` | Banner UI | 12 | Create/Edit/Delete + preview |
+| `15-splash-ui-config` | Splash Config UI | 8 | toggle/update/persist |
+| `16-company-api` | Company API | 7 | CRUD + dup 409 |
+| `17-job-api` | Job API | 8 | CRUD + status filter |
+| `18-mapping-api` | Mapping API | 8 | CRUD + missing field 400 |
+| `19-alumni-api` | Alumni API | 8 | CRUD + employmentHistory |
+| `20-document-api` | Document API | 8 | CRUD + status filter |
+| `21-banner-api` | Banner API | 8 | CRUD + newsId null safe |
 
 ### Pattern สำคัญใน UI tests
 - **ใช้ ASCII เท่านั้นสำหรับ dynamic test data** — `fill()` กับ Thai text ใน Chromium อาจ hang เมื่อ input มี character filter (`onlyThai`, `onlyEnglish` ฯลฯ)
 - **`waitForResponse` + `Promise.all`** — ใช้ดัก POST/PUT/DELETE ที่ context ไม่ await ก่อน assert
 - **Modal scoping** — `page.locator(".fixed.inset-0.z-50").last()` เพื่อหลีกเลี่ยง strict mode เมื่อมีปุ่มชื่อซ้ำ
 - **Live search filter** — ทุก list module กรอง `searchInput` แบบ live (ไม่ต้องกด Enter) ยกเว้น keyword chips
+- **Banner page** — ห้ามใช้ `waitForLoadState("networkidle")` เพราะ BannerContext fetch News ค้างอยู่เสมอ — ใช้ `expect(button).toBeVisible()` แทน
+- **Banner card scoping** — `page.locator("div").filter({ hasText, has: getByRole("button", { name: "แก้ไข" }) }).last()` ได้ card ระดับใน
+- **Alumni `AlumniEmploymentHistory`** — ไม่มี field `startYear`; ใช้ `startDate`/`endDate` (VarChar 10 string)
 
 ### Bugs พบระหว่าง test และ fix แล้ว
 - `app/api/news/route.js` + `[id]/route.js` — map `author` (form) → `authorName` (Prisma), strip relations
 - `app/api/jobs/[id]/route.js` — เพิ่ม `JOB_FIELDS` whitelist กรอง `company` relation ออกก่อน PUT
 - `components/admin/FaqListClient.js` — null-safe `category` ใน `matchFaq` (กัน crash เมื่อ category เป็น null)
+- `app/api/banners/route.js` + `[id]/route.js` — `normalizeRelations()` แปลง `newsId`/`activityId` `""` → `null` ก่อนส่ง Prisma (กัน P2003)
+- `app/api/alumni/route.js` — migrate จาก bare `try/catch` → `withErrorHandler` (P2002 dup → 409 แทน 500)
 
 ## ยังไม่ได้ทำ (Remaining)
 - API Authentication (ทุก route ยังไม่ได้ protect)
@@ -493,4 +507,4 @@ const data = Object.fromEntries(
 - Input validation (Zod)
 - Error handling ครบทุก route (มีแค่บางส่วน)
 - Public pages migrate จาก localStorage → API
-- E2E tests: CSV export/import (ทุกโมดูล), Applications CRUD จริง (ต้องการ seed data)
+- E2E tests: CSV export/import (ทุกโมดูล)
