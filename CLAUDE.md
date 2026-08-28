@@ -459,15 +459,42 @@ const data = Object.fromEntries(
 
 ## E2E Tests (Playwright)
 
-ไฟล์อยู่ที่ `e2e/tests/` — รวม **191 tests** ผ่านทั้งหมด
+ไฟล์อยู่ที่ `e2e/tests/` — รวม **321 tests | 319 passed | 2 flaky** (11-mapping-ui-crud — ผ่านเมื่อรันแยก)
 
+### Coverage สรุป
+- **Backend API**: 43/47 routes ✅ (91%) — ขาดเฉพาะ Upload APIs (multipart, intentional)
+- **Frontend UI**: ครบทุก module ที่ implement แล้ว — stub pages มี smoke test (navigate ไม่ crash)
+- **ที่ยังขาด**: `/admin/marketplace/job-positions/new` (full-page form) + Upload APIs
+
+### ตารางไฟล์ทั้งหมด
+
+#### API Tests
+| ไฟล์ | โมดูล | เคส | ครอบคลุม |
+|------|-------|-----|---------|
+| `02-student-api` | Student API | 7 | CRUD + edge cases |
+| `04-faq-api` | FAQ API | 8 | CRUD + BVA |
+| `05-news-api` | News API | 6 | CRUD |
+| `16-company-api` | Company API | 7 | CRUD + dup 409 |
+| `17-job-api` | Job API | 8 | CRUD + status filter |
+| `18-mapping-api` | Mapping API | 8 | CRUD + missing field 400 |
+| `19-alumni-api` | Alumni API | 8 | CRUD + employmentHistory |
+| `20-document-api` | Document API | 8 | CRUD + status filter |
+| `21-banner-api` | Banner API | 8 | CRUD + newsId null safe |
+| `31-news-categories-api` | News Categories API | 4 | GET/POST |
+| `32-scholarship-types-api` | Scholarship Types API | 5 | CRUD ครบ |
+| `33-activities-api` | Activities API | 6 | CRUD + blocks + status filter |
+| `34-splash-api` | Splash API | 5 | GET/PUT + radius mapping + whitelist |
+| `35-users-api` | Users API | 6 | CRUD + bcrypt + no password leak |
+| `36-internships-api` | Internships API | 6 | CRUD + studentId filter |
+| `40-contact-apis` | Contact APIs (3 กลุ่ม) | 15 | contact-info/social/universities CRUD + reorder |
+| `41-history-apis` | History APIs | 10 | student-history + alumni-history GET/POST/DELETE |
+| `42-news-categories-id-api` | News Categories [id] | 4 | PUT + DELETE |
+
+#### UI Tests
 | ไฟล์ | โมดูล | เคส | ครอบคลุม |
 |------|-------|-----|---------|
 | `01-auth` | Login/Logout | 5 | auth flow |
-| `02-student-api` | Student API | 7 | CRUD + edge cases |
 | `03-student-ui` | Student UI smoke | 4 | navigation |
-| `04-faq-api` | FAQ API | 8 | CRUD + BVA |
-| `05-news-api` | News API | 6 | CRUD |
 | `06-student-ui-crud` | Students UI | 9 | Create/Search/Edit/Delete |
 | `07-faq-ui-crud` | FAQ UI | 8 | Create/Search/Edit/Delete |
 | `08-news-ui-crud` | News UI | 7 | Create/Search/Edit/Delete |
@@ -478,12 +505,6 @@ const data = Object.fromEntries(
 | `13-document-ui-crud` | Documents UI | 9 | Create/Search/Edit/Delete |
 | `14-banner-ui-crud` | Banner UI | 12 | Create/Edit/Delete + preview |
 | `15-splash-ui-config` | Splash Config UI | 8 | toggle/update/persist |
-| `16-company-api` | Company API | 7 | CRUD + dup 409 |
-| `17-job-api` | Job API | 8 | CRUD + status filter |
-| `18-mapping-api` | Mapping API | 8 | CRUD + missing field 400 |
-| `19-alumni-api` | Alumni API | 8 | CRUD + employmentHistory |
-| `20-document-api` | Document API | 8 | CRUD + status filter |
-| `21-banner-api` | Banner API | 8 | CRUD + newsId null safe |
 | `22-faq-reorder` | FAQ reorder | 4 | ▲▼ + PATCH /api/faq/reorder |
 | `23-banner-reorder` | Banner reorder | 4 | ↑↓ + PATCH /api/banners/reorder |
 | `24-company-detail` | Company detail page | 5 | navigate/edit/cancel/save/auto-edit |
@@ -491,20 +512,11 @@ const data = Object.fromEntries(
 | `26-application-detail` | Application detail | 5 | navigate/edit/cancel/save/status grid |
 | `27-student-detail` | Student detail | 5 | navigate/edit/cancel/save/auto-edit |
 | `28-alumni-detail` | Alumni detail | 5 | navigate/edit/cancel/save/history section |
-| `29-csv-export` | CSV export | 5 | download event ทุกโมดูล |
-| `30-csv-import` | CSV import | 4 | FAQ/Companies/Jobs + error case |
-| `31-news-categories-api` | News Categories API | 4 | GET/POST (ไม่มี [id] route) |
-| `32-scholarship-types-api` | Scholarship Types API | 5 | CRUD ครบ |
-| `33-activities-api` | Activities API | 6 | CRUD + blocks + status filter |
-| `34-splash-api` | Splash API | 5 | GET/PUT + radius mapping + whitelist |
-| `35-users-api` | Users API | 6 | CRUD + bcrypt + no password leak |
-| `36-internships-api` | Internships API | 6 | CRUD + studentId filter |
-| `37-student-new-page` | Student new page | 4 | navigate/disabled/create/redirect |
-| `38-alumni-new-page` | Alumni new page | 4 | navigate/disabled/create/redirect |
-| `39-stub-pages-smoke` | Stub pages smoke | 9 | navigate ได้, ไม่ crash (1 test/หน้า) |
-| `40-contact-apis` | Contact APIs (3 กลุ่ม) | 15 | contact-info/social/universities CRUD + reorder |
-| `41-history-apis` | History APIs | 10 | student-history + alumni-history GET/POST/DELETE |
-| `42-news-categories-id-api` | News Categories [id] | 4 | PUT + DELETE (ต่อจาก 31) |
+| `29-csv-export` | CSV export | 5 | download event — Students/Companies/FAQ/Jobs/Apps |
+| `30-csv-import` | CSV import | 4 | FAQ/Companies/Jobs + non-csv error case |
+| `37-student-new-page` | Student new page | 4 | navigate/submit disabled/create/redirect |
+| `38-alumni-new-page` | Alumni new page | 4 | navigate/submit disabled/create/redirect |
+| `39-stub-pages-smoke` | Stub pages smoke | 9 | 9 หน้า 🔧 — navigate ไม่ crash |
 
 ### Pattern สำคัญใน UI tests
 - **ใช้ ASCII เท่านั้นสำหรับ dynamic test data** — `fill()` กับ Thai text ใน Chromium อาจ hang เมื่อ input มี character filter (`onlyThai`, `onlyEnglish` ฯลฯ)
@@ -532,5 +544,7 @@ const data = Object.fromEntries(
 - API Authentication (ทุก route ยังไม่ได้ protect)
 - Role-based access control
 - Input validation (Zod)
-- Error handling ครบทุก route (มีแค่บางส่วน)
+- Error handling ครบทุก route — บาง route ยังใช้ bare `try/catch` แทน `withErrorHandler` เช่น `news-categories/[id]`, `alumni-history`
 - Public pages migrate จาก localStorage → API
+- UI implement จริง สำหรับ stub pages 🔧: Activities, News Categories, Scholarship Types, Contact, Internship Tracking, Students Documents, Academic Tracking, Scholarship, Users
+- E2E test: `/admin/marketplace/job-positions/new` (full-page form) + Upload APIs (multipart)
