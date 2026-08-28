@@ -484,6 +484,24 @@ const data = Object.fromEntries(
 | `19-alumni-api` | Alumni API | 8 | CRUD + employmentHistory |
 | `20-document-api` | Document API | 8 | CRUD + status filter |
 | `21-banner-api` | Banner API | 8 | CRUD + newsId null safe |
+| `22-faq-reorder` | FAQ reorder | 4 | ▲▼ + PATCH /api/faq/reorder |
+| `23-banner-reorder` | Banner reorder | 4 | ↑↓ + PATCH /api/banners/reorder |
+| `24-company-detail` | Company detail page | 5 | navigate/edit/cancel/save/auto-edit |
+| `25-job-detail` | Job detail page | 5 | navigate/edit/cancel/save/auto-edit |
+| `26-application-detail` | Application detail | 5 | navigate/edit/cancel/save/status grid |
+| `27-student-detail` | Student detail | 5 | navigate/edit/cancel/save/auto-edit |
+| `28-alumni-detail` | Alumni detail | 5 | navigate/edit/cancel/save/history section |
+| `29-csv-export` | CSV export | 5 | download event ทุกโมดูล |
+| `30-csv-import` | CSV import | 4 | FAQ/Companies/Jobs + error case |
+| `31-news-categories-api` | News Categories API | 4 | GET/POST (ไม่มี [id] route) |
+| `32-scholarship-types-api` | Scholarship Types API | 5 | CRUD ครบ |
+| `33-activities-api` | Activities API | 6 | CRUD + blocks + status filter |
+| `34-splash-api` | Splash API | 5 | GET/PUT + radius mapping + whitelist |
+| `35-users-api` | Users API | 6 | CRUD + bcrypt + no password leak |
+| `36-internships-api` | Internships API | 6 | CRUD + studentId filter |
+| `37-student-new-page` | Student new page | 4 | navigate/disabled/create/redirect |
+| `38-alumni-new-page` | Alumni new page | 4 | navigate/disabled/create/redirect |
+| `39-stub-pages-smoke` | Stub pages smoke | 9 | navigate ได้, ไม่ crash (1 test/หน้า) |
 
 ### Pattern สำคัญใน UI tests
 - **ใช้ ASCII เท่านั้นสำหรับ dynamic test data** — `fill()` กับ Thai text ใน Chromium อาจ hang เมื่อ input มี character filter (`onlyThai`, `onlyEnglish` ฯลฯ)
@@ -493,6 +511,9 @@ const data = Object.fromEntries(
 - **Banner page** — ห้ามใช้ `waitForLoadState("networkidle")` เพราะ BannerContext fetch News ค้างอยู่เสมอ — ใช้ `expect(button).toBeVisible()` แทน
 - **Banner card scoping** — `page.locator("div").filter({ hasText, has: getByRole("button", { name: "แก้ไข" }) }).last()` ได้ card ระดับใน
 - **Alumni `AlumniEmploymentHistory`** — ไม่มี field `startYear`; ใช้ `startDate`/`endDate` (VarChar 10 string)
+- **Detail pages** — ชื่อ/title ปรากฏ 2 ครั้ง (sticky bar + form/card) → ใช้ `.first()` เสมอ
+- **Strict mode กับ getByPlaceholder** — Playwright match แบบ partial ดังนั้น `getByPlaceholder('2565')` จะ match `placeholder="2565-06"` ด้วย → ใช้ `page.locator('input[placeholder="2565"]')` เมื่อต้องการ exact
+- **CSV import confirm buttons** — FAQ/Jobs ใช้ `/รวม \d+ รายการ|แทนที่ด้วย \d+/`, Companies ใช้ `/นำเข้า \d+ บริษัท/` — ต้อง scope ไปยัง modal `.fixed.inset-0.z-50` ก่อนเพื่อกัน toolbar button
 
 ### Bugs พบระหว่าง test และ fix แล้ว
 - `app/api/news/route.js` + `[id]/route.js` — map `author` (form) → `authorName` (Prisma), strip relations
@@ -500,6 +521,8 @@ const data = Object.fromEntries(
 - `components/admin/FaqListClient.js` — null-safe `category` ใน `matchFaq` (กัน crash เมื่อ category เป็น null)
 - `app/api/banners/route.js` + `[id]/route.js` — `normalizeRelations()` แปลง `newsId`/`activityId` `""` → `null` ก่อนส่ง Prisma (กัน P2003)
 - `app/api/alumni/route.js` — migrate จาก bare `try/catch` → `withErrorHandler` (P2002 dup → 409 แทน 500)
+- `app/api/activities/route.js` + `[id]/route.js` — เพิ่ม `blockId()` + `prepBlocks()` (เหมือน News) กัน Prisma error "id is missing" ตอน create blocks
+- `app/admin/marketplace/applications/[id]/page.js` — ย้าย `useMemo` ขึ้นก่อน early return (Rules of Hooks)
 
 ## ยังไม่ได้ทำ (Remaining)
 - API Authentication (ทุก route ยังไม่ได้ protect)
@@ -507,4 +530,3 @@ const data = Object.fromEntries(
 - Input validation (Zod)
 - Error handling ครบทุก route (มีแค่บางส่วน)
 - Public pages migrate จาก localStorage → API
-- E2E tests: CSV export/import (ทุกโมดูล)
