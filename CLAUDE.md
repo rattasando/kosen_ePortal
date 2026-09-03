@@ -35,7 +35,7 @@
 | เพิ่มตำแหน่งงาน | `/admin/marketplace/job-positions/new` | — | ✅ |
 | การสมัครงาน (Applications/Mapping) | `/admin/marketplace/applications` | `MappingListClient.js` | ✅ |
 | รายละเอียดการสมัคร | `/admin/marketplace/applications/[id]` | — | ✅ |
-| ติดตามการฝึกงาน | `/admin/marketplace/internship-tracking` | — | 🔧 |
+| ติดตามการฝึกงาน | `/admin/marketplace/internship-tracking` | `InternshipListClient.js` | 🔧 |
 
 ### 📢 Information
 | โมดูล | Path | Client Component | สถานะ |
@@ -46,14 +46,14 @@
 | เอกสาร (Documents) | `/admin/information/documents` | `DocumentListClient.js` | ✅ |
 | แบนเนอร์ (Banner) | `/admin/information/banner` | — (BannerContext) | ✅ |
 | Splash Screen | `/admin/information/splash` | `SplashConfigClient.js` | ✅ |
-| ติดต่อเรา (Contact) | `/admin/information/contact` | — | 🔧 |
-| หมวดหมู่ข่าว | `/admin/information/news-categories` | — | 🔧 |
-| ประเภททุน | `/admin/information/scholarship-types` | — | 🔧 |
+| ติดต่อเรา (Contact) | `/admin/information/contact` | `ContactListClient.js` | 🔧 |
+| หมวดหมู่ข่าว | `/admin/information/news-categories` | `NewsCategoriesListClient.js` | 🔧 |
+| ประเภททุน | `/admin/information/scholarship-types` | `ScholarshipTypesListClient.js` | 🔧 |
 
 ### ⚙️ System
-| โมดูล | Path | สถานะ |
-|-------|------|-------|
-| จัดการผู้ใช้ | `/admin/users` | 🔧 |
+| โมดูล | Path | Client Component | สถานะ |
+|-------|------|-----------------|-------|
+| จัดการผู้ใช้ | `/admin/users` | `UserListClient.js` | 🔧 |
 
 > ✅ = มี Client Component + ทำงานได้เต็มที่ · 🔧 = อยู่ระหว่างพัฒนา / stub
 
@@ -294,8 +294,16 @@ onCellClick={(e, i, j) => {
 ## UI Conventions
 - **Sticky back bar** ใน detail pages: `<div className="sticky top-0 z-20 flex items-center border-b border-border bg-surface/95 px-6 py-2.5 backdrop-blur">` — มีทั้งใน student และ alumni detail
 - **Action buttons**: ขนาด `h-8 w-8` icon `h-4 w-4` — ใช้ทั้ง student (`StudentActionButtons.js`) และ alumni list Actions column width `115px`
-- **Filter persistence**: ใช้ `sessionStorage` เก็บ filter state ผ่าน `loadFilters()`/`saveFilters()` — student ใช้ key `student-list-filters`, alumni ใช้ key `alumni-list-filters`, doc ใช้ key `doc-list-filters`
-- **Sort options มาตรฐาน**: `newest` (createdAt desc), `oldest` (createdAt asc), `updated` (updatedAt desc), `th_az`/`th_za` (ชื่อไทย), เพิ่มเติมตามบริบท เช่น `year_desc`/`year_asc` สำหรับ alumni
+- **Filter persistence**: ใช้ `sessionStorage` เก็บ filter state ผ่าน `loadFilters()`/`saveFilters()` — session storage keys:
+  | โมดูล | Key |
+  |-------|-----|
+  | Students | `student-list-filters` |
+  | Alumni | `alumni-list-filters` |
+  | Documents | `doc-list-filters` |
+  | FAQ | `faq-list-filters` |
+  | Companies | `company-list-filters` |
+- **Sort options มาตรฐาน**: `newest` (createdAt desc), `oldest` (createdAt asc), `updated` (updatedAt desc), `th_az`/`th_za` (ชื่อไทย), เพิ่มเติมตามบริบท เช่น `year_desc`/`year_asc` สำหรับ alumni, `name-az`/`name-za`/`positions-desc` สำหรับ companies
+- **Status pills count pattern**: count ใน pills ควร **นับจาก base list** (filter อื่นๆ ไว้แล้ว ยกเว้น filterStatus เอง) เพื่อให้ตัวเลขสะท้อนว่าแต่ละ status มีกี่รายการจากเงื่อนไขที่ filter ไว้อยู่ — ดูตัวอย่างใน `CompanyListClient.js` (IIFE `baseList`) และ `FaqListClient.js` (`statusCounts` useMemo)
 
 ### List page layout มาตรฐาน (ใช้ทุกโมดูล: News, FAQ, Documents, Job, Company, Mapping)
 ลำดับ section ใน return ของ list client:
@@ -345,6 +353,78 @@ Selection bar ใช้ `h-3.5 w-3.5` แทน `h-4 w-4` (เพราะปุ
 - `MappingContext` migrate จาก localStorage → `/api/mappings` แล้ว (ดู Marketplace section)
 - Pattern: fetch **ทั้งตาราง** ครั้งเดียวตอน mount (`useEffect` ว่าง deps) เก็บใน state แล้ว filter/search/sort ฝั่ง client ทั้งหมด (ดู `StudentContext.js` + `StudentListClient.js`) — **เป็นการตัดสินใจตั้งใจ ไม่ใช่ bug**: วัดจริงที่ 100 students ≈ 143KB/25ms, ประมาณการที่ 1,000 students ≈ 1.4MB ยังรับได้สบายสำหรับ admin tool ภายใน ไม่ต้องรีบเปลี่ยนเป็น server-side search+pagination จนกว่าจะเกิน ~3,000-5,000 rows
 
+## Admin Dashboard Pages
+
+แต่ละ section ของ Admin มี dashboard page (`page.js`) ที่เป็น `"use client"` และดึงข้อมูลจาก Context โดยตรง:
+
+| Page | Path | Contexts ที่ใช้ |
+|------|------|----------------|
+| Main Menu | `/admin/page.js` | students, companies, jobs, mappings, news, activities |
+| Student Dashboard | `/admin/students/page.js` | students |
+| Company Dashboard | `/admin/companies/page.js` | companies |
+| Marketplace Dashboard | `/admin/marketplace/page.js` | jobs, mappings, companies |
+
+### Dashboard layout มาตรฐาน (ใช้ทุก dashboard)
+1. **Stat Cards** (`admin-stat-grid`) — 4 ตัวเลขหลัก
+2. **Bar chart section** (grid 2 คอลัมน์) — `BarRow` component แสดง breakdown ตามหมวด
+3. **Mini stat / highlight section** — `MiniStat` หรือ warning cards
+4. **Top N list** — ranked bar list (top by positions, top by students ฯลฯ)
+5. **Recent items (card grid)** — `card p-5 space-y-4` wrapper + `grid gap-2 sm:grid-cols-2 lg:grid-cols-3` — Link cards แสดงข้อมูลสำคัญ + status badge
+6. **Quick links** — grid ลิงก์ไปยังหน้าย่อย
+
+### BarRow component (ใช้ใน dashboard ทุกตัว)
+```js
+function BarRow({ label, count, total, colorClass, badge, unit = "รายการ", subLabel }) {
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between text-sm gap-2">
+        <div className="min-w-0">
+          <span className="font-medium text-foreground truncate block">{label}</span>
+          {subLabel && <span className="text-xs text-muted">{subLabel}</span>}
+        </div>
+        <span className="text-muted shrink-0 flex items-center gap-1.5">
+          {badge && <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${badge}`}>{pct}%</span>}
+          <span className="text-xs font-semibold text-foreground">{count} {unit}</span>
+        </span>
+      </div>
+      <div className="h-2 w-full overflow-hidden rounded-full bg-surface-muted">
+        <div className={`h-2 rounded-full ${colorClass}`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
+}
+```
+
+### goWithFilter pattern (dashboard → list page)
+Dashboard ใช้ `sessionStorage` เพื่อส่ง filter ไปยัง list page:
+```js
+const goWithFilter = useCallback((overrides = {}) => {
+  const saved = (() => { try { return JSON.parse(sessionStorage.getItem(FILTER_KEY)) ?? {}; } catch { return {}; } })();
+  sessionStorage.setItem(FILTER_KEY, JSON.stringify({ ...saved, ...overrides }));
+  router.push("/admin/students/list");
+}, [router]);
+
+// ใช้:
+<button onClick={() => goWithFilter({ sortBy: "newest" })}>ดูทั้งหมด →</button>
+```
+
+## Companies (`/admin/companies/`)
+
+### CompanyListClient.js — Filters
+Filter ทั้งหมดที่รองรับ (เซฟใน `sessionStorage` key `company-list-filters`):
+| Filter | State | ค่า Default |
+|--------|-------|------------|
+| Keyword chips | `keywords[]` | `[]` |
+| Status | `filterStatus` | `"ทั้งหมด"` |
+| Industry | `filterIndustry` | `"ทั้งหมด"` |
+| Type (ประเภทนิติบุคคล) | `filterType` | `"ทั้งหมด"` |
+| MOU | `filterMOU` | `"ทั้งหมด"` |
+| Sort | `sortBy` | `"default"` |
+
+Sort options: `default` / `newest` (createdAt desc) / `oldest` (createdAt asc) / `name-az` / `name-za` / `positions-desc` (เปิดรับมากสุด) / `updated` (updatedAt desc)
+
+`hasFilter` = true เมื่อ keywords ≠ [] **หรือ** filter ใดๆ ≠ ค่า default (รวม `sortBy !== "default"`)
+
 ## Marketplace (`/admin/marketplace/`)
 
 ### Job Positions (`/api/jobs`, `JobListClient.js`)
@@ -360,6 +440,7 @@ Selection bar ใช้ `h-3.5 w-3.5` แทน `h-4 w-4` (เพราะปุ
 - `MappingContext` ดึงข้อมูลจาก API (migrate จาก localStorage แล้ว)
 - ตาราง `AdminTable`: ☐ | นักเรียน (180px) | ตำแหน่งงาน (200px) | ประเภท/สาขา (140px) | วันที่สมัคร (110px) | สถานะ (170px) | จัดการ (115px)
 - คอลัมน์นักเรียนแสดง: รหัส + ชื่อ + badge สถาบัน (สีแยก KMUTT/KMITL/Chulabhorn) + สาขา/ปี จาก enrollment ปัจจุบัน (`endDate == null`)
+- **Sort options**: `newest` (createdAt desc), `oldest` (createdAt asc), `job-asc`/`job-desc` (ตำแหน่งงาน), `date-desc`/`date-asc` (appliedDate) — `newest`/`oldest` ใช้ `createdAt` ไม่ใช่ `appliedDate` (เพราะ appliedDate อาจเป็น null)
 
 ## CSV Import/Export
 
@@ -544,7 +625,9 @@ const data = Object.fromEntries(
 - API Authentication (ทุก route ยังไม่ได้ protect)
 - Role-based access control
 - Input validation (Zod)
-- Error handling ครบทุก route — บาง route ยังใช้ bare `try/catch` แทน `withErrorHandler` เช่น `news-categories/[id]`, `alumni-history`
-- Public pages migrate จาก localStorage → API
-- UI implement จริง สำหรับ stub pages 🔧: Activities, News Categories, Scholarship Types, Contact, Internship Tracking, Students Documents, Academic Tracking, Scholarship, Users
+- Error handling ครบทุก route — routes ต่อไปนี้ยังใช้ bare `try/catch` แทน `withErrorHandler`:
+  `students`, `students/[id]`, `mappings`, `mappings/[id]`, `banners/[id]`, `alumni/[id]`, `companies/[id]`, `splash`, `news-categories`, `news-categories/[id]`, `alumni-history`, upload routes (3 ตัว)
+- Public pages migrate จาก localStorage → API (marketplace, homepage — ยกเว้น login ที่เก็บ username จงใจ)
+- UI implement จริง สำหรับ stub pages 🔧 ที่ยังไม่มี Client Component เลย: Activities, Students Documents, Academic Tracking, Scholarship
+- UI implement จริง สำหรับ stub pages 🔧 ที่มี Client Component แล้วแต่ยังไม่สมบูรณ์: News Categories, Scholarship Types, Contact, Internship Tracking, Users
 - E2E test: `/admin/marketplace/job-positions/new` (full-page form) + Upload APIs (multipart)
