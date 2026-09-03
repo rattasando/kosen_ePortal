@@ -6,7 +6,7 @@ export default function StudentsListPage() {
     <>
       <AdminTopBar
         title="Students"
-        description="Manage student records, profiles, and enrollment status."
+        description="จัดการข้อมูลนักเรียน โปรไฟล์ และสถานะการลงทะเบียน"
       />
       <StudentListClient />
     </>
