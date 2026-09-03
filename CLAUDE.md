@@ -35,6 +35,7 @@
 | เพิ่มตำแหน่งงาน | `/admin/marketplace/job-positions/new` | — | ✅ |
 | การสมัครงาน (Applications/Mapping) | `/admin/marketplace/applications` | `MappingListClient.js` | ✅ |
 | รายละเอียดการสมัคร | `/admin/marketplace/applications/[id]` | — | ✅ |
+| เพิ่มการสมัครงาน | `/admin/marketplace/applications/new` | — | ✅ |
 | ติดตามการฝึกงาน | `/admin/marketplace/internship-tracking` | `InternshipListClient.js` | 🔧 |
 
 ### 📢 Information
@@ -219,7 +220,8 @@ npx playwright test <file> --headed  # รันแค่ไฟล์เดี�
 
 ## Shared Utilities (`lib/utils/`)
 - `inputFilters.js` — character-class filters (`onlyThai`, `onlyEnglish`, `onlyNumeric`, `onlyAscii`, `onlyThaiText`, `onlyEnglishAddress`) ใช้กรอง input ตอน `onChange` ให้ตรงประเภทข้อมูล (ไทย/อังกฤษ/ตัวเลข) + auto-formatter ใส่ขีดให้อัตโนมัติ (`formatThaiPhone`, `formatThaiNationalId`, `formatThaiBankAccount`)
-- `studentFieldLimits.js` — map ความยาว `@db.VarChar(n)` ของ Student/StudentEnrollment ไว้ validate ฝั่ง API ก่อนถึง Prisma (กัน error "value too long" ที่บางทีไม่บอกชื่อ column)
+- `studentFieldLimits.js` — map ความยาว `@db.VarChar(n)` ของ Student/StudentEnrollment ไว้ validate ฝั่ง API ก่อนถึง Prisma (กัน error "value too long" ที่บางทีไม่บอกชื่อ column) — **ไม่มี bank fields แล้ว** (ลบออกพร้อม schema)
+- `studentFilters.js` — `matchStudentField()` รองรับค้นหาด้วยชื่อ+นามสกุลรวม (`"สมชาย ใจดี"`) และ prefix+ชื่อ+นามสกุล (`"นายสมชาย ใจดี"`) และ English full name — ไม่ใช่แค่ field เดี่ยว
 - `studentEnrollments.js` — `prepEnrollments()` ใช้ร่วมกันทั้ง POST/PUT: บังคับ `order` ตามตำแหน่งใน array + แปลง `startDate`/`endDate` เป็น Date object
 - `studentHistoryHelpers.js` — `diffSnapshot()` เทียบ before/after เพื่อ log ประวัติแก้ไขนักเรียน — **ระวัง**: `before`/`after` ต้องมี shape ตรงกันเป๊ะ ไม่งั้นเกิด diff ปลอม (ดู Known Bugs Fixed)
 
@@ -347,6 +349,13 @@ Selection bar ใช้ `h-3.5 w-3.5` แทน `h-4 w-4` (เพราะปุ
   {displayed.map(({ item, i }) => <Card index={i} onChange={() => updateAt(i)} ... />)}
   ```
 
+## AdminHeader (`components/admin/ui/AdminHeader.js`)
+- แสดง page title (จาก `PageTitleContext`) ทางซ้าย + DB status pill + profile dropdown ทางขวา
+- **DB status pill** — แสดง "สถานะฐานข้อมูล" พร้อม dot สี: 🟢 ปกติ / 🟡 กำลังตรวจสอบ / 🔴 ขัดข้อง
+  - Hover → tooltip แสดง: สถานะ, latency, เวลาตรวจล่าสุด, ความถี่, legend 3 สถานะ + ปุ่มรีเฟรช
+  - poll ทุก 60 วินาที — skip เมื่อ tab hidden (`document.hidden`), ตรวจทันทีเมื่อ tab กลับมา active (`visibilitychange`)
+  - API: `GET /api/health` → `SELECT 1` ping DB คืน `{ ok: boolean, latency: number }`
+
 ## Context Providers
 ทุก context ใน `components/admin/contexts/` ดึงข้อมูลจาก API แล้ว (ไม่ใช้ localStorage)
 - ยกเว้น: `LanguageContext`, `PageTitleContext` (UI state เท่านั้น)
@@ -441,6 +450,20 @@ Sort options: `default` / `newest` (createdAt desc) / `oldest` (createdAt asc) /
 - ตาราง `AdminTable`: ☐ | นักเรียน (180px) | ตำแหน่งงาน (200px) | ประเภท/สาขา (140px) | วันที่สมัคร (110px) | สถานะ (170px) | จัดการ (115px)
 - คอลัมน์นักเรียนแสดง: รหัส + ชื่อ + badge สถาบัน (สีแยก KMUTT/KMITL/Chulabhorn) + สาขา/ปี จาก enrollment ปัจจุบัน (`endDate == null`)
 - **Sort options**: `newest` (createdAt desc), `oldest` (createdAt asc), `job-asc`/`job-desc` (ตำแหน่งงาน), `date-desc`/`date-asc` (appliedDate) — `newest`/`oldest` ใช้ `createdAt` ไม่ใช่ `appliedDate` (เพราะ appliedDate อาจเป็น null)
+- **ปุ่มเพิ่ม** → navigate ไปหน้า `/admin/marketplace/applications/new` (ไม่ใช่ modal)
+- **คลิกชื่อนักเรียน/ตำแหน่งงานในตาราง** → เข้าหน้า detail ของ mapping นั้น (ไม่ใช่ student/job page)
+
+### Mapping Detail (`/admin/marketplace/applications/[id]`)
+- Layout: hero card (preview live) → student card + job card (2-col grid) → details card (status/date/note)
+- **edit mode**: student card และ job card มี SearchPicker เพื่อเปลี่ยนการ mapping — card ทั้งสองมี `min-h` คงขนาดไว้แม้ไม่มีข้อมูล
+- **SearchPicker dropdown**: card ไม่มี `overflow-hidden` เพื่อกัน dropdown ถูกตัด — ใช้ `rounded-t-[...]` บน header แทน
+- **สถานะนักเรียน**: แก้ไขได้เฉพาะตอน edit mode — กดปุ่มสถานะ = อัปเดต form state เท่านั้น, กด "บันทึก" ค่อย call `updateStudent` + บันทึก `StudentHistory`
+- **ปุ่มคืนค่าเดิม**: อยู่ใน hero card (ขอบล่างชิดขวา) แสดงเมื่อ `editing === true`
+
+### Mapping New (`/admin/marketplace/applications/new`)
+- หน้าเต็มสำหรับสร้าง mapping ใหม่ (ไม่ใช่ modal)
+- มี preview hero card + SearchPicker นักเรียน + SearchPicker ตำแหน่งงาน + status/date/note
+- กด "บันทึก" → `addMapping()` แล้ว redirect ไปหน้า detail
 
 ## CSV Import/Export
 
@@ -453,13 +476,13 @@ Sort options: `default` / `newest` (createdAt desc) / `oldest` (createdAt asc) /
 | Applications | `studentId`, `jobId` | |
 | Companies | `id`, `name` | กรองแถวที่ขาด id/name ออกอัตโนมัติ |
 
-### Students CSV Headers (49 คอลัมน์)
+### Students CSV Headers (46 คอลัมน์)
 `no.` `prefix` `name` `lastname` `prefixEn` `nameEn` `lastnameEn` `nickname` `gender` `dob` `nationalId` `passport` `militaryStatus`
 `enroll1_university` `enroll1_studentId` `enroll1_email` `enroll1_faculty` `enroll1_department` `enroll1_major` `enroll1_year` `enroll1_advisor` `enroll1_project` (×3 ชุด: enroll1/2/3)
 `prevSchool` `scholarship` `tel` `email` `lineId` `country`
 `addr_th_houseNo` `addr_th_subdistrict` `addr_th_district` `addr_th_province` `addr_th_postalCode`
 `addr_jp_postalCode` `addr_jp_prefecture` `addr_jp_city` `addr_jp_street` `addr_jp_building`
-`bankName` `bankBranch` `bankAccountNo` `departureDateTH` `arrivalDateJP` `status` `note`
+`departureDateTH` `arrivalDateJP` `status` `note`
 
 ### Applications CSV Export — คอลัมน์อ่านอย่างเดียว
 Export มี `studentName`, `jobTitle`, `companyName` เพิ่มมาด้วย แต่ **import ไม่รับ** 3 คอลัมน์นี้ (เป็นแค่ข้อมูลอ้างอิง)
