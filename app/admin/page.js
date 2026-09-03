@@ -1,229 +1,207 @@
+"use client";
+
 import Link from "next/link";
 import AdminTopBar from "@/components/admin/ui/AdminTopBar";
-import { DEFAULT_STUDENTS } from "@/lib/data/studentData";
-import { DEFAULT_COMPANIES } from "@/lib/data/companyData";
-import { DEFAULT_JOBS } from "@/lib/data/jobData";
-import { NEWS, ACTIVITIES } from "@/lib/config/publicData";
+import { useStudents } from "@/components/admin/contexts/StudentContext";
+import { useCompanies } from "@/components/admin/contexts/CompanyContext";
+import { useJobs } from "@/components/admin/contexts/JobContext";
+import { useMappings } from "@/components/admin/contexts/MappingContext";
+import { useNews } from "@/components/admin/contexts/NewsContext";
+import { useActivities } from "@/components/admin/contexts/ActivitiesContext";
 
-const totalStudents    = DEFAULT_STUDENTS.length;
-const studyingStudents = DEFAULT_STUDENTS.filter((s) => s.status === "กำลังศึกษา").length;
-const internStudents   = DEFAULT_STUDENTS.filter((s) => s.status === "ฝึกงาน").length;
-const graduatedStudents = DEFAULT_STUDENTS.filter((s) => s.status === "จบการศึกษา").length;
+// ── Skeleton pill ─────────────────────────────────────────────────────────────
+function Skel({ w = "w-10", h = "h-3.5" }) {
+  return <span className={`inline-block ${w} ${h} animate-pulse rounded-full bg-surface-muted`} />;
+}
 
-const totalCompanies  = DEFAULT_COMPANIES.length;
-const activeCompanies = DEFAULT_COMPANIES.filter((c) => c.status === "ร่วมมือ").length;
+// ── System card ────────────────────────────────────────────────────────────────
+function SystemCard({ href, icon, title, titleTh, description, features, hover, iconBg, badge, badgeColor, stats, ready }) {
+  return (
+    <Link
+      href={href}
+      className={`card group flex flex-col gap-4 p-6 transition-all duration-200 ${hover}`}
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-3">
+          <span className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-surface-muted text-2xl transition-colors ${iconBg}`}>
+            {icon}
+          </span>
+          <div>
+            <p className="font-bold text-foreground group-hover:text-primary transition-colors">{title}</p>
+            <p className="text-xs text-muted">{titleTh}</p>
+          </div>
+        </div>
+        <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${badgeColor}`}>
+          {ready ? badge : <Skel w="w-14" />}
+        </span>
+      </div>
 
-const totalJobs      = DEFAULT_JOBS.length;
-const openJobs       = DEFAULT_JOBS.filter((j) => j.status === "เปิดรับ").length;
-const totalSlots     = DEFAULT_JOBS.reduce((s, j) => s + (Number(j.slots) || 0), 0);
-const totalApps      = DEFAULT_JOBS.reduce((s, j) => s + (Number(j.applications) || 0), 0);
+      {/* Description */}
+      <p className="text-sm text-muted leading-relaxed">{description}</p>
 
-const systems = [
-  {
-    href: "/admin/students",
-    icon: "🎓",
-    title: "Student Management",
-    titleTh: "ระบบจัดการนักเรียน",
-    description:
-      "บริหารจัดการข้อมูลนักเรียนทั้งหมด ตั้งแต่การลงทะเบียน สถานะการศึกษา เอกสาร ไปจนถึงการจัดการทุนการศึกษา",
-    features: [
-      "ข้อมูลนักเรียน",
-      "เพิ่ม / แก้ไข / ลบ",
-      "ทุนการศึกษา",
-      "จัดการเอกสาร",
-    ],
-    hover: "card-glow-blue hover:bg-blue-50",
-    iconBg: "group-hover:bg-blue-100",
-    badge: `${totalStudents} คน`,
-    badgeColor: "bg-blue-50 text-primary",
-    stats: [
-      {
-        label: "กำลังศึกษา",
-        value: studyingStudents,
-        color: "text-blue-700 bg-blue-100",
-      },
-      {
-        label: "ฝึกงาน",
-        value: internStudents,
-        color: "text-emerald-700 bg-emerald-100",
-      },
-      {
-        label: "จบแล้ว",
-        value: graduatedStudents,
-        color: "text-slate-600 bg-slate-100",
-      },
-    ],
-  },
-  {
-    href: "/admin/marketplace",
-    icon: "💼",
-    title: "Marketplace",
-    titleTh: "ระบบตลาดงาน",
-    description:
-      "จัดการตำแหน่งงานและการฝึกงาน เชื่อมต่อนักเรียนกับบริษัทพาร์ทเนอร์ ติดตามสถานะการสมัครงาน",
-    features: [
-      "ตำแหน่งงานว่าง",
-      "จับคู่นักเรียน-งาน",
-      "ติดตามสถานะ",
-      "รายงานสรุป",
-    ],
-    hover: "card-glow-emerald hover:bg-emerald-50",
-    iconBg: "group-hover:bg-emerald-100",
-    badge: `${openJobs} ตำแหน่งเปิด`,
-    badgeColor: "bg-emerald-50 text-emerald-700",
-    stats: [
-      {
-        label: "ตำแหน่งงานทั้งหมด",
-        value: totalJobs,
-        color: "text-emerald-700 bg-emerald-100",
-      },
-      {
-        label: "ผู้สมัครรวม",
-        value: totalApps,
-        color: "text-blue-700 bg-blue-100",
-      },
-      {
-        label: "ที่นั่งทั้งหมด",
-        value: totalSlots,
-        color: "text-violet-700 bg-violet-100",
-      },
-    ],
-  },
-  {
-    href: "/admin/companies",
-    icon: "🏢",
-    title: "Company Management",
-    titleTh: "ระบบจัดการบริษัท",
-    description:
-      "บริหารข้อมูลบริษัทพาร์ทเนอร์ทั้งหมด จัดการความสัมพันธ์ และติดตามประวัติความร่วมมือ",
-    features: [
-      "ข้อมูลบริษัท",
-      "เพิ่ม / แก้ไข",
-      "ประวัติความร่วมมือ",
-      "ติดต่อประสานงาน",
-    ],
-    hover: "card-glow-violet hover:bg-violet-50",
-    iconBg: "group-hover:bg-violet-100",
-    badge: `${totalCompanies} บริษัท`,
-    badgeColor: "bg-violet-50 text-violet-700",
-    stats: [
-      {
-        label: "ทั้งหมด",
-        value: totalCompanies,
-        color: "text-violet-700 bg-violet-100",
-      },
-      {
-        label: "ร่วมมืออยู่",
-        value: activeCompanies,
-        color: "text-emerald-700 bg-emerald-100",
-      },
-      {
-        label: "รอดำเนินการ",
-        value: DEFAULT_COMPANIES.filter((c) => c.status === "รอดำเนินการ").length,
-        color: "text-amber-700 bg-amber-100",
-      },
-    ],
-  },
-  {
-    href: "/admin/information/news",
-    icon: "📋",
-    title: "Information Management",
-    titleTh: "ระบบจัดการข้อมูลสถาบัน",
-    description:
-      "ดูแลเนื้อหาเว็บไซต์ ประกาศข่าวสาร กิจกรรม แบนเนอร์ คำถามที่พบบ่อย และข้อมูลติดต่อ",
-    features: [
-      "ข่าวสารและกิจกรรม",
-      "แบนเนอร์สไลด์",
-      "คำถามที่พบบ่อย",
-      "ข้อมูลติดต่อ",
-    ],
-    hover: "card-glow-amber hover:bg-amber-50",
-    iconBg: "group-hover:bg-amber-100",
-    badge: "5 หมวดหมู่",
-    badgeColor: "bg-amber-50 text-amber-700",
-    stats: [
-      {
-        label: "ข่าวสาร",
-        value: NEWS.length,
-        color: "text-amber-700 bg-amber-100",
-      },
-      {
-        label: "กิจกรรม",
-        value: ACTIVITIES.length,
-        color: "text-orange-700 bg-orange-100",
-      },
-    ],
-  },
-];
+      {/* Mini stats */}
+      <div className="flex flex-wrap gap-2">
+        {stats.map((s) => (
+          <span key={s.label} className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold ${s.color}`}>
+            {ready
+              ? <span className="text-sm font-extrabold">{s.value}</span>
+              : <Skel w="w-5" h="h-4" />}
+            {s.label}
+          </span>
+        ))}
+      </div>
+
+      {/* Feature tags */}
+      <div className="flex flex-wrap gap-2">
+        {features.map((f) => (
+          <span key={f} className="rounded-lg bg-surface-muted px-2.5 py-1 text-xs font-medium text-foreground">{f}</span>
+        ))}
+      </div>
+    </Link>
+  );
+}
 
 export default function AdminHomePage() {
+  const { students, ready: srReady }    = useStudents();
+  const { companies, ready: coReady }   = useCompanies();
+  const { jobs, ready: jbReady }        = useJobs();
+  const { mappings, ready: mpReady }    = useMappings();
+  const { news, ready: nwReady }        = useNews();
+  const { activities, ready: acReady }  = useActivities();
+
+  // ── Student stats ──────────────────────────────────────────────────────────
+  const totalStudents     = students.length;
+  const studyingStudents  = students.filter((s) => s.status === "กำลังศึกษา").length;
+  const internStudents    = students.filter((s) => s.status === "ฝึกงาน").length;
+  const graduatedStudents = students.filter((s) => s.status === "จบการศึกษา").length;
+
+  // ── Company stats ──────────────────────────────────────────────────────────
+  const totalCompanies  = companies.length;
+  const activeCompanies = companies.filter((c) => c.status === "ร่วมมือ").length;
+  const pendingCompanies = companies.filter((c) => c.status === "รอดำเนินการ").length;
+
+  // ── Job stats ──────────────────────────────────────────────────────────────
+  const totalJobs  = jobs.length;
+  const openJobs   = jobs.filter((j) => j.status === "เปิดรับ").length;
+  const totalSlots = jobs.reduce((s, j) => s + (Number(j.slots) || 0), 0);
+
+  // ── Mapping stats ──────────────────────────────────────────────────────────
+  const totalMappings   = mappings.length;
+  const activeMappings  = mappings.filter((m) => ["สัมภาษณ์", "อนุมัติ", "ฝึกงาน"].includes(m.status)).length;
+
+  // ── Information stats ──────────────────────────────────────────────────────
+  const publishedNews       = news.filter((n) => n.status === "published").length;
+  const publishedActivities = activities.filter((a) => a.status === "published").length;
+
+  const systems = [
+    {
+      href:        "/admin/students",
+      icon:        "🎓",
+      title:       "Student Management",
+      titleTh:     "ระบบจัดการนักเรียน",
+      description: "บริหารจัดการข้อมูลนักเรียนทั้งหมด ตั้งแต่การลงทะเบียน สถานะการศึกษา เอกสาร ไปจนถึงการจัดการทุนการศึกษา",
+      features:    ["ข้อมูลนักเรียน", "เพิ่ม / แก้ไข / ลบ", "ทุนการศึกษา", "จัดการเอกสาร"],
+      hover:       "card-glow-blue hover:bg-blue-50",
+      iconBg:      "group-hover:bg-blue-100",
+      ready:       srReady,
+      badge:       `${totalStudents} คน`,
+      badgeColor:  "bg-blue-50 text-primary",
+      stats: [
+        { label: "กำลังศึกษา", value: studyingStudents,  color: "text-blue-700 bg-blue-100" },
+        { label: "ฝึกงาน",     value: internStudents,    color: "text-emerald-700 bg-emerald-100" },
+        { label: "จบแล้ว",     value: graduatedStudents, color: "text-slate-600 bg-slate-100" },
+      ],
+    },
+    {
+      href:        "/admin/marketplace",
+      icon:        "💼",
+      title:       "Marketplace",
+      titleTh:     "ระบบตลาดงาน",
+      description: "จัดการตำแหน่งงานและการฝึกงาน เชื่อมต่อนักเรียนกับบริษัทพาร์ทเนอร์ ติดตามสถานะการสมัครงาน",
+      features:    ["ตำแหน่งงานว่าง", "จับคู่นักเรียน-งาน", "ติดตามสถานะ", "รายงานสรุป"],
+      hover:       "card-glow-emerald hover:bg-emerald-50",
+      iconBg:      "group-hover:bg-emerald-100",
+      ready:       jbReady && mpReady,
+      badge:       `${openJobs} ตำแหน่งเปิด`,
+      badgeColor:  "bg-emerald-50 text-emerald-700",
+      stats: [
+        { label: "ตำแหน่งงานทั้งหมด", value: totalJobs,     color: "text-emerald-700 bg-emerald-100" },
+        { label: "ที่นั่งทั้งหมด",      value: totalSlots,   color: "text-violet-700 bg-violet-100" },
+        { label: "การสมัครรวม",         value: totalMappings, color: "text-blue-700 bg-blue-100" },
+      ],
+    },
+    {
+      href:        "/admin/companies",
+      icon:        "🏢",
+      title:       "Company Management",
+      titleTh:     "ระบบจัดการบริษัท",
+      description: "บริหารข้อมูลบริษัทพาร์ทเนอร์ทั้งหมด จัดการความสัมพันธ์ และติดตามประวัติความร่วมมือ",
+      features:    ["ข้อมูลบริษัท", "เพิ่ม / แก้ไข", "ประวัติความร่วมมือ", "ติดต่อประสานงาน"],
+      hover:       "card-glow-violet hover:bg-violet-50",
+      iconBg:      "group-hover:bg-violet-100",
+      ready:       coReady,
+      badge:       `${totalCompanies} บริษัท`,
+      badgeColor:  "bg-violet-50 text-violet-700",
+      stats: [
+        { label: "ร่วมมืออยู่",   value: activeCompanies,  color: "text-emerald-700 bg-emerald-100" },
+        { label: "รอดำเนินการ",   value: pendingCompanies, color: "text-amber-700 bg-amber-100" },
+        { label: "ทั้งหมด",       value: totalCompanies,   color: "text-violet-700 bg-violet-100" },
+      ],
+    },
+    {
+      href:        "/admin/information/news",
+      icon:        "📋",
+      title:       "Information Management",
+      titleTh:     "ระบบจัดการข้อมูลสถาบัน",
+      description: "ดูแลเนื้อหาเว็บไซต์ ประกาศข่าวสาร กิจกรรม แบนเนอร์ คำถามที่พบบ่อย และข้อมูลติดต่อ",
+      features:    ["ข่าวสารและกิจกรรม", "แบนเนอร์สไลด์", "คำถามที่พบบ่อย", "ข้อมูลติดต่อ"],
+      hover:       "card-glow-amber hover:bg-amber-50",
+      iconBg:      "group-hover:bg-amber-100",
+      ready:       nwReady && acReady,
+      badge:       `${publishedNews + publishedActivities} เผยแพร่`,
+      badgeColor:  "bg-amber-50 text-amber-700",
+      stats: [
+        { label: "ข่าวสาร",  value: news.length,       color: "text-amber-700 bg-amber-100" },
+        { label: "กิจกรรม",  value: activities.length, color: "text-orange-700 bg-orange-100" },
+        { label: "เผยแพร่",  value: publishedNews + publishedActivities, color: "text-emerald-700 bg-emerald-100" },
+      ],
+    },
+  ];
+
+  const allReady = srReady && coReady && jbReady && mpReady && nwReady && acReady;
+
   return (
     <>
       <AdminTopBar
         title="Main Menu"
-        description="เลือกระบบที่ต้องการจัดการ"
+        description={allReady
+          ? `ภาพรวมระบบทั้งหมด — ${totalStudents} นักเรียน · ${totalCompanies} บริษัท · ${totalJobs} ตำแหน่งงาน`
+          : "กำลังโหลดข้อมูล..."}
       />
 
-      <div className="p-6">
+      <div className="p-6 space-y-4">
+        {/* ── Quick summary strip ── */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            { label: "นักเรียนทั้งหมด", value: totalStudents,  ready: srReady, color: "border-primary",   bg: "bg-blue-50",    text: "text-primary" },
+            { label: "บริษัทพาร์ทเนอร์", value: totalCompanies, ready: coReady, color: "border-violet-500", bg: "bg-violet-50",  text: "text-violet-700" },
+            { label: "ตำแหน่งเปิดรับ",  value: openJobs,       ready: jbReady, color: "border-emerald-500", bg: "bg-emerald-50", text: "text-emerald-700" },
+            { label: "ใบสมัครทั้งหมด",  value: totalMappings,  ready: mpReady, color: "border-amber-500",  bg: "bg-amber-50",   text: "text-amber-700" },
+          ].map((s) => (
+            <div key={s.label} className={`rounded-xl border-l-4 ${s.color} ${s.bg} px-4 py-3`}>
+              <p className={`text-2xl font-extrabold ${s.text}`}>
+                {s.ready ? s.value : <Skel w="w-8" h="h-6" />}
+              </p>
+              <p className="text-xs font-medium text-foreground mt-0.5">{s.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* ── System cards ── */}
         <div className="grid gap-6 md:grid-cols-2">
           {systems.map((sys) => (
-            <Link
-              key={sys.href}
-              href={sys.href}
-              className={`card group flex flex-col gap-4 p-6 transition-all duration-200 ${sys.hover}`}
-            >
-              {/* Header */}
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <span
-                    className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-surface-muted text-2xl transition-colors ${sys.iconBg}`}
-                  >
-                    {sys.icon}
-                  </span>
-                  <div>
-                    <p className="font-bold text-foreground group-hover:text-primary transition-colors">
-                      {sys.title}
-                    </p>
-                    <p className="text-xs text-muted">{sys.titleTh}</p>
-                  </div>
-                </div>
-                <span
-                  className={`rounded-full px-2.5 py-1 text-xs font-medium ${sys.badgeColor}`}
-                >
-                  {sys.badge}
-                </span>
-              </div>
-
-              {/* Description */}
-              <p className="text-sm text-muted leading-relaxed">
-                {sys.description}
-              </p>
-
-              {/* Mini stats */}
-              <div className="flex flex-wrap gap-2">
-                {sys.stats.map((s) => (
-                  <span
-                    key={s.label}
-                    className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold ${s.color}`}
-                  >
-                    <span className="text-sm font-extrabold">{s.value}</span>
-                    {s.label}
-                  </span>
-                ))}
-              </div>
-
-              {/* Feature tags */}
-              <div className="flex flex-wrap gap-2">
-                {sys.features.map((f) => (
-                  <span
-                    key={f}
-                    className="rounded-lg bg-surface-muted px-2.5 py-1 text-xs font-medium text-foreground"
-                  >
-                    {f}
-                  </span>
-                ))}
-              </div>
-            </Link>
+            <SystemCard key={sys.href} {...sys} />
           ))}
         </div>
       </div>

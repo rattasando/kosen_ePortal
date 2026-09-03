@@ -11,20 +11,31 @@ const STATUS_COLOR = {
   ระงับ:       { bar: "bg-red-500",     badge: "bg-red-100 text-red-700" },
 };
 
-const IND_COLORS = [
-  "bg-primary", "bg-sky-500", "bg-violet-500", "bg-amber-500",
-  "bg-emerald-500", "bg-pink-500", "bg-orange-500", "bg-teal-500",
+const IND_PALETTE = [
+  { bar: "bg-primary",     badge: "bg-accent-soft text-primary" },
+  { bar: "bg-sky-500",     badge: "bg-sky-100 text-sky-700" },
+  { bar: "bg-violet-500",  badge: "bg-violet-100 text-violet-700" },
+  { bar: "bg-amber-500",   badge: "bg-amber-100 text-amber-700" },
+  { bar: "bg-emerald-500", badge: "bg-emerald-100 text-emerald-700" },
+  { bar: "bg-rose-500",    badge: "bg-rose-100 text-rose-700" },
+  { bar: "bg-cyan-500",    badge: "bg-cyan-100 text-cyan-700" },
+  { bar: "bg-orange-500",  badge: "bg-orange-100 text-orange-700" },
 ];
 
-function BarRow({ label, count, total, colorClass, badge }) {
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function BarRow({ label, count, total, colorClass, badge, unit = "บริษัท", subLabel }) {
   const pct = total > 0 ? Math.round((count / total) * 100) : 0;
   return (
     <div>
-      <div className="mb-1 flex items-center justify-between text-sm">
-        <span className="font-medium text-foreground truncate max-w-[60%]">{label}</span>
-        <span className="text-muted shrink-0 ml-2 flex items-center gap-1.5">
+      <div className="mb-1 flex items-center justify-between text-sm gap-2">
+        <div className="min-w-0">
+          <span className="font-medium text-foreground truncate block">{label}</span>
+          {subLabel && <span className="text-xs text-muted">{subLabel}</span>}
+        </div>
+        <span className="text-muted shrink-0 flex items-center gap-1.5">
           {badge && <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${badge}`}>{pct}%</span>}
-          {count} บริษัท
+          <span className="text-xs font-semibold text-foreground">{count.toLocaleString()} {unit}</span>
         </span>
       </div>
       <div className="h-2 w-full overflow-hidden rounded-full bg-surface-muted">
@@ -44,6 +55,8 @@ function MiniStat({ label, value, sub, color }) {
   );
 }
 
+// ── Main Page ─────────────────────────────────────────────────────────────────
+
 export default function CompaniesDashboardPage() {
   const { companies, ready } = useCompanies();
 
@@ -58,24 +71,28 @@ export default function CompaniesDashboardPage() {
 
   const total = companies.length;
 
-  // ── Status breakdown ───────────────────────────────────
+  // ── Status breakdown ───────────────────────────────────────────────────────
   const byStatus = Object.entries(
     companies.reduce((acc, c) => ({ ...acc, [c.status]: (acc[c.status] || 0) + 1 }), {})
   ).sort((a, b) => b[1] - a[1]);
 
-  // ── Industry breakdown ─────────────────────────────────
+  // ── Industry breakdown ─────────────────────────────────────────────────────
   const byIndustry = Object.entries(
-    companies.reduce((acc, c) => ({ ...acc, [c.industry]: (acc[c.industry] || 0) + 1 }), {})
+    companies.reduce((acc, c) => {
+      const k = c.industry || "ไม่ระบุ";
+      acc[k] = (acc[k] || 0) + 1;
+      return acc;
+    }, {})
   ).sort((a, b) => b[1] - a[1]);
 
-  // ── Key counts ─────────────────────────────────────────
-  const active      = companies.filter((c) => c.status === "ร่วมมือ").length;
-  const pending     = companies.filter((c) => c.status === "รอดำเนินการ").length;
-  const withMOU     = companies.filter((c) => c.mouStatus === "มี MOU").length;
-  const totalPos    = companies.reduce((s, c) => s + (c.openPositions || 0), 0);
-  const suspended   = companies.filter((c) => c.status === "ระงับ").length;
+  // ── Key counts ─────────────────────────────────────────────────────────────
+  const active    = companies.filter((c) => c.status === "ร่วมมือ").length;
+  const pending   = companies.filter((c) => c.status === "รอดำเนินการ").length;
+  const suspended = companies.filter((c) => c.status === "ระงับ").length;
+  const withMOU   = companies.filter((c) => c.mouStatus === "มี MOU").length;
+  const totalPos  = companies.reduce((s, c) => s + (c.openPositions || 0), 0);
 
-  // ── Expiring MOU (within 6 months) ────────────────────
+  // ── Expiring MOU (within 6 months) ────────────────────────────────────────
   const today = new Date();
   const sixMonths = new Date(today);
   sixMonths.setMonth(sixMonths.getMonth() + 6);
@@ -85,14 +102,16 @@ export default function CompaniesDashboardPage() {
     return d >= today && d <= sixMonths;
   });
 
-  // ── Top by open positions ──────────────────────────────
+  // ── Top by open positions ──────────────────────────────────────────────────
   const topByPositions = [...companies]
     .filter((c) => c.openPositions > 0)
     .sort((a, b) => b.openPositions - a.openPositions)
     .slice(0, 5);
 
-  // ── Recently added (last 5) ────────────────────────────
-  const recentCompanies = [...companies].slice(-5).reverse();
+  // ── Recently added (createdAt desc) ───────────────────────────────────────
+  const recentCompanies = [...companies]
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+    .slice(0, 6);
 
   return (
     <>
@@ -105,15 +124,16 @@ export default function CompaniesDashboardPage() {
 
         {/* ── 1. Stat Cards ── */}
         <div className="admin-stat-grid">
-          <StatCard label="บริษัททั้งหมด"       value={total}          change="ในระบบทั้งหมด"                              icon="🏢" />
-          <StatCard label="ร่วมมืออยู่"          value={active}         change={`${Math.round(active/total*100)}% ของทั้งหมด`} icon="🤝" />
-          <StatCard label="มี MOU"               value={withMOU}        change={`${Math.round(withMOU/total*100)}% มีสัญญา`}   icon="📋" />
-          <StatCard label="ตำแหน่งเปิดรับรวม"   value={totalPos}       change="จากบริษัทที่ร่วมมือ"                        icon="💼" />
+          <StatCard label="บริษัททั้งหมด"     value={total}    change="ในระบบทั้งหมด"                                                       icon="🏢" />
+          <StatCard label="ร่วมมืออยู่"        value={active}   change={total > 0 ? `${Math.round(active/total*100)}% ของทั้งหมด` : "—"}   icon="🤝" />
+          <StatCard label="มี MOU"             value={withMOU}  change={total > 0 ? `${Math.round(withMOU/total*100)}% มีสัญญา` : "—"}       icon="📋" />
+          <StatCard label="ตำแหน่งเปิดรับรวม" value={totalPos}  change="จากบริษัทที่ร่วมมือ"                                               icon="💼" />
         </div>
 
         {/* ── 2. Status + Industry ── */}
         <div className="grid gap-6 lg:grid-cols-2">
 
+          {/* Status */}
           <div className="card p-5 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="font-semibold text-foreground">สถานะความร่วมมือ</h2>
@@ -126,9 +146,10 @@ export default function CompaniesDashboardPage() {
                   badge={STATUS_COLOR[status]?.badge} />
               ))}
             </div>
-            <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border text-center">
+            {/* Summary tiles */}
+            <div className="grid grid-cols-3 gap-2 pt-2 border-t border-border">
               {byStatus.map(([status, count]) => (
-                <div key={status}>
+                <div key={status} className="text-center">
                   <p className="text-lg font-extrabold text-foreground">{count}</p>
                   <p className="text-xs text-muted">{status}</p>
                 </div>
@@ -136,6 +157,7 @@ export default function CompaniesDashboardPage() {
             </div>
           </div>
 
+          {/* Industry */}
           <div className="card p-5 space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="font-semibold text-foreground">อุตสาหกรรม</h2>
@@ -144,7 +166,8 @@ export default function CompaniesDashboardPage() {
             <div className="space-y-3">
               {byIndustry.map(([ind, count], i) => (
                 <BarRow key={ind} label={ind} count={count} total={total}
-                  colorClass={IND_COLORS[i % IND_COLORS.length]} />
+                  colorClass={IND_PALETTE[i % IND_PALETTE.length].bar}
+                  badge={IND_PALETTE[i % IND_PALETTE.length].badge} />
               ))}
             </div>
           </div>
@@ -152,8 +175,10 @@ export default function CompaniesDashboardPage() {
 
         {/* ── 3. Mini stats + MOU expiring ── */}
         <div className="grid gap-6 lg:grid-cols-3">
-          <div className="space-y-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">สรุปสถานะ</h2>
+
+          {/* Mini stats */}
+          <div className="card p-5 space-y-3">
+            <h2 className="font-semibold text-foreground text-sm">สรุปสถานะ</h2>
             <div className="grid grid-cols-2 gap-3">
               <MiniStat label="ร่วมมืออยู่"  value={active}    sub="บริษัท" color="border-emerald-500" />
               <MiniStat label="รอดำเนินการ"  value={pending}   sub="บริษัท" color="border-amber-400" />
@@ -203,62 +228,78 @@ export default function CompaniesDashboardPage() {
                 const maxPos = topByPositions[0].openPositions;
                 const pct = Math.round((c.openPositions / maxPos) * 100);
                 return (
-                  <div key={c.id} className="flex items-center gap-3">
-                    <span className="w-5 text-xs font-bold text-muted text-center">{i + 1}</span>
+                  <Link key={c.id} href={`/admin/companies/${c.id}`}
+                    className="flex items-center gap-3 rounded-xl border border-border px-4 py-2.5 hover:border-primary hover:bg-accent-soft/30 transition-colors">
+                    <span className="w-5 shrink-0 text-xs font-bold text-muted text-center">{i + 1}</span>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-0.5">
-                        <Link href={`/admin/companies/${c.id}`} className="text-sm font-semibold text-foreground hover:text-primary truncate transition-colors">{c.name}</Link>
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-sm font-semibold text-foreground truncate">{c.name}</p>
                         <span className="text-sm font-bold text-primary ml-2 shrink-0">{c.openPositions} คน</span>
                       </div>
                       <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-muted">
                         <div className="h-1.5 rounded-full bg-primary transition-all duration-500" style={{ width: `${pct}%` }} />
                       </div>
                     </div>
-                  </div>
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_COLOR[c.status]?.badge ?? "bg-gray-100 text-gray-600"}`}>
+                      {c.status}
+                    </span>
+                  </Link>
                 );
               })}
             </div>
           </div>
         )}
 
-        {/* ── 5. Recent companies table ── */}
-        <div className="space-y-3">
+        {/* ── 5. Recent companies (card grid) ── */}
+        <div className="card p-5 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted">บริษัทล่าสุดในระบบ</h2>
-            <Link href="/admin/companies/list" className="text-xs font-medium text-primary hover:underline">ดูทั้งหมด →</Link>
+            <h2 className="font-semibold text-foreground">🏢 บริษัทล่าสุดในระบบ</h2>
+            <Link href="/admin/companies/list" className="text-xs font-medium text-primary hover:underline">
+              ดูทั้งหมด ({total}) →
+            </Link>
           </div>
-          <div className="overflow-hidden rounded-xl border border-border">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-surface-muted">
-                  {["บริษัท", "อุตสาหกรรม", "จังหวัด", "ตำแหน่งเปิด", "MOU", "สถานะ"].map((h) => (
-                    <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-muted">{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {recentCompanies.map((c, i) => (
-                  <tr key={c.id} className={`border-b border-border last:border-0 ${i % 2 !== 0 ? "bg-surface-muted/30" : ""}`}>
-                    <td className="px-4 py-2.5 max-w-[200px]">
-                      <Link href={`/admin/companies/${c.id}`} className="font-semibold text-foreground hover:text-primary transition-colors line-clamp-1">{c.name}</Link>
-                    </td>
-                    <td className="px-4 py-2.5 text-muted">{c.industry}</td>
-                    <td className="px-4 py-2.5 text-muted">{c.province}</td>
-                    <td className="px-4 py-2.5 text-center font-bold text-primary">{c.openPositions}</td>
-                    <td className="px-4 py-2.5">
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${c.mouStatus === "มี MOU" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-500"}`}>
-                        {c.mouStatus}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_COLOR[c.status]?.badge ?? "bg-gray-100 text-gray-600"}`}>
-                        {c.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {recentCompanies.map((c) => (
+              <Link
+                key={c.id}
+                href={`/admin/companies/${c.id}`}
+                className="flex flex-col gap-2 rounded-xl border border-border px-4 py-3 hover:border-primary hover:bg-accent-soft/30 transition-colors"
+              >
+                {/* ชื่อ + สถานะ */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-violet-100 text-sm font-bold text-violet-600">
+                      {c.name.charAt(0)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-foreground">{c.name}</p>
+                      <p className="font-mono text-[10px] text-muted">{c.id}</p>
+                    </div>
+                  </div>
+                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_COLOR[c.status]?.badge ?? "bg-gray-100 text-gray-600"}`}>
+                    {c.status}
+                  </span>
+                </div>
+                {/* อุตสาหกรรม + จังหวัด */}
+                {(c.industry || c.province) && (
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="text-[10px] text-muted shrink-0">🏭</span>
+                    <p className="truncate text-xs text-muted">
+                      {[c.industry, c.province].filter(Boolean).join(" · ")}
+                    </p>
+                  </div>
+                )}
+                {/* MOU + ตำแหน่งเปิด */}
+                <div className="flex items-center gap-2">
+                  {c.mouStatus === "มี MOU" && (
+                    <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700">มี MOU</span>
+                  )}
+                  {c.openPositions > 0 && (
+                    <span className="text-[10px] font-medium text-primary">เปิดรับ {c.openPositions} คน</span>
+                  )}
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
 
