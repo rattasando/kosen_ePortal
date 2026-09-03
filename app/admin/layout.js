@@ -1,6 +1,7 @@
 import AdminSidebar from "@/components/admin/ui/AdminSidebar";
 import AdminHeader from "@/components/admin/ui/AdminHeader";
 import AdminGuard from "@/components/admin/ui/AdminGuard";
+import DbHealthCheck from "@/components/admin/ui/DbHealthCheck";
 import { LanguageProvider } from "@/components/admin/contexts/LanguageContext";
 import { StudentProvider } from "@/components/admin/contexts/StudentContext";
 import { StudentHistoryProvider } from "@/components/admin/contexts/StudentHistoryContext";
@@ -24,6 +25,7 @@ import { PageTitleProvider } from "@/components/admin/contexts/PageTitleContext"
 
 export default function AdminLayout({ children }) {
   return (
+    <DbHealthCheck>
     <AdminGuard>
       <LanguageProvider>
       <StudentHistoryProvider>
@@ -73,5 +75,6 @@ export default function AdminLayout({ children }) {
       </StudentHistoryProvider>
       </LanguageProvider>
     </AdminGuard>
+    </DbHealthCheck>
   );
 }
