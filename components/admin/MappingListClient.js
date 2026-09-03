@@ -1186,6 +1186,8 @@ export default function MappingListClient() {
     if (filterField  !== "ทั้งหมด") list = list.filter(m => m.job?.field === filterField);
     if (filterUniv   !== "ทั้งหมด") list = list.filter(m => m.student?.university === filterUniv);
     switch (sortBy) {
+      case "newest":    list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)); break;
+      case "oldest":    list.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)); break;
       case "date-desc": list.sort((a, b) => (b.appliedDate ?? "").localeCompare(a.appliedDate ?? "")); break;
       case "date-asc":  list.sort((a, b) => (a.appliedDate ?? "").localeCompare(b.appliedDate ?? "")); break;
       case "student":   list.sort((a, b) => ((a.student?.name ?? "") + (a.student?.lastname ?? "")).localeCompare((b.student?.name ?? "") + (b.student?.lastname ?? ""), "th")); break;
@@ -1548,6 +1550,8 @@ export default function MappingListClient() {
             <label className={labelCls}>{t("common.sortBy")}</label>
             <select value={sortBy} onChange={e => { setSortBy(e.target.value); setPage(1); }} className={selectCls}>
               <option value="default">{t("common.sortBy")}</option>
+              <option value="newest">เพิ่มล่าสุดก่อน</option>
+              <option value="oldest">เพิ่มเก่าสุดก่อน</option>
               <option value="date-desc">{t("mapping.sort.dateDesc")}</option>
               <option value="date-asc">{t("mapping.sort.dateAsc")}</option>
               <option value="student">{t("mapping.sort.student")}</option>
@@ -1583,7 +1587,7 @@ export default function MappingListClient() {
           )}
           {sortBy !== "default" && (
             <button onClick={() => { setSortBy("default"); setPage(1); }} className={chipBase}>
-              ⇅ {{"job-asc": t("mapping.sort.jobAsc"), "date-desc": t("mapping.sort.dateDesc"), "date-asc": t("mapping.sort.dateAsc"), "student": t("mapping.sort.student")}[sortBy]}<XIcon />
+              ⇅ {{ "newest": "เพิ่มล่าสุด", "oldest": "เพิ่มเก่าสุด", "job-asc": t("mapping.sort.jobAsc"), "date-desc": t("mapping.sort.dateDesc"), "date-asc": t("mapping.sort.dateAsc"), "student": t("mapping.sort.student") }[sortBy]}<XIcon />
             </button>
           )}
           {keywords.map(kw => (
