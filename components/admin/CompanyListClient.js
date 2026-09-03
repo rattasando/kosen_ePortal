@@ -18,6 +18,16 @@ const MOU_STATUSES  = ["มี MOU", "ไม่มี MOU"];
 const TYPES         = ["บริษัทจำกัด", "บริษัทมหาชนจำกัด", "รัฐวิสาหกิจ", "หน่วยงานวิจัย"];
 const PAGE_SIZE_OPTIONS = [10, 20, 30, 50];
 
+const SORT_OPTIONS = [
+  { value: "default",        label: "เรียงลำดับ (ค่าเริ่มต้น)" },
+  { value: "newest",         label: "เพิ่มล่าสุดก่อน" },
+  { value: "oldest",         label: "เพิ่มเก่าสุดก่อน" },
+  { value: "name-az",        label: "ชื่อ ก → ฮ" },
+  { value: "name-za",        label: "ชื่อ ฮ → ก" },
+  { value: "positions-desc", label: "เปิดรับมากสุด" },
+  { value: "updated",        label: "อัปเดตล่าสุด" },
+];
+
 const STATUS_CONFIG = {
   ร่วมมือ:     { color: "bg-emerald-100 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
   รอดำเนินการ: { color: "bg-amber-100 text-amber-700 border-amber-200",       dot: "bg-amber-500"   },
@@ -28,6 +38,7 @@ const MOU_CONFIG = {
   "ไม่มี MOU": "bg-gray-100 text-gray-500 border-gray-200",
 };
 
+const inputCls  = "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft placeholder:text-muted";
 const selectCls = "rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-accent-soft";
 const labelCls  = "text-xs font-medium text-foreground";
 const chipBase  = "inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-accent-soft px-2.5 py-1 text-xs font-semibold text-primary hover:border-red-400 hover:bg-red-50 hover:text-red-500 transition-colors";
@@ -457,6 +468,8 @@ export default function CompanyListClient() {
   const [filterStatus,   setFilterStatus]   = useState(() => loadFilters().filterStatus   ?? "ทั้งหมด");
   const [filterIndustry, setFilterIndustry] = useState(() => loadFilters().filterIndustry ?? "ทั้งหมด");
   const [filterMOU,      setFilterMOU]      = useState(() => loadFilters().filterMOU      ?? "ทั้งหมด");
+  const [filterType,     setFilterType]     = useState(() => loadFilters().filterType     ?? "ทั้งหมด");
+  const [sortBy,         setSortBy]         = useState(() => loadFilters().sortBy         ?? "default");
 
   // ── Pagination ──
   const [page,     setPage]     = useState(1);
@@ -474,8 +487,8 @@ export default function CompanyListClient() {
   const resetPage = useCallback(() => setPage(1), []);
 
   useEffect(() => {
-    saveFilters({ keywords, filterStatus, filterIndustry, filterMOU });
-  }, [keywords, filterStatus, filterIndustry, filterMOU]);
+    saveFilters({ keywords, filterStatus, filterIndustry, filterMOU, filterType, sortBy });
+  }, [keywords, filterStatus, filterIndustry, filterMOU, filterType, sortBy]);
 
   // ── Keyword search ──
   const addKeyword = (kw) => {
@@ -495,20 +508,41 @@ export default function CompanyListClient() {
       s(c.type).includes(q) || s(c.country).includes(q) || s(c.id).includes(q);
   };
 
-  const filtered = companies.filter((c) => {
-    const matchKw   = keywords.length === 0 || keywords.every((kw) => matchField(c, kw.toLowerCase()));
-    const matchLive = !searchInput.trim() || matchField(c, searchInput.trim().toLowerCase());
-    const matchSt   = filterStatus   === "ทั้งหมด" || c.status   === filterStatus;
-    const matchInd  = filterIndustry === "ทั้งหมด" || c.industry === filterIndustry;
-    const matchMou  = filterMOU      === "ทั้งหมด" || c.mouStatus=== filterMOU;
-    return matchKw && matchLive && matchSt && matchInd && matchMou;
-  });
+  const filtered = (() => {
+    let list = companies.filter((c) => {
+      const matchKw   = keywords.length === 0 || keywords.every((kw) => matchField(c, kw.toLowerCase()));
+      const matchLive = !searchInput.trim() || matchField(c, searchInput.trim().toLowerCase());
+      const matchSt   = filterStatus   === "ทั้งหมด" || c.status    === filterStatus;
+      const matchInd  = filterIndustry === "ทั้งหมด" || c.industry  === filterIndustry;
+      const matchMou  = filterMOU      === "ทั้งหมด" || c.mouStatus === filterMOU;
+      const matchType = filterType     === "ทั้งหมด" || c.type      === filterType;
+      return matchKw && matchLive && matchSt && matchInd && matchMou && matchType;
+    });
+    // Apply sort
+    switch (sortBy) {
+      case "newest":         list = [...list].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)); break;
+      case "oldest":         list = [...list].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)); break;
+      case "name-az":        list = [...list].sort((a, b) => (a.name || "").localeCompare(b.name || "", "th")); break;
+      case "name-za":        list = [...list].sort((a, b) => (b.name || "").localeCompare(a.name || "", "th")); break;
+      case "positions-desc": list = [...list].sort((a, b) => (b.openPositions || 0) - (a.openPositions || 0)); break;
+      case "updated":        list = [...list].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)); break;
+      default: break;
+    }
+    return list;
+  })();
 
-  const hasFilter = keywords.length > 0 || filterStatus !== "ทั้งหมด" || filterIndustry !== "ทั้งหมด" || filterMOU !== "ทั้งหมด";
+  const hasFilter = keywords.length > 0
+    || filterStatus   !== "ทั้งหมด"
+    || filterIndustry !== "ทั้งหมด"
+    || filterMOU      !== "ทั้งหมด"
+    || filterType     !== "ทั้งหมด"
+    || sortBy         !== "default";
 
   const clearFilters = () => {
     setKeywords([]); setSearchInput("");
-    setFilterStatus("ทั้งหมด"); setFilterIndustry("ทั้งหมด"); setFilterMOU("ทั้งหมด");
+    setFilterStatus("ทั้งหมด"); setFilterIndustry("ทั้งหมด");
+    setFilterMOU("ทั้งหมด");    setFilterType("ทั้งหมด");
+    setSortBy("default");
     resetPage();
   };
 
@@ -583,11 +617,24 @@ export default function CompanyListClient() {
         </div>
       )}
 
-      {/* ── Status pills ── */}
+      {/* ── Status pills (count สะท้อน filter อื่นๆ แต่ไม่ filter status เอง) ── */}
+      {(() => {
+        const baseList = companies.filter((c) => {
+          const matchKw   = keywords.length === 0 || keywords.every((kw) => matchField(c, kw.toLowerCase()));
+          const matchLive = !searchInput.trim() || matchField(c, searchInput.trim().toLowerCase());
+          const matchInd  = filterIndustry === "ทั้งหมด" || c.industry  === filterIndustry;
+          const matchMou  = filterMOU      === "ทั้งหมด" || c.mouStatus === filterMOU;
+          const matchType = filterType     === "ทั้งหมด" || c.type      === filterType;
+          return matchKw && matchLive && matchInd && matchMou && matchType;
+        });
+        const statusCounts = Object.fromEntries(
+          STATUSES.map((s) => [s, baseList.filter((c) => c.status === s).length])
+        );
+        return (
       <div className="flex flex-wrap gap-2">
         {[
-          { key: "ทั้งหมด", label: "ทั้งหมด", count: companies.length, color: "bg-surface-muted border-border text-foreground", dot: "bg-gray-400" },
-          ...STATUSES.map((s) => ({ key: s, label: s, count: companies.filter((c) => c.status === s).length, ...STATUS_CONFIG[s] })),
+          { key: "ทั้งหมด", label: "ทั้งหมด", count: baseList.length, color: "bg-surface-muted border-border text-foreground", dot: "bg-gray-400" },
+          ...STATUSES.map((s) => ({ key: s, label: s, count: statusCounts[s] ?? 0, ...STATUS_CONFIG[s] })),
         ].map(({ key, label, count, color, dot }) => (
           <button key={key}
             onClick={() => { setFilterStatus(filterStatus === key ? "ทั้งหมด" : key); resetPage(); }}
@@ -602,6 +649,8 @@ export default function CompanyListClient() {
           </button>
         ))}
       </div>
+      );
+    })()}
 
       {/* ── Search + Action buttons ── */}
       <div className="flex flex-col gap-3">
@@ -663,10 +712,23 @@ export default function CompanyListClient() {
             </select>
           </div>
           <div className="flex flex-col gap-0.5">
+            <label className={labelCls}>ประเภทนิติบุคคล</label>
+            <select value={filterType} onChange={(e) => { setFilterType(e.target.value); resetPage(); }} className={selectCls}>
+              <option value="ทั้งหมด">🏛 ประเภททั้งหมด</option>
+              {TYPES.map((t) => <option key={t}>{t}</option>)}
+            </select>
+          </div>
+          <div className="flex flex-col gap-0.5">
             <label className={labelCls}>MOU</label>
             <select value={filterMOU} onChange={(e) => { setFilterMOU(e.target.value); resetPage(); }} className={selectCls}>
               <option value="ทั้งหมด">📄 MOU ทั้งหมด</option>
               {MOU_STATUSES.map((s) => <option key={s}>{s}</option>)}
+            </select>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className={labelCls}>เรียงลำดับ</label>
+            <select value={sortBy} onChange={(e) => { setSortBy(e.target.value); resetPage(); }} className={selectCls}>
+              {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
         </div>
@@ -686,9 +748,19 @@ export default function CompanyListClient() {
               🏭 {filterIndustry} <XIcon />
             </button>
           )}
+          {filterType !== "ทั้งหมด" && (
+            <button onClick={() => { setFilterType("ทั้งหมด"); resetPage(); }} className={chipBase}>
+              🏛 {filterType} <XIcon />
+            </button>
+          )}
           {filterMOU !== "ทั้งหมด" && (
             <button onClick={() => { setFilterMOU("ทั้งหมด"); resetPage(); }} className={chipBase}>
               📄 {filterMOU} <XIcon />
+            </button>
+          )}
+          {sortBy !== "default" && (
+            <button onClick={() => { setSortBy("default"); resetPage(); }} className={chipBase}>
+              ↕ {SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? sortBy} <XIcon />
             </button>
           )}
           {keywords.map((kw) => (
