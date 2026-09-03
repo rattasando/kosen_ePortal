@@ -15,26 +15,21 @@ function Skel({ w = "w-10", h = "h-3.5" }) {
 }
 
 // ── System card ────────────────────────────────────────────────────────────────
-function SystemCard({ href, icon, title, titleTh, description, features, hover, iconBg, badge, badgeColor, stats, ready }) {
+function SystemCard({ href, icon, title, titleTh, description, features, hover, iconBg, stats, ready }) {
   return (
     <Link
       href={href}
       className={`card group flex flex-col gap-4 p-6 transition-all duration-200 ${hover}`}
     >
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-3">
-          <span className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-surface-muted text-2xl transition-colors ${iconBg}`}>
-            {icon}
-          </span>
-          <div>
-            <p className="font-bold text-foreground group-hover:text-primary transition-colors">{title}</p>
-            <p className="text-xs text-muted">{titleTh}</p>
-          </div>
-        </div>
-        <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${badgeColor}`}>
-          {ready ? badge : <Skel w="w-14" />}
+      <div className="flex items-center gap-3">
+        <span className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-surface-muted text-2xl transition-colors ${iconBg}`}>
+          {icon}
         </span>
+        <div>
+          <p className="font-bold text-foreground group-hover:text-primary transition-colors">{title}</p>
+          <p className="text-xs text-muted">{titleTh}</p>
+        </div>
       </div>
 
       {/* Description */}
