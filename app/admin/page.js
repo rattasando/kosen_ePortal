@@ -71,14 +71,13 @@ export default function AdminHomePage() {
   const { activities, ready: acReady }  = useActivities();
 
   // ── Student stats ──────────────────────────────────────────────────────────
-  const totalStudents     = students.length;
   const studyingStudents  = students.filter((s) => s.status === "กำลังศึกษา").length;
   const internStudents    = students.filter((s) => s.status === "ฝึกงาน").length;
   const graduatedStudents = students.filter((s) => s.status === "จบการศึกษา").length;
 
   // ── Company stats ──────────────────────────────────────────────────────────
-  const totalCompanies  = companies.length;
-  const activeCompanies = companies.filter((c) => c.status === "ร่วมมือ").length;
+  const totalCompanies   = companies.length;
+  const activeCompanies  = companies.filter((c) => c.status === "ร่วมมือ").length;
   const pendingCompanies = companies.filter((c) => c.status === "รอดำเนินการ").length;
 
   // ── Job stats ──────────────────────────────────────────────────────────────
@@ -87,8 +86,8 @@ export default function AdminHomePage() {
   const totalSlots = jobs.reduce((s, j) => s + (Number(j.slots) || 0), 0);
 
   // ── Mapping stats ──────────────────────────────────────────────────────────
-  const totalMappings   = mappings.length;
-  const activeMappings  = mappings.filter((m) => ["สัมภาษณ์", "อนุมัติ", "ฝึกงาน"].includes(m.status)).length;
+  const totalMappings  = mappings.length;
+  const activeMappings = mappings.filter((m) => ["สัมภาษณ์", "อนุมัติ", "ฝึกงาน"].includes(m.status)).length;
 
   // ── Information stats ──────────────────────────────────────────────────────
   const publishedNews       = news.filter((n) => n.status === "published").length;
@@ -105,8 +104,8 @@ export default function AdminHomePage() {
       hover:       "card-glow-blue hover:bg-blue-50",
       iconBg:      "group-hover:bg-blue-100",
       ready:       srReady,
-      badge:       `${totalStudents} คน`,
-      badgeColor:  "bg-blue-50 text-primary",
+      badge:       internStudents > 0 ? `${internStudents} กำลังฝึกงาน` : `${studyingStudents} กำลังศึกษา`,
+      badgeColor:  internStudents > 0 ? "bg-emerald-50 text-emerald-700" : "bg-blue-50 text-primary",
       stats: [
         { label: "กำลังศึกษา", value: studyingStudents,  color: "text-blue-700 bg-blue-100" },
         { label: "ฝึกงาน",     value: internStudents,    color: "text-emerald-700 bg-emerald-100" },
@@ -123,8 +122,8 @@ export default function AdminHomePage() {
       hover:       "card-glow-emerald hover:bg-emerald-50",
       iconBg:      "group-hover:bg-emerald-100",
       ready:       jbReady && mpReady,
-      badge:       `${openJobs} ตำแหน่งเปิด`,
-      badgeColor:  "bg-emerald-50 text-emerald-700",
+      badge:       activeMappings > 0 ? `${activeMappings} กำลังดำเนินการ` : `${openJobs} ตำแหน่งเปิด`,
+      badgeColor:  activeMappings > 0 ? "bg-blue-50 text-primary" : "bg-emerald-50 text-emerald-700",
       stats: [
         { label: "ตำแหน่งงานทั้งหมด", value: totalJobs,     color: "text-emerald-700 bg-emerald-100" },
         { label: "ที่นั่งทั้งหมด",      value: totalSlots,   color: "text-violet-700 bg-violet-100" },
@@ -141,8 +140,8 @@ export default function AdminHomePage() {
       hover:       "card-glow-violet hover:bg-violet-50",
       iconBg:      "group-hover:bg-violet-100",
       ready:       coReady,
-      badge:       `${totalCompanies} บริษัท`,
-      badgeColor:  "bg-violet-50 text-violet-700",
+      badge:       `${activeCompanies} ร่วมมืออยู่`,
+      badgeColor:  "bg-emerald-50 text-emerald-700",
       stats: [
         { label: "ร่วมมืออยู่",   value: activeCompanies,  color: "text-emerald-700 bg-emerald-100" },
         { label: "รอดำเนินการ",   value: pendingCompanies, color: "text-amber-700 bg-amber-100" },
@@ -159,8 +158,8 @@ export default function AdminHomePage() {
       hover:       "card-glow-amber hover:bg-amber-50",
       iconBg:      "group-hover:bg-amber-100",
       ready:       nwReady && acReady,
-      badge:       `${publishedNews + publishedActivities} เผยแพร่`,
-      badgeColor:  "bg-amber-50 text-amber-700",
+      badge:       `${publishedNews + publishedActivities} เผยแพร่แล้ว`,
+      badgeColor:  "bg-emerald-50 text-emerald-700",
       stats: [
         { label: "ข่าวสาร",  value: news.length,       color: "text-amber-700 bg-amber-100" },
         { label: "กิจกรรม",  value: activities.length, color: "text-orange-700 bg-orange-100" },
@@ -169,35 +168,11 @@ export default function AdminHomePage() {
     },
   ];
 
-  const allReady = srReady && coReady && jbReady && mpReady && nwReady && acReady;
-
   return (
     <>
-      <AdminTopBar
-        title="Main Menu"
-        description={allReady
-          ? `ภาพรวมระบบทั้งหมด — ${totalStudents} นักเรียน · ${totalCompanies} บริษัท · ${totalJobs} ตำแหน่งงาน`
-          : "กำลังโหลดข้อมูล..."}
-      />
+      <AdminTopBar title="Main Menu" />
 
-      <div className="p-6 space-y-4">
-        {/* ── Quick summary strip ── */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {[
-            { label: "นักเรียนทั้งหมด", value: totalStudents,  ready: srReady, color: "border-primary",   bg: "bg-blue-50",    text: "text-primary" },
-            { label: "บริษัทพาร์ทเนอร์", value: totalCompanies, ready: coReady, color: "border-violet-500", bg: "bg-violet-50",  text: "text-violet-700" },
-            { label: "ตำแหน่งเปิดรับ",  value: openJobs,       ready: jbReady, color: "border-emerald-500", bg: "bg-emerald-50", text: "text-emerald-700" },
-            { label: "ใบสมัครทั้งหมด",  value: totalMappings,  ready: mpReady, color: "border-amber-500",  bg: "bg-amber-50",   text: "text-amber-700" },
-          ].map((s) => (
-            <div key={s.label} className={`rounded-xl border-l-4 ${s.color} ${s.bg} px-4 py-3`}>
-              <p className={`text-2xl font-extrabold ${s.text}`}>
-                {s.ready ? s.value : <Skel w="w-8" h="h-6" />}
-              </p>
-              <p className="text-xs font-medium text-foreground mt-0.5">{s.label}</p>
-            </div>
-          ))}
-        </div>
-
+      <div className="p-6">
         {/* ── System cards ── */}
         <div className="grid gap-6 md:grid-cols-2">
           {systems.map((sys) => (
