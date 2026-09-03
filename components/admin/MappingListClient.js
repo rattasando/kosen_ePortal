@@ -1290,8 +1290,8 @@ export default function MappingListClient() {
           return (
             <>
               <p className="text-[10px] font-mono text-muted/60 mb-0.5">{s.id}</p>
-              <Link href={`/admin/students/${s.id}`} onClick={e => e.stopPropagation()}
-                className="text-xs font-semibold text-foreground hover:text-primary hover:underline transition-colors line-clamp-1">
+              <Link href={`/admin/marketplace/applications/${m.id}`} onClick={e => e.stopPropagation()}
+                className="text-xs font-semibold text-foreground hover:text-primary transition-colors line-clamp-1">
                 <HighlightText text={`${s.prefix}${s.name} ${s.lastname}`} terms={activeTerms} />
               </Link>
               {enroll?.university && (
@@ -1318,8 +1318,8 @@ export default function MappingListClient() {
         {j ? (
           <>
             <p className="text-[10px] font-mono text-muted/60 mb-0.5">{j.id}</p>
-            <Link href={`/admin/marketplace/job-positions/${j.id}`} onClick={e => e.stopPropagation()}
-              className="text-xs font-semibold text-foreground hover:text-primary hover:underline transition-colors line-clamp-1">
+            <Link href={`/admin/marketplace/applications/${m.id}`} onClick={e => e.stopPropagation()}
+              className="text-xs font-semibold text-foreground hover:text-primary transition-colors line-clamp-1">
               <HighlightText text={j.title} terms={activeTerms} />
             </Link>
             <p className="text-[11px] text-muted truncate">
@@ -1504,7 +1504,7 @@ export default function MappingListClient() {
               </svg>
               {t("mapping.import")}
             </button>
-            <button onClick={() => setShowAdd(true)}
+            <button onClick={() => router.push("/admin/marketplace/applications/new")}
               className="btn-primary inline-flex items-center gap-1.5 whitespace-nowrap">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
