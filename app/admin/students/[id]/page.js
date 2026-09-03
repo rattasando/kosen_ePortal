@@ -1203,23 +1203,6 @@ function StudentDetail({ student, students, updateStudent, deleteStudent, histor
                                 </Section>
                             </div>
 
-                            {/* บัญชีธนาคาร */}
-                            <Section icon="🏦" title="บัญชีธนาคาร" description="บัญชีรับทุนการศึกษา">
-                                <div className="grid gap-4 sm:grid-cols-3">
-                                    <EField label="ธนาคาร">
-                                        <input type="text" value={form.bankName ?? ""} onChange={setT("bankName", onlyThaiText)} readOnly={!editing}
-                                            className={iCls} />
-                                    </EField>
-                                    <EField label="สาขา">
-                                        <input type="text" value={form.bankBranch ?? ""} onChange={setT("bankBranch", onlyThaiText)} readOnly={!editing}
-                                            className={iCls} />
-                                    </EField>
-                                    <EField label="เลขที่บัญชี" hint={editing ? "10 หลัก เช่น 000-0-00000-0" : undefined}>
-                                        <input type="text" value={form.bankAccountNo ?? ""} onChange={setT("bankAccountNo", formatThaiBankAccount)} readOnly={!editing}
-                                            maxLength={13} className={iCls} inputMode="numeric" />
-                                    </EField>
-                                </div>
-                            </Section>
 
                             {/* การเดินทาง */}
                             <Section icon="✈️" title="การเดินทาง" description="ข้อมูลวันเดินทางไป-กลับ">

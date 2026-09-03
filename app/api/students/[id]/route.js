@@ -24,7 +24,6 @@ const STUDENT_FIELDS = [
   "addrThHouseNo","addrThSubdistrict","addrThDistrict","addrThProvince","addrThPostalCode",
   "addrJpPostalCode","addrJpPrefecture","addrJpCity","addrJpStreetAddress","addrJpBuilding",
   "prevSchool","scholarship","selfFunded","scholarshipTypeId",
-  "bankName","bankBranch","bankAccountNo",
   "departureDateTh","arrivalDateJp","status","note","avatar","createdBy",
 ];
 

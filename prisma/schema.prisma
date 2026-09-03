@@ -178,10 +178,6 @@ model Student {
   selfFunded          Boolean   @default(false) @map("self_funded")
   scholarshipTypeId   String?   @map("scholarship_type_id") @db.VarChar(20)
 
-  bankName            String?   @map("bank_name") @db.VarChar(100)
-  bankBranch          String?   @map("bank_branch") @db.VarChar(100)
-  bankAccountNo       String?   @map("bank_account_no") @db.VarChar(30)
-
   departureDateTh     DateTime? @map("departure_date_th") @db.Date
   arrivalDateJp       DateTime? @map("arrival_date_jp") @db.Date
 
